@@ -118,6 +118,9 @@ app.use('/api/equipment', require('./routes/equipment'));
 app.use('/api/faqs', require('./routes/faqs'));
 app.use('/api/search', require('./routes/search'));
 
+// ONE-TIME ADMIN CREATION - DELETE AFTER USE!
+app.use('/api', require('./routes/createAdminOnce'));
+
 // Add API route debugging
 app.use('/api/*', (req, res, next) => {
   console.log(`API Route not found: ${req.method} ${req.originalUrl}`);
