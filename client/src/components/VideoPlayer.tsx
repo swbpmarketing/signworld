@@ -11,24 +11,26 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon, BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
 
+interface VideoPlayerVideo {
+  id: number;
+  title: string;
+  description: string;
+  youtubeId: string;
+  duration: string;
+  views: number;
+  instructor: string;
+  rating: number;
+  tags: string[];
+  isBookmarked?: boolean;
+  isLiked?: boolean;
+}
+
 interface VideoPlayerProps {
-  video: {
-    id: number;
-    title: string;
-    description: string;
-    youtubeId: string;
-    duration: string;
-    views: number;
-    instructor: string;
-    rating: number;
-    tags: string[];
-    isBookmarked?: boolean;
-    isLiked?: boolean;
-  };
+  video: VideoPlayerVideo;
   onClose: () => void;
   onBookmark?: (videoId: number) => void;
   onLike?: (videoId: number) => void;
-  onShare?: (video: any) => void;
+  onShare?: (video: VideoPlayerVideo) => void;
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ 

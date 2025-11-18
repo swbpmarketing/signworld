@@ -34,7 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   // Set axios defaults
-  axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:9000/api';
+  axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   console.log('AuthContext: API URL set to', axios.defaults.baseURL);
   
   useEffect(() => {

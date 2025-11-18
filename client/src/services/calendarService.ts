@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.DEV 
-    ? 'http://localhost:9000/api' 
+const API_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV
+    ? 'http://localhost:5000/api'
     : 'https://sign-company.onrender.com/api');
 
 // Create axios instance with base configuration
@@ -197,4 +197,3 @@ export const calendarService = {
 };
 
 export default calendarService;
-export type { CalendarEvent };

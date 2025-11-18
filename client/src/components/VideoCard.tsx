@@ -1,9 +1,7 @@
 import {
-  PlayIcon,
   BookmarkIcon,
   ClockIcon,
   EyeIcon,
-  StarIcon,
 } from '@heroicons/react/24/outline';
 import { 
   BookmarkIcon as BookmarkSolidIcon, 
@@ -11,25 +9,27 @@ import {
   StarIcon as StarSolidIcon 
 } from '@heroicons/react/24/solid';
 
+interface Video {
+  id: number;
+  title: string;
+  description: string;
+  thumbnail: string;
+  youtubeId: string;
+  duration: string;
+  views: number;
+  uploadDate: string;
+  category: string;
+  instructor: string;
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
+  rating: number;
+  isBookmarked: boolean;
+  isNew: boolean;
+  tags: string[];
+}
+
 interface VideoCardProps {
-  video: {
-    id: number;
-    title: string;
-    description: string;
-    thumbnail: string;
-    youtubeId: string;
-    duration: string;
-    views: number;
-    uploadDate: string;
-    category: string;
-    instructor: string;
-    level: 'Beginner' | 'Intermediate' | 'Advanced';
-    rating: number;
-    isBookmarked: boolean;
-    isNew: boolean;
-    tags: string[];
-  };
-  onPlay: (video: any) => void;
+  video: Video;
+  onPlay: (video: Video) => void;
   onBookmark?: (videoId: number) => void;
   layout?: 'grid' | 'list';
 }

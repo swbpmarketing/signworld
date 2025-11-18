@@ -25,7 +25,6 @@ const corsOptions = {
     const allowedOrigins = [
       process.env.CLIENT_URL || 'http://localhost:5173',
       'http://localhost:5173',
-      'http://localhost:5001',
       'https://sign-company.onrender.com',
       'https://customadesign.github.io'
     ];
@@ -136,37 +135,6 @@ app.use((err, req, res, next) => {
     error: err.message || 'Server Error',
   });
 });
-
-// Serve static assets in production
-if (process.env.NODE_ENV === 'production') {
-  const staticPath = path.join(__dirname, '../client/dist');
-  console.log('Serving static files from:', staticPath);
-  
-  // Only serve static files for non-API routes
-  app.use((req, res, next) => {
-    if (req.path.startsWith('/api/')) {
-      // Skip static file serving for API routes
-      return next();
-    }
-    express.static(staticPath)(req, res, next);
-  });
-  
-  // SPA catch-all handler MUST come last
-  app.get('*', (req, res) => {
-    // Only serve index.html for non-API routes
-    if (!req.path.startsWith('/api/')) {
-      const indexPath = path.join(__dirname, '../client/dist/index.html');
-      console.log('Serving index.html from:', indexPath);
-      res.sendFile(indexPath);
-    } else {
-      // If we reach here, it means an API route wasn't found
-      res.status(404).json({
-        success: false,
-        message: 'API endpoint not found'
-      });
-    }
-  });
-}
 
 const PORT = process.env.PORT || 5000;
 

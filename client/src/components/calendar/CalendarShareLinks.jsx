@@ -33,8 +33,8 @@ const CalendarShareLinks = ({
     
     try {
       // Generate iCal feed URL
-      const baseUrl = import.meta.env.DEV 
-        ? 'http://localhost:9000' 
+      const baseUrl = import.meta.env.DEV
+        ? 'http://localhost:5000'
         : window.location.origin;
       
       const icalUrl = `${baseUrl}/api/events/calendar.ics`;
