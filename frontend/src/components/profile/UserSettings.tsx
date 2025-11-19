@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { validateUserSettings, type ValidationError } from '../../utils/validation';
+import { validateUserSettings } from '../../utils/validation';
+import type { ValidationError } from '../../utils/validation';
 import { showSuccess, showError, showLoading, dismissToast } from '../../utils/toast';
 import {
   UserIcon,
@@ -19,13 +20,40 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 
+interface UserSettingsFormData {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  notifications: {
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+    marketing: boolean;
+  };
+  language: string;
+  timezone: string;
+  privacy: {
+    profileVisible: boolean;
+    dataSharing: boolean;
+    analytics: boolean;
+  };
+  theme: string;
+  security: {
+    twoFactorEnabled: boolean;
+    lastPasswordChange: string;
+  };
+}
+
+type NestedObjectKeys = 'notifications' | 'privacy' | 'security';
+
 const UserSettings = () => {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<UserSettingsFormData>({
     name: user?.name || '',
     email: user?.email || '',
     phone: '',
@@ -83,14 +111,21 @@ const UserSettings = () => {
     },
   ];
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = <K extends keyof UserSettingsFormData>(
+    field: K,
+    value: UserSettingsFormData[K]
+  ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleNestedChange = (section: string, field: string, value: any) => {
+  const handleNestedChange = <K extends NestedObjectKeys>(
+    section: K,
+    field: keyof UserSettingsFormData[K],
+    value: boolean | string
+  ) => {
     setFormData(prev => ({
       ...prev,
-      [section]: { ...prev[section as keyof typeof prev], [field]: value }
+      [section]: { ...prev[section], [field]: value }
     }));
   };
 
@@ -264,7 +299,7 @@ const UserSettings = () => {
           Notifications
         </h4>
         <div className="space-y-4">
-          {Object.entries(formData.notifications).map(([key, value]) => (
+          {(Object.entries(formData.notifications) as Array<[keyof UserSettingsFormData['notifications'], boolean]>).map(([key, value]) => (
             <div key={key} className="flex items-center justify-between">
               <div>
                 <h5 className="text-sm font-medium text-gray-900 capitalize">
@@ -343,7 +378,7 @@ const UserSettings = () => {
         Privacy Controls
       </h4>
       <div className="space-y-4">
-        {Object.entries(formData.privacy).map(([key, value]) => (
+        {(Object.entries(formData.privacy) as Array<[keyof UserSettingsFormData['privacy'], boolean]>).map(([key, value]) => (
           <div key={key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
               <h5 className="text-sm font-medium text-gray-900">

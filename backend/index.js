@@ -25,7 +25,6 @@ const corsOptions = {
     const allowedOrigins = [
       process.env.CLIENT_URL || 'http://localhost:5173',
       'http://localhost:5173',
-      'http://localhost:5001',
       'https://sign-company.onrender.com',
       'https://customadesign.github.io'
     ];
