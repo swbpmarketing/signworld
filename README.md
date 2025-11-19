@@ -36,7 +36,7 @@ A modern internal dashboard for Sign Company Owners built with the MERN stack.
 
 1. Clone the repository:
 ```bash
-git clone [repository-url]
+git clone https://github.com/gabtest61-sys/Sign-World.git
 cd sign-company-dashboard
 ```
 
@@ -47,9 +47,14 @@ npm run install-all
 
 3. Set up environment variables:
 
-Create `.env` in the root directory:
+Copy the example file and configure:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your values:
 ```env
-PORT=5000
+PORT=9000
 NODE_ENV=development
 MONGODB_URI=mongodb://localhost:27017/sign-company-dashboard
 JWT_SECRET=your-super-secret-jwt-key
@@ -60,13 +65,11 @@ AWS_REGION=us-east-1
 AWS_S3_BUCKET=sign-company-dashboard-files
 GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 CLIENT_URL=http://localhost:5173
-```
-
-Create `frontend/.env`:
-```env
 VITE_API_URL=http://localhost:9000/api
 VITE_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 ```
+
+See [Environment Variables Guide](docs/ENVIRONMENT_VARIABLES.md) for detailed configuration.
 
 4. Create an admin user:
 ```bash
@@ -130,25 +133,31 @@ sign-company-dashboard/
 
 ## Documentation
 
-Comprehensive documentation is available in the [`docs/`](docs/) folder:
+Comprehensive documentation is available in the [docs/](docs/) folder:
 
 - [Documentation Index](docs/README.md) - Complete documentation guide
-- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md) - Step-by-step deployment instructions
+- [Render Quick Start](docs/RENDER_QUICK_START.md) - 5-minute deployment guide
+- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md) - Detailed deployment instructions
 - [Environment Variables](docs/ENVIRONMENT_VARIABLES.md) - Configuration reference
-- [AI Search Implementation](docs/AI_SEARCH_DESIGN_GUIDE.md) - AI search feature guide
-- [Map Implementation](docs/MAP_IMPLEMENTATION.md) - Interactive map feature
-- And more...
 
 ## Deployment
 
-1. Build the client:
-```bash
-npm run build
-```
+### Quick Deploy to Render
 
-2. Set NODE_ENV to production and configure production database
+See [Render Quick Start Guide](docs/RENDER_QUICK_START.md) for a 5-minute deployment.
 
-3. Deploy to your preferred hosting service (Heroku, AWS, DigitalOcean, etc.)
+**Prerequisites:**
+- MongoDB Atlas account
+- AWS S3 bucket
+- Google Maps API key
+
+**One-Click Deploy:**
+1. Push to GitHub
+2. Connect to Render via Blueprint
+3. Configure environment variables
+4. Deploy!
+
+For detailed instructions, see the [Full Deployment Guide](docs/DEPLOYMENT_GUIDE.md).
 
 ## License
 

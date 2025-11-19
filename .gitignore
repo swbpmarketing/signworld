@@ -57,3 +57,6 @@ backend/dist/
 .env.production
 .env.development
 .env
+
+# Deployment checklists with credentials
+RENDER_DEPLOYMENT_CHECKLIST.md
