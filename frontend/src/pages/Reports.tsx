@@ -126,15 +126,15 @@ const Reports = () => {
       </div>
 
       {/* Controls Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
+              <CalendarDaysIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
               <select
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-lg"
+                className="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-lg"
               >
                 {dateRangeOptions.map(option => (
                   <option key={option.value} value={option.value}>
@@ -143,13 +143,13 @@ const Reports = () => {
                 ))}
               </select>
             </div>
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
               <FunnelIcon className="h-4 w-4 mr-2" />
               Filters
             </button>
           </div>
-          <div className="text-sm text-gray-500">
-            Last updated: <span className="font-medium text-gray-900">Just now</span>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Last updated: <span className="font-medium text-gray-900 dark:text-gray-100">Just now</span>
           </div>
         </div>
       </div>
@@ -165,19 +165,19 @@ const Reports = () => {
                 onClick={() => setSelectedReport(section.id)}
                 className={`w-full group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
                   selectedReport === section.id
-                    ? 'bg-primary-50 text-primary-700 shadow-sm'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 shadow-sm'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
               >
                 <section.icon
                   className={`mr-3 h-5 w-5 flex-shrink-0 transition-colors ${
-                    selectedReport === section.id ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-600'
+                    selectedReport === section.id ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400'
                   }`}
                 />
                 <div className="text-left min-w-0">
                   <div className="truncate">{section.name}</div>
                   <div className={`text-xs mt-0.5 line-clamp-2 ${
-                    selectedReport === section.id ? 'text-primary-600' : 'text-gray-500'
+                    selectedReport === section.id ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'
                   }`}>
                     {section.description}
                   </div>

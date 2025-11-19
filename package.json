@@ -15,7 +15,11 @@
     "deploy:github": "./scripts/deploy-to-github.sh",
     "seed:events": "node backend/seedEvents.js",
     "seed:admin": "node backend/seedAdmin.js",
-    "seed:owners": "node backend/seedOwners.js",
+    "seed:vendor": "node backend/seedVendor.js",
+    "seed:owners": "node backend/scripts/seedOwners.js",
+    "seed:library": "node backend/scripts/seedLibrary.js",
+    "seed:videos": "node backend/scripts/seedVideos.js",
+    "seed:all": "npm run seed:owners && npm run seed:library && npm run seed:videos && npm run seed:events",
     "seed:production-owners": "node backend/seedProductionOwners.js",
     "test": "echo \"No tests specified\" && exit 0"
   },

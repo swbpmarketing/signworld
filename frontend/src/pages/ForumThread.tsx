@@ -238,18 +238,18 @@ const ForumThread = () => {
           </div>
         </div>
         <div className="flex-1">
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
             <div className="flex items-start justify-between mb-2">
               <div>
-                <span className="font-medium text-gray-900">{reply.author}</span>
-                <span className="text-sm text-gray-500 ml-2">{reply.authorRole}</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">{reply.author}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">{reply.authorRole}</span>
                 <span className="text-sm text-gray-400 ml-2">• {reply.createdAt}</span>
               </div>
-              <button className="text-gray-400 hover:text-gray-600">
+              <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <EllipsisHorizontalIcon className="h-5 w-5" />
               </button>
             </div>
-            <div className="text-gray-700 prose prose-sm max-w-none">
+            <div className="text-gray-700 dark:text-gray-300 prose prose-sm max-w-none">
               {reply.content.split('\n').map((paragraph, idx) => (
                 <p key={idx} className="mb-2">{paragraph}</p>
               ))}
@@ -257,13 +257,13 @@ const ForumThread = () => {
             {reply.attachments && reply.attachments.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {reply.attachments.map((attachment, idx) => (
-                  <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-200 text-sm">
+                  <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 text-sm">
                     {attachment.type === 'image' ? (
                       <PhotoIcon className="h-4 w-4 text-gray-400" />
                     ) : (
                       <PaperClipIcon className="h-4 w-4 text-gray-400" />
                     )}
-                    <span className="text-gray-700">{attachment.name}</span>
+                    <span className="text-gray-700 dark:text-gray-300">{attachment.name}</span>
                     <span className="text-gray-400 text-xs">({attachment.size})</span>
                   </div>
                 ))}
@@ -274,27 +274,27 @@ const ForumThread = () => {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => handleVote(reply.id, 'up')}
-                className={`p-1 rounded hover:bg-gray-100 ${reply.userVote === 'up' ? 'text-primary-600' : 'text-gray-400'}`}
+                className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${reply.userVote === 'up' ? 'text-primary-600' : 'text-gray-400'}`}
               >
                 {reply.userVote === 'up' ? <ChevronUpSolidIcon className="h-5 w-5" /> : <ChevronUpIcon className="h-5 w-5" />}
               </button>
-              <span className="text-sm font-medium text-gray-700">{reply.votes}</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{reply.votes}</span>
               <button
                 onClick={() => handleVote(reply.id, 'down')}
-                className={`p-1 rounded hover:bg-gray-100 ${reply.userVote === 'down' ? 'text-primary-600' : 'text-gray-400'}`}
+                className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${reply.userVote === 'down' ? 'text-primary-600' : 'text-gray-400'}`}
               >
                 {reply.userVote === 'down' ? <ChevronDownSolidIcon className="h-5 w-5" /> : <ChevronDownIcon className="h-5 w-5" />}
               </button>
             </div>
-            <button className={`flex items-center gap-1.5 text-sm ${reply.isLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500`}>
+            <button className={`flex items-center gap-1.5 text-sm ${reply.isLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'} hover:text-red-500`}>
               {reply.isLiked ? <HeartSolidIcon className="h-4 w-4" /> : <HeartIcon className="h-4 w-4" />}
               <span>{reply.likes}</span>
             </button>
-            <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-600">
+            <button className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400">
               <ChatBubbleLeftIcon className="h-4 w-4" />
               Reply
             </button>
-            <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
+            <button className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
               <ShareIcon className="h-4 w-4" />
               Share
             </button>
@@ -325,33 +325,33 @@ const ForumThread = () => {
       </div>
 
       {/* Thread Header */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               {thread.isPinned && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-medium rounded-full">
                   <FireIcon className="h-3 w-3" />
                   Pinned
                 </span>
               )}
               {thread.isLocked && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-full">
                   <LockClosedIcon className="h-3 w-3" />
                   Locked
                 </span>
               )}
-              <span className="inline-flex items-center px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded-full">
+              <span className="inline-flex items-center px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 text-xs font-medium rounded-full">
                 {thread.category}
               </span>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">{thread.title}</h1>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">{thread.title}</h1>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold text-sm">
                   {thread.authorAvatar}
                 </div>
-                <span className="font-medium text-gray-700">{thread.author}</span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">{thread.author}</span>
                 <span>{thread.authorRole}</span>
               </div>
               <div className="flex items-center gap-1">
@@ -369,13 +369,13 @@ const ForumThread = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className={`p-2 rounded-lg border ${thread.isBookmarked ? 'border-primary-500 text-primary-600 bg-primary-50' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+            <button className={`p-2 rounded-lg border ${thread.isBookmarked ? 'border-primary-500 text-primary-600 bg-primary-50 dark:bg-primary-900/30' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
               {thread.isBookmarked ? <BookmarkSolidIcon className="h-5 w-5" /> : <BookmarkIcon className="h-5 w-5" />}
             </button>
-            <button className={`p-2 rounded-lg border ${thread.isSubscribed ? 'border-primary-500 text-primary-600 bg-primary-50' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+            <button className={`p-2 rounded-lg border ${thread.isSubscribed ? 'border-primary-500 text-primary-600 bg-primary-50 dark:bg-primary-900/30' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
               <BellIcon className="h-5 w-5" />
             </button>
-            <button className="p-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
+            <button className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
               <FlagIcon className="h-5 w-5" />
             </button>
           </div>
@@ -383,37 +383,37 @@ const ForumThread = () => {
       </div>
 
       {/* Thread Content */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <div className="prose prose-lg max-w-none">
           {thread.content.split('\n').map((paragraph, idx) => {
             if (paragraph.startsWith('##')) {
-              return <h2 key={idx} className="text-xl font-bold text-gray-900 mt-6 mb-3">{paragraph.replace('## ', '')}</h2>;
+              return <h2 key={idx} className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-6 mb-3">{paragraph.replace('## ', '')}</h2>;
             } else if (paragraph.startsWith('###')) {
-              return <h3 key={idx} className="text-lg font-semibold text-gray-900 mt-4 mb-2">{paragraph.replace('### ', '')}</h3>;
+              return <h3 key={idx} className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-4 mb-2">{paragraph.replace('### ', '')}</h3>;
             } else if (paragraph.startsWith('-')) {
-              return <li key={idx} className="ml-6 mb-1">{paragraph.replace('- ', '')}</li>;
+              return <li key={idx} className="ml-6 mb-1 text-gray-700 dark:text-gray-300">{paragraph.replace('- ', '')}</li>;
             } else if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
-              return <p key={idx} className="font-semibold text-gray-900 mb-2">{paragraph.replace(/\*\*/g, '')}</p>;
+              return <p key={idx} className="font-semibold text-gray-900 dark:text-gray-100 mb-2">{paragraph.replace(/\*\*/g, '')}</p>;
             } else if (paragraph.match(/^\d+\./)) {
-              return <li key={idx} className="ml-6 mb-1 list-decimal">{paragraph.replace(/^\d+\.\s*/, '')}</li>;
+              return <li key={idx} className="ml-6 mb-1 list-decimal text-gray-700 dark:text-gray-300">{paragraph.replace(/^\d+\.\s*/, '')}</li>;
             }
-            return <p key={idx} className="mb-4 text-gray-700">{paragraph}</p>;
+            return <p key={idx} className="mb-4 text-gray-700 dark:text-gray-300">{paragraph}</p>;
           })}
         </div>
-        
+
         {thread.attachments && thread.attachments.length > 0 && (
-          <div className="mt-6 pt-6 border-t">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Attachments</h4>
+          <div className="mt-6 pt-6 border-t dark:border-gray-700">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Attachments</h4>
             <div className="flex flex-wrap gap-3">
               {thread.attachments.map((attachment, idx) => (
-                <button key={idx} className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
+                <button key={idx} className="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                   {attachment.type === 'image' ? (
                     <PhotoIcon className="h-5 w-5 text-gray-400" />
                   ) : (
                     <PaperClipIcon className="h-5 w-5 text-gray-400" />
                   )}
-                  <span className="text-sm font-medium text-gray-700">{attachment.name}</span>
-                  <span className="text-xs text-gray-500">({attachment.size})</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{attachment.name}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">({attachment.size})</span>
                 </button>
               ))}
             </div>
@@ -421,11 +421,11 @@ const ForumThread = () => {
         )}
 
         {thread.tags && thread.tags.length > 0 && (
-          <div className="mt-6 pt-6 border-t">
+          <div className="mt-6 pt-6 border-t dark:border-gray-700">
             <div className="flex items-center gap-2 flex-wrap">
               <TagIcon className="h-4 w-4 text-gray-400" />
               {thread.tags.map(tag => (
-                <span key={tag} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer transition-colors">
+                <span key={tag} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors">
                   #{tag}
                 </span>
               ))}
@@ -435,14 +435,14 @@ const ForumThread = () => {
       </div>
 
       {/* Replies Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="px-6 py-4 border-b border-gray-100">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">{thread.replies} Replies</h3>
-            <select 
-              value={sortBy} 
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{thread.replies} Replies</h3>
+            <select
+              value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
             >
               <option value="oldest">Oldest First</option>
               <option value="newest">Newest First</option>
@@ -457,11 +457,11 @@ const ForumThread = () => {
 
       {/* Reply Box */}
       {!thread.isLocked && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           {!showReplyBox ? (
             <button
               onClick={() => setShowReplyBox(true)}
-              className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary-400 hover:text-primary-600 transition-colors"
+              className="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
             >
               Write a reply...
             </button>
@@ -476,17 +476,17 @@ const ForumThread = () => {
                     value={replyContent}
                     onChange={(e) => setReplyContent(e.target.value)}
                     placeholder="Share your thoughts..."
-                    className="w-full min-h-[120px] p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                    className="w-full min-h-[120px] p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none dark:bg-gray-700 dark:text-gray-100"
                   />
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-2">
-                      <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                      <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                         <PaperClipIcon className="h-5 w-5" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                      <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                         <PhotoIcon className="h-5 w-5" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                      <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                         <FaceSmileIcon className="h-5 w-5" />
                       </button>
                     </div>
@@ -496,7 +496,7 @@ const ForumThread = () => {
                           setShowReplyBox(false);
                           setReplyContent('');
                         }}
-                        className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                        className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
                       >
                         Cancel
                       </button>

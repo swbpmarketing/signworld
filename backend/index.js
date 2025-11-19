@@ -25,6 +25,7 @@ const corsOptions = {
     const allowedOrigins = [
       process.env.CLIENT_URL || 'http://localhost:5173',
       'http://localhost:5173',
+      'http://127.0.0.1:5173', // Allow 127.0.0.1 as well as localhost
       'https://sign-company.onrender.com',
       'https://customadesign.github.io'
     ];
@@ -104,6 +105,7 @@ app.get('/api/debug/routes', (req, res) => {
 // Routes - These must come AFTER static file serving but BEFORE catch-all
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/conventions', require('./routes/conventions'));
 app.use('/api/brags', require('./routes/brags'));

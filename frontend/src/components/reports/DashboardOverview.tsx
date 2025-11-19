@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getReportsOverview } from '../../services/dashboardService';
 import {
   ArrowUpIcon,
   ArrowDownIcon,
@@ -18,45 +20,25 @@ interface DashboardOverviewProps {
 }
 
 const DashboardOverview = ({ dateRange, filters, onFiltersChange }: DashboardOverviewProps) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [kpiData, setKpiData] = useState({
-    totalRevenue: { value: 456789, change: 12.5, trend: 'up' },
-    activeProjects: { value: 34, change: 8.3, trend: 'up' },
-    customerSatisfaction: { value: 94.2, change: 2.1, trend: 'up' },
-    avgProjectTime: { value: 14.5, change: -5.2, trend: 'down' },
-    newCustomers: { value: 27, change: 15.8, trend: 'up' },
-    equipmentUtilization: { value: 87.3, change: -1.2, trend: 'down' },
+  // Fetch reports overview data
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['reports-overview', dateRange, filters],
+    queryFn: getReportsOverview,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Sample data for charts
-  const revenueOverTime = [
-    { month: 'Jan', revenue: 42000, profit: 18000 },
-    { month: 'Feb', revenue: 38000, profit: 15000 },
-    { month: 'Mar', revenue: 45000, profit: 20000 },
-    { month: 'Apr', revenue: 48000, profit: 22000 },
-    { month: 'May', revenue: 52000, profit: 24000 },
-    { month: 'Jun', revenue: 51000, profit: 23000 },
-  ];
+  const kpiData = data?.kpiData || {
+    totalRevenue: { value: 0, change: 0, trend: 'up' as const },
+    activeProjects: { value: 0, change: 0, trend: 'up' as const },
+    customerSatisfaction: { value: 0, change: 0, trend: 'up' as const },
+    avgProjectTime: { value: 0, change: 0, trend: 'down' as const },
+    newCustomers: { value: 0, change: 0, trend: 'up' as const },
+    equipmentUtilization: { value: 0, change: 0, trend: 'down' as const },
+  };
 
-  const projectsByCategory = [
-    { name: 'Channel Letters', value: 35, revenue: 125000 },
-    { name: 'Monument Signs', value: 28, revenue: 98000 },
-    { name: 'LED Displays', value: 22, revenue: 87000 },
-    { name: 'Vehicle Wraps', value: 15, revenue: 45000 },
-    { name: 'Interior Signs', value: 18, revenue: 36000 },
-  ];
-
-  const performanceMetrics = [
-    { metric: 'On-Time Delivery', current: 92, target: 95 },
-    { metric: 'Quality Score', current: 96, target: 90 },
-    { metric: 'Customer Retention', current: 88, target: 85 },
-    { metric: 'First Call Resolution', current: 78, target: 80 },
-  ];
-
-  useEffect(() => {
-    // Simulate data loading
-    setTimeout(() => setIsLoading(false), 1000);
-  }, [dateRange, filters]);
+  const revenueOverTime = data?.revenueOverTime || [];
+  const projectsByCategory = data?.projectsByCategory || [];
+  const performanceMetrics = data?.performanceMetrics || [];
 
   const exportToPDF = () => {
     // Implementation for PDF export
@@ -70,10 +52,28 @@ const DashboardOverview = ({ dateRange, filters, onFiltersChange }: DashboardOve
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-8">
         <div className="flex flex-col items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-          <p className="mt-4 text-gray-500">Loading dashboard data...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 dark:border-primary-400"></div>
+          <p className="mt-4 text-gray-500 dark:text-gray-400">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-8">
+        <div className="flex flex-col items-center justify-center h-96">
+          <div className="text-red-600 dark:text-red-400 mb-4">
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Unable to load reports data</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-center max-w-md">
+            {error instanceof Error ? error.message : 'An error occurred while loading the reports. Please try again later.'}
+          </p>
         </div>
       </div>
     );
@@ -82,30 +82,30 @@ const DashboardOverview = ({ dateRange, filters, onFiltersChange }: DashboardOve
   return (
     <div className="space-y-6">
       {/* Header with Export Options */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Executive Dashboard</h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Executive Dashboard</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Real-time business metrics and performance indicators
             </p>
           </div>
           <div className="flex space-x-2">
             <button
               onClick={exportToPDF}
-              className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               <ArrowDownTrayIcon className="h-4 w-4 mr-1.5" />
               PDF
             </button>
             <button
               onClick={exportToExcel}
-              className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               <ArrowDownTrayIcon className="h-4 w-4 mr-1.5" />
               Excel
             </button>
-            <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
               <PrinterIcon className="h-4 w-4 mr-1.5" />
               Print
             </button>
@@ -132,32 +132,32 @@ const DashboardOverview = ({ dateRange, filters, onFiltersChange }: DashboardOve
           };
 
           return (
-            <div key={key} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+            <div key={key} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{labels[key]}</p>
-                  <p className="mt-2 text-3xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{labels[key]}</p>
+                  <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">
                     {formats[key] === '$' && '$'}
                     {formats[key] === '$' ? data.value.toLocaleString() : data.value}
                     {formats[key] === '%' && '%'}
                   </p>
                   <div className="mt-3 flex items-center">
                     {data.trend === 'up' ? (
-                      <ArrowUpIcon className="h-4 w-4 text-green-500 mr-1" />
+                      <ArrowUpIcon className="h-4 w-4 text-green-500 dark:text-green-400 mr-1" />
                     ) : (
-                      <ArrowDownIcon className="h-4 w-4 text-red-500 mr-1" />
+                      <ArrowDownIcon className="h-4 w-4 text-red-500 dark:text-red-400 mr-1" />
                     )}
-                    <span className={`text-sm font-medium ${data.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`text-sm font-medium ${data.trend === 'up' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {Math.abs(data.change)}%
                     </span>
-                    <span className="ml-2 text-sm text-gray-500">vs last period</span>
+                    <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">vs last period</span>
                   </div>
                 </div>
-                <div className={`p-3 rounded-lg ${data.trend === 'up' ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div className={`p-3 rounded-lg ${data.trend === 'up' ? 'bg-green-50 dark:bg-green-900/30' : 'bg-red-50 dark:bg-red-900/30'}`}>
                   {data.trend === 'up' ? (
-                    <ArrowTrendingUpIcon className={`h-6 w-6 ${data.trend === 'up' ? 'text-green-600' : 'text-red-600'}`} />
+                    <ArrowTrendingUpIcon className={`h-6 w-6 ${data.trend === 'up' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
                   ) : (
-                    <ArrowTrendingDownIcon className={`h-6 w-6 ${data.trend === 'up' ? 'text-green-600' : 'text-red-600'}`} />
+                    <ArrowTrendingDownIcon className={`h-6 w-6 ${data.trend === 'up' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
                   )}
                 </div>
               </div>
@@ -169,8 +169,8 @@ const DashboardOverview = ({ dateRange, filters, onFiltersChange }: DashboardOve
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Trend Chart */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue & Profit Trend</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Revenue & Profit Trend</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueOverTime}>
@@ -200,8 +200,8 @@ const DashboardOverview = ({ dateRange, filters, onFiltersChange }: DashboardOve
         </div>
 
         {/* Projects by Category */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Projects by Category</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Projects by Category</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -233,8 +233,8 @@ const DashboardOverview = ({ dateRange, filters, onFiltersChange }: DashboardOve
       </div>
 
       {/* Performance Metrics */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance vs Targets</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Performance vs Targets</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={performanceMetrics} layout="horizontal">

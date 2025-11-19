@@ -37,21 +37,21 @@ interface OwnerDisplay extends Owner {
 
 // Loading skeleton component
 const OwnerSkeleton = () => (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
     <div className="p-6">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center">
-          <div className="h-16 w-16 rounded-full bg-gray-200 animate-pulse" />
+          <div className="h-16 w-16 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
           <div className="ml-4 space-y-2">
-            <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
-            <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
-            <div className="h-3 w-20 bg-gray-200 rounded animate-pulse" />
+            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
           </div>
         </div>
       </div>
       <div className="space-y-3">
-        <div className="h-3 w-full bg-gray-200 rounded animate-pulse" />
-        <div className="h-3 w-full bg-gray-200 rounded animate-pulse" />
+        <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
       </div>
     </div>
   </div>
@@ -227,13 +227,13 @@ const OwnersRoster = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400';
       case 'new':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400';
       case 'inactive':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-400';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-400';
     }
   };
 
@@ -298,32 +298,32 @@ const OwnersRoster = () => {
 
       {/* Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
-          <UserGroupIcon className="h-8 w-8 text-primary-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">{data?.total || 0}</p>
-          <p className="text-sm text-gray-600">Total Owners</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
+          <UserGroupIcon className="h-8 w-8 text-primary-600 dark:text-primary-400 mx-auto mb-2" />
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{data?.total || 0}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Owners</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <MapPinIcon className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">{new Set(owners.map(o => o.territory)).size || 0}</p>
-          <p className="text-sm text-gray-600">States Covered</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{new Set(owners.map(o => o.territory)).size || 0}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">States Covered</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <StarIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {owners.length > 0 ? (owners.reduce((sum, o) => sum + o.rating, 0) / owners.length).toFixed(1) : '0.0'}
           </p>
-          <p className="text-sm text-gray-600">Avg. Rating</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Avg. Rating</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <BuildingOfficeIcon className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">{owners.length}</p>
-          <p className="text-sm text-gray-600">Active Franchises</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{owners.length}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Active Franchises</p>
         </div>
       </div>
 
       {/* Search and Filter Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
@@ -333,15 +333,15 @@ const OwnersRoster = () => {
                 placeholder="Search by name, company, or location..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
               />
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 dark:text-gray-300"
               >
-                <FunnelIcon className="h-5 w-5 mr-2 text-gray-500" />
+                <FunnelIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
                 Filters
                 {showFilters ? (
                   <ChevronUpIcon className="h-4 w-4 ml-1 text-gray-400" />
@@ -349,16 +349,16 @@ const OwnersRoster = () => {
                   <ChevronDownIcon className="h-4 w-4 ml-1 text-gray-400" />
                 )}
               </button>
-              <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+              <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
                 <button
                   onClick={() => setViewMode('grid')}
-                  className={`p-2 ${viewMode === 'grid' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'} transition-colors duration-200`}
+                  className={`p-2 ${viewMode === 'grid' ? 'bg-primary-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'} transition-colors duration-200`}
                 >
                   <Squares2X2Icon className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`p-2 ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'} transition-colors duration-200`}
+                  className={`p-2 ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'} transition-colors duration-200`}
                 >
                   <ListBulletIcon className="h-5 w-5" />
                 </button>
@@ -368,9 +368,9 @@ const OwnersRoster = () => {
 
           {/* Expandable Filters */}
           {showFilters && (
-            <div className="border-t pt-4 space-y-4">
+            <div className="border-t dark:border-gray-700 pt-4 space-y-4">
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Territory</h4>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Territory</h4>
                 <div className="flex flex-wrap gap-2">
                   {territories.map((territory) => (
                     <button
@@ -379,7 +379,7 @@ const OwnersRoster = () => {
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         selectedTerritory === territory.name
                           ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
                       {territory.name} ({territory.count})
@@ -388,7 +388,7 @@ const OwnersRoster = () => {
                 </div>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Specialties</h4>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Specialties</h4>
                 <div className="flex flex-wrap gap-2">
                   {specialtyFilters.map((specialty) => (
                     <button
@@ -397,7 +397,7 @@ const OwnersRoster = () => {
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         selectedSpecialties.includes(specialty)
                           ? 'bg-primary-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
                       {specialty}
@@ -412,10 +412,10 @@ const OwnersRoster = () => {
 
       {/* Owners Grid/List */}
       {owners.length === 0 && !isLoading ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
           <UserGroupIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Owners Found</h3>
-          <p className="text-gray-600 max-w-md mx-auto mb-6">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">No Owners Found</h3>
+          <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-6">
             {searchQuery || selectedSpecialties.length > 0 
               ? "No owners match your search criteria. Try adjusting your filters."
               : "The owner roster is currently empty. New owners will appear here once they're added to the system."}
@@ -439,7 +439,7 @@ const OwnersRoster = () => {
             <Link
               key={owner.id}
               to={`/owners/${owner.id}`}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer block"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer block"
             >
               <div className="p-6">
                 {/* Owner Header */}
@@ -449,11 +449,11 @@ const OwnersRoster = () => {
                       {owner.avatar}
                     </div>
                     <div className="ml-4 min-w-0">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{owner.name}</h3>
-                      <p className="text-xs sm:text-sm text-gray-600 truncate">{owner.company}</p>
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{owner.name}</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{owner.company}</p>
                       <div className="flex items-center mt-1">
                         <MapPinIcon className="h-4 w-4 text-gray-400 mr-1" />
-                        <span className="text-xs sm:text-sm text-gray-500 truncate">{owner.location}</span>
+                        <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{owner.location}</span>
                       </div>
                     </div>
                   </div>
@@ -465,34 +465,34 @@ const OwnersRoster = () => {
                 {/* Owner Info */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Territory</span>
-                    <span className="font-medium text-gray-900">{owner.territory}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Territory</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{owner.territory}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Years in Business</span>
-                    <span className="font-medium text-gray-900">{owner.yearsInBusiness}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Years in Business</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{owner.yearsInBusiness}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Projects</span>
-                    <span className="font-medium text-gray-900">{owner.totalProjects}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Projects</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{owner.totalProjects}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Rating</span>
+                    <span className="text-gray-500 dark:text-gray-400">Rating</span>
                     <div className="flex items-center">
                       <StarSolidIcon className="h-4 w-4 text-yellow-400 mr-1" />
-                      <span className="font-medium text-gray-900">{owner.rating}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{owner.rating}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Specialties */}
                 <div className="mt-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Specialties</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Specialties</p>
                   <div className="flex flex-wrap gap-1">
                     {owner.specialties.slice(0, 3).map((specialty) => (
                       <span
                         key={specialty}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-700"
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
                       >
                         {specialty}
                       </span>
@@ -502,17 +502,17 @@ const OwnersRoster = () => {
 
                 {/* Actions */}
                 <div className="mt-6 flex flex-col sm:flex-row gap-2">
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       // Handle email action
                     }}
-                    className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                    className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-xs sm:text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <EnvelopeIcon className="h-4 w-4 mr-1.5 text-gray-400" />
                     Email
                   </button>
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -528,55 +528,55 @@ const OwnersRoster = () => {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Owner
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Location
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Specialties
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Stats
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {owners.map((owner) => (
-                  <tr key={owner.id} className="hover:bg-gray-50">
+                  <tr key={owner.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
                           {owner.avatar}
                         </div>
                         <div className="ml-4">
-                          <div className="text-xs sm:text-sm font-medium text-gray-900">{owner.name}</div>
-                          <div className="text-xs sm:text-sm text-gray-500">{owner.company}</div>
+                          <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">{owner.name}</div>
+                          <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{owner.company}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-xs sm:text-sm text-gray-900">{owner.location}</div>
-                      <div className="text-xs sm:text-sm text-gray-500">{owner.territory}</div>
+                      <div className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">{owner.location}</div>
+                      <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{owner.territory}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1 max-w-xs">
                         {owner.specialties.map((specialty) => (
                           <span
                             key={specialty}
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700"
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                           >
                             {specialty}
                           </span>
@@ -586,12 +586,12 @@ const OwnersRoster = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                         <div className="text-xs sm:text-sm">
-                          <span className="text-gray-500">Projects: </span>
-                          <span className="font-medium text-gray-900">{owner.totalProjects}</span>
+                          <span className="text-gray-500 dark:text-gray-400">Projects: </span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{owner.totalProjects}</span>
                         </div>
                         <div className="flex items-center text-xs sm:text-sm">
                           <StarSolidIcon className="h-4 w-4 text-yellow-400 mr-1" />
-                          <span className="font-medium text-gray-900">{owner.rating}</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{owner.rating}</span>
                         </div>
                       </div>
                     </td>
@@ -602,10 +602,10 @@ const OwnersRoster = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex flex-col sm:flex-row gap-2">
-                        <Link to={`/owners/${owner.id}`} className="text-primary-600 hover:text-primary-900 text-xs sm:text-sm">
+                        <Link to={`/owners/${owner.id}`} className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 text-xs sm:text-sm">
                           View Profile
                         </Link>
-                        <button className="text-gray-600 hover:text-gray-900 text-xs sm:text-sm">
+                        <button className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-xs sm:text-sm">
                           Contact
                         </button>
                       </div>

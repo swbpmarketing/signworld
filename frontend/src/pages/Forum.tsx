@@ -204,30 +204,30 @@ const Forum = () => {
 
       {/* Forum Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
-          <UserGroupIcon className="h-8 w-8 text-primary-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">1,234</p>
-          <p className="text-sm text-gray-600">Active Members</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
+          <UserGroupIcon className="h-8 w-8 text-primary-600 dark:text-primary-400 mx-auto mb-2" />
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">1,234</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Active Members</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <ChatBubbleLeftIcon className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">5,678</p>
-          <p className="text-sm text-gray-600">Total Threads</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">5,678</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Threads</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <FireIcon className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">89</p>
-          <p className="text-sm text-gray-600">Today's Posts</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">89</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Today's Posts</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <ClockIcon className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">24/7</p>
-          <p className="text-sm text-gray-600">Support Available</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">24/7</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Support Available</p>
         </div>
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
         <div className="flex gap-4">
           <div className="flex-1 relative">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -236,7 +236,7 @@ const Forum = () => {
               placeholder="Search threads, topics, or users..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
             />
           </div>
           <button className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200">
@@ -250,9 +250,9 @@ const Forum = () => {
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
           {/* Categories */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Categories</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
               <div className="space-y-2">
                 {forumCategories.map((category) => (
                   <div key={category.name} className="space-y-1">
@@ -260,18 +260,18 @@ const Forum = () => {
                       onClick={() => toggleCategory(category.name)}
                       className="w-full group"
                     >
-                      <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <div className="flex items-center min-w-0">
-                          <div className={`p-2 rounded-lg ${category.bg}`}>
+                          <div className={`p-2 rounded-lg ${category.bg} dark:bg-opacity-20`}>
                             <category.icon className={`h-5 w-5 ${category.color}`} />
                           </div>
                           <div className="ml-3 text-left min-w-0">
-                            <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{category.name}</p>
-                            <p className="text-xs text-gray-500 truncate">{category.count} threads</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{category.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{category.count} threads</p>
                           </div>
                         </div>
                         {category.subcategories && (
-                          expandedCategories.includes(category.name) 
+                          expandedCategories.includes(category.name)
                             ? <ChevronUpIcon className="h-4 w-4 text-gray-400" />
                             : <ChevronDownIcon className="h-4 w-4 text-gray-400" />
                         )}
@@ -282,7 +282,7 @@ const Forum = () => {
                         {category.subcategories.map((sub) => (
                           <button
                             key={sub}
-                            className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                            className="w-full text-left px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                           >
                             {sub}
                           </button>
@@ -296,37 +296,37 @@ const Forum = () => {
           </div>
 
           {/* Trending Tags */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <TagIcon className="h-5 w-5 mr-2 text-primary-600" />
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+              <TagIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
               Trending Tags
             </h3>
             <div className="flex flex-wrap gap-2">
               {trendingTags.map((tag) => (
                 <button
                   key={tag.name}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 >
                   #{tag.name}
-                  <span className="ml-1 text-gray-500">({tag.count})</span>
+                  <span className="ml-1 text-gray-500 dark:text-gray-400">({tag.count})</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Quick Links */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Links</h3>
             <div className="space-y-2">
-              <button className="w-full text-left flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+              <button className="w-full text-left flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 <BellIcon className="h-4 w-4 mr-2 text-gray-400" />
                 My Subscriptions
               </button>
-              <button className="w-full text-left flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+              <button className="w-full text-left flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 <BookmarkIcon className="h-4 w-4 mr-2 text-gray-400" />
                 Bookmarked Threads
               </button>
-              <button className="w-full text-left flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+              <button className="w-full text-left flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 <ClockIcon className="h-4 w-4 mr-2 text-gray-400" />
                 Recent Activity
               </button>
@@ -337,19 +337,19 @@ const Forum = () => {
         {/* Thread List */}
         <div className="lg:col-span-3 space-y-4">
           {/* Sorting Options */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <button className="text-sm font-medium text-primary-600 border-b-2 border-primary-600 pb-1">
+                <button className="text-sm font-medium text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400 pb-1">
                   Latest
                 </button>
-                <button className="text-sm text-gray-600 hover:text-gray-900 pb-1">
+                <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 pb-1">
                   Hot
                 </button>
-                <button className="text-sm text-gray-600 hover:text-gray-900 pb-1">
+                <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 pb-1">
                   Top
                 </button>
-                <button className="text-sm text-gray-600 hover:text-gray-900 pb-1">
+                <button className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 pb-1">
                   Unanswered
                 </button>
               </div>
@@ -360,7 +360,7 @@ const Forum = () => {
           {threads.map((thread) => (
             <div
               key={thread.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-all duration-200"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -373,19 +373,19 @@ const Forum = () => {
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <Link to={`/forum/thread/${thread.id}`}>
-                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 hover:text-primary-600 cursor-pointer transition-colors flex items-center gap-2 line-clamp-2">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 cursor-pointer transition-colors flex items-center gap-2 line-clamp-2">
                               {thread.isPinned && <FireIcon className="h-5 w-5 text-orange-500" />}
-                              {thread.isLocked && <LockSolidIcon className="h-4 w-4 text-gray-500" />}
+                              {thread.isLocked && <LockSolidIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />}
                               {thread.title}
                             </h3>
                           </Link>
-                          <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                            <span className="font-medium text-gray-700">{thread.author}</span>
+                          <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            <span className="font-medium text-gray-700 dark:text-gray-300">{thread.author}</span>
                             <span>{thread.authorRole}</span>
                             <span>•</span>
                             <span>{thread.createdAt}</span>
                             <span>•</span>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400">
                               {thread.category}
                             </span>
                           </div>
@@ -403,14 +403,14 @@ const Forum = () => {
                       </div>
 
                       {/* Thread Preview */}
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{thread.content}</p>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">{thread.content}</p>
 
                       {/* Tags */}
                       <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-3">
                         {thread.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer transition-colors"
+                            className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
                           >
                             #{tag}
                           </span>
@@ -420,22 +420,22 @@ const Forum = () => {
                       {/* Thread Stats and Last Reply */}
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mt-3">
                         <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-sm">
-                          <span className="flex items-center gap-1 text-gray-500">
+                          <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
                             <EyeIcon className="h-4 w-4" />
                             {thread.views.toLocaleString()}
                           </span>
-                          <span className="flex items-center gap-1 text-gray-500">
+                          <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
                             <ChatBubbleLeftIcon className="h-4 w-4" />
                             {thread.replies}
                           </span>
-                          <span className="flex items-center gap-1 text-gray-500">
+                          <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
                             <ChevronUpIcon className="h-4 w-4" />
                             {thread.likes}
                           </span>
                         </div>
                         {thread.lastReply && (
-                          <div className="text-xs sm:text-sm text-gray-500 text-right sm:text-left">
-                            Last reply by <span className="font-medium text-gray-700">{thread.lastReply.author}</span> {thread.lastReply.time}
+                          <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-right sm:text-left">
+                            Last reply by <span className="font-medium text-gray-700 dark:text-gray-300">{thread.lastReply.author}</span> {thread.lastReply.time}
                           </div>
                         )}
                       </div>

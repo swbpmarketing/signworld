@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const partnerSchema = new mongoose.Schema({
+  vendorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false,
+  },
   name: {
     type: String,
     required: [true, 'Please add a partner name'],

@@ -3,23 +3,24 @@ import axios from 'axios';
 // Check for injected API URL from GitHub Pages deployment
 const injectedApiUrl = (window as any)?.API_BASE_URL;
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
+// VITE_API_URL should already include /api (e.g., http://localhost:9000/api)
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
   injectedApiUrl ||
-  (import.meta.env.DEV 
-    ? 'http://localhost:5000' 
-    : window.location.origin);
+  (import.meta.env.DEV
+    ? 'http://localhost:9000/api'
+    : '/api');
 
 // Log the API URL for debugging
 console.log('🔗 API Configuration:', {
   VITE_API_URL: import.meta.env.VITE_API_URL,
   injectedApiUrl,
-  finalApiUrl: `${API_BASE_URL}/api`,
+  finalApiUrl: API_BASE_URL,
   isDev: import.meta.env.DEV
 });
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: import.meta.env.DEV ? `${API_BASE_URL}/api` : '/api',
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

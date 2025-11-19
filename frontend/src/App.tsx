@@ -2,13 +2,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import { DarkModeProvider } from './context/DarkModeContext';
 import Layout from './components/Layout';
 // import ErrorBoundary from './components/ErrorBoundary';
 // import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
+import DashboardRouter from './pages/DashboardRouter';
 import Calendar from './pages/Calendar';
 // import Calendar from './pages/CalendarFixed';
 import Convention from './pages/Convention';
@@ -47,38 +48,40 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <AuthProvider>
-          <Toaster position="top-right" />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={<Layout />}
-            >
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="calendar" element={<Calendar />} />
-              <Route path="convention" element={<Convention />} />
-              <Route path="brags" element={<Brags />} />
-              <Route path="forum" element={<Forum />} />
-              <Route path="forum/thread/:id" element={<ForumThread />} />
-              <Route path="library" element={<Library />} />
-              <Route path="library/*" element={<Library />} />
-              <Route path="resources" element={<Resources />} />
-              <Route path="owners" element={<OwnersRoster />} />
-              <Route path="owners/:id" element={<OwnerProfileEnhanced />} />
-              <Route path="map" element={<MapSearch />} />
-              <Route path="partners" element={<Partners />} />
-              <Route path="videos" element={<Videos />} />
-              <Route path="equipment" element={<Equipment />} />
-              <Route path="faqs" element={<FAQs />} />
-              <Route path="profile" element={<UserProfile />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="billing" element={<Billing />} />
-            </Route>
-          </Routes>
-        </AuthProvider>
+        <DarkModeProvider>
+          <AuthProvider>
+            <Toaster position="top-right" />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/"
+                element={<Layout />}
+              >
+                <Route index element={<Navigate to="/dashboard" replace />} />
+                <Route path="dashboard" element={<DashboardRouter />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="calendar" element={<Calendar />} />
+                <Route path="convention" element={<Convention />} />
+                <Route path="brags" element={<Brags />} />
+                <Route path="forum" element={<Forum />} />
+                <Route path="forum/thread/:id" element={<ForumThread />} />
+                <Route path="library" element={<Library />} />
+                <Route path="library/*" element={<Library />} />
+                <Route path="resources" element={<Resources />} />
+                <Route path="owners" element={<OwnersRoster />} />
+                <Route path="owners/:id" element={<OwnerProfileEnhanced />} />
+                <Route path="map" element={<MapSearch />} />
+                <Route path="partners" element={<Partners />} />
+                <Route path="videos" element={<Videos />} />
+                <Route path="equipment" element={<Equipment />} />
+                <Route path="faqs" element={<FAQs />} />
+                <Route path="profile" element={<UserProfile />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="billing" element={<Billing />} />
+              </Route>
+            </Routes>
+          </AuthProvider>
+        </DarkModeProvider>
       </Router>
     </QueryClientProvider>
   );

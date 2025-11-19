@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const dotenv = require('dotenv');
 
 // Load env vars
-dotenv.config({ path: '../.env' });
+dotenv.config({ path: __dirname + '/../.env' });
 
 // Connect to DB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/sign-company-dashboard', {
@@ -23,15 +23,11 @@ const seedAdmin = async () => {
       process.exit(0);
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('admin123', salt);
-
-    // Create admin user
+    // Create admin user (password will be hashed by User model pre-save hook)
     const admin = await User.create({
       name: 'Admin User',
       email: 'admin@signcompany.com',
-      password: hashedPassword,
+      password: 'admin123',
       role: 'admin',
       phone: '555-555-0100',
       company: 'Sign Company HQ',

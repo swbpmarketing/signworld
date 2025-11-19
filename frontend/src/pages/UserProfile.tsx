@@ -88,8 +88,8 @@ const UserProfile = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
             {tabs.map((tab) => (
               <button
@@ -97,8 +97,8 @@ const UserProfile = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex items-center space-x-2 transition-colors duration-200 ${
                   activeTab === tab.id
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 <tab.icon className="h-4 w-4" />
@@ -114,96 +114,96 @@ const UserProfile = () => {
             <div className="space-y-6">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={editForm.name}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-gray-100"
                     />
                   ) : (
                     <div className="mt-1 flex items-center space-x-2">
                       <UserIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm text-gray-900">{user?.name || 'Not provided'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{user?.name || 'Not provided'}</span>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email Address</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
                   {isEditing ? (
                     <input
                       type="email"
                       value={editForm.email}
                       onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-gray-100"
                     />
                   ) : (
                     <div className="mt-1 flex items-center space-x-2">
                       <EnvelopeIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm text-gray-900">{user?.email || 'Not provided'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{user?.email || 'Not provided'}</span>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</label>
                   {isEditing ? (
                     <input
                       type="tel"
                       value={editForm.phone}
                       onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-gray-100"
                     />
                   ) : (
                     <div className="mt-1 flex items-center space-x-2">
                       <PhoneIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm text-gray-900">{editForm.phone || 'Not provided'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{editForm.phone || 'Not provided'}</span>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Location</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={editForm.location}
                       onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-gray-100"
                     />
                   ) : (
                     <div className="mt-1 flex items-center space-x-2">
                       <MapPinIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm text-gray-900">{editForm.location || 'Not provided'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{editForm.location || 'Not provided'}</span>
                     </div>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Bio</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Bio</label>
                 {isEditing ? (
                   <textarea
                     rows={4}
                     value={editForm.bio}
                     onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm dark:bg-gray-700 dark:text-gray-100"
                     placeholder="Tell us about yourself..."
                   />
                 ) : (
-                  <div className="mt-1 text-sm text-gray-900">
+                  <div className="mt-1 text-sm text-gray-900 dark:text-gray-100">
                     {editForm.bio || 'No bio provided yet.'}
                   </div>
                 )}
               </div>
 
               {isEditing && (
-                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleCancel}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                   >
                     <XMarkIcon className="h-4 w-4 mr-2" />
                     Cancel
@@ -222,12 +222,12 @@ const UserProfile = () => {
 
           {activeTab === 'security' && (
             <div className="space-y-6">
-              <div className="bg-gray-50 rounded-lg p-6">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
                 <div className="flex items-center space-x-3">
-                  <KeyIcon className="h-6 w-6 text-primary-600" />
-                  <h3 className="text-lg font-medium text-gray-900">Password & Security</h3>
+                  <KeyIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Password & Security</h3>
                 </div>
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   Manage your password and security settings to keep your account safe.
                 </p>
                 <div className="mt-4">
@@ -237,16 +237,16 @@ const UserProfile = () => {
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-6">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
                 <div className="flex items-center space-x-3">
                   <ShieldCheckIcon className="h-6 w-6 text-green-600" />
-                  <h3 className="text-lg font-medium text-gray-900">Two-Factor Authentication</h3>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Two-Factor Authentication</h3>
                 </div>
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   Add an extra layer of security to your account with two-factor authentication.
                 </p>
                 <div className="mt-4">
-                  <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                  <button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
                     Enable 2FA
                   </button>
                 </div>
@@ -257,11 +257,11 @@ const UserProfile = () => {
           {activeTab === 'notifications' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                  <BellIcon className="h-5 w-5 mr-2 text-primary-600" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                  <BellIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
                   Email Notifications
                 </h3>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                   Choose what updates you want to receive via email.
                 </p>
               </div>
@@ -275,8 +275,8 @@ const UserProfile = () => {
                 ].map((notification) => (
                   <div key={notification.id} className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{notification.label}</p>
-                      <p className="text-sm text-gray-500">{notification.description}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{notification.label}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{notification.description}</p>
                     </div>
                     <button
                       type="button"
@@ -295,30 +295,30 @@ const UserProfile = () => {
           {activeTab === 'settings' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                  <Cog6ToothIcon className="h-5 w-5 mr-2 text-primary-600" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                  <Cog6ToothIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
                   Account Settings
                 </h3>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                   Manage your account preferences and settings.
                 </p>
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Account Status</p>
-                    <p className="text-sm text-gray-500">Your account is active and verified</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Account Status</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Your account is active and verified</p>
                   </div>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
                     Active
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Member Since</p>
-                    <p className="text-sm text-gray-500">{new Date().toLocaleDateString()}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Member Since</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{new Date().toLocaleDateString()}</p>
                   </div>
                   <CalendarIcon className="h-5 w-5 text-gray-400" />
                 </div>
