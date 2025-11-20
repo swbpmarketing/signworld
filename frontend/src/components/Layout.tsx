@@ -24,6 +24,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { useState, useEffect } from "react";
 import AISearchModal from "./AISearchModal";
+import { NotificationPanel } from "./NotificationPanel";
+import { useEventNotifications } from "../hooks/useEventNotifications";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['admin', 'owner', 'vendor'] },
@@ -48,6 +50,17 @@ const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+
+  // Event notifications hook
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    dismissNotification,
+    clearAll,
+  } = useEventNotifications();
 
   // Filter navigation based on user role
   const filteredNavigation = navigation.filter(item =>
@@ -92,12 +105,15 @@ const Layout = () => {
       >
         <div className="flex h-full flex-col bg-white dark:bg-gray-800">
           {/* Logo */}
-          <div className="flex h-16 items-center justify-center px-6 border-b border-gray-100 dark:border-gray-700 bg-primary-600/90 dark:bg-primary-700/90">
+          <div className="flex h-16 items-center justify-center px-6 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-white">
             <img
               src="https://storage.googleapis.com/msgsndr/DecfA7BjYEDxFe8pqRZs/media/688c08634a3ff3102330f5bf.png"
               alt="Sign Company Logo"
-              className="h-10 w-auto object-contain filter brightness-0 invert"
-              style={{ maxWidth: '180px' }}
+              className="h-10 w-auto object-contain"
+              style={{
+                maxWidth: '180px',
+                filter: 'invert(32%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(65%) contrast(110%)'
+              }}
             />
           </div>
 
@@ -217,14 +233,32 @@ const Layout = () => {
                   </button>
 
                   {/* Notifications */}
-                  <button
-                    type="button"
-                    className="relative p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    title="Notifications"
-                  >
-                    <BellIcon className="h-5 w-5" />
-                    <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-primary-500 ring-2 ring-white dark:ring-gray-900"></span>
-                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="relative p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      title="Notifications"
+                      onClick={() => setNotificationPanelOpen(!notificationPanelOpen)}
+                    >
+                      <BellIcon className="h-5 w-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center h-5 w-5 text-xs font-medium text-white bg-primary-500 rounded-full ring-2 ring-white dark:ring-gray-800">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    <NotificationPanel
+                      notifications={notifications}
+                      unreadCount={unreadCount}
+                      isOpen={notificationPanelOpen}
+                      onClose={() => setNotificationPanelOpen(false)}
+                      onMarkAsRead={markAsRead}
+                      onMarkAllAsRead={markAllAsRead}
+                      onDismiss={dismissNotification}
+                      onClearAll={clearAll}
+                    />
+                  </div>
 
                   {/* User Avatar */}
                   <button

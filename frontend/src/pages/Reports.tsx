@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import {
   ChartBarIcon,
   CurrencyDollarIcon,
@@ -86,11 +86,49 @@ const reportSections = [
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('overview');
-  const [dateRange, setDateRange] = useState('last30days');
+  const [dateRange, setDateRange] = useState('last7days');
   const [filters, setFilters] = useState({});
   const [showFiltersModal, setShowFiltersModal] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+
+  // Update timestamp whenever dateRange or filters change
+  useEffect(() => {
+    setLastUpdated(new Date());
+  }, [dateRange, filters, selectedReport]);
+
+  // Format the last updated time
+  const getTimeAgo = (date: Date) => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+
+    if (seconds < 10) return 'Just now';
+    if (seconds < 60) return `${seconds} seconds ago`;
+
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+
+    return date.toLocaleString();
+  };
+
+  // Force re-render every 10 seconds to update "time ago" display
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick(prev => prev + 1);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const ActiveComponent = reportSections.find(section => section.id === selectedReport)?.component || DashboardOverview;
+
+  const handleDateRangeChange = (newDateRange: string) => {
+    setDateRange(newDateRange);
+    const label = dateRangeOptions.find(opt => opt.value === newDateRange)?.label || newDateRange;
+    toast.success(`Date range updated to: ${label}`);
+  };
 
   const handleExportAll = () => {
     toast.loading('Generating complete report...', { id: 'export-all' });
@@ -135,66 +173,62 @@ const Reports = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-8 sm:px-8 sm:py-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                Business Intelligence Reports
-              </h1>
-              <p className="mt-2 text-lg text-primary-100">
-                Comprehensive analytics and insights for your sign business
-              </p>
-            </div>
-            <div className="mt-4 sm:mt-0 flex space-x-3">
-              <button
-                onClick={handleExportAll}
-                className="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition-colors duration-200"
-              >
-                <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-                Export All
-              </button>
-            </div>
+      <div className="bg-blue-50 dark:bg-blue-900 rounded-lg border border-blue-100 dark:border-blue-900/30 p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Business Intelligence Reports
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Comprehensive analytics and insights for your sign business
+            </p>
+          </div>
+          <div className="mt-4 sm:mt-0 flex space-x-3">
+            <button
+              onClick={handleExportAll}
+              className="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 rounded-lg text-sm font-medium text-white transition-colors"
+            >
+              <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+              Export All
+            </button>
           </div>
         </div>
       </div>
 
       {/* Controls Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <CalendarDaysIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-              <select
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-lg"
-              >
-                {dateRangeOptions.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              onClick={() => setShowFiltersModal(true)}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
+            <CalendarDaysIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+            <select
+              value={dateRange}
+              onChange={(e) => handleDateRangeChange(e.target.value)}
+              className="text-sm border-0 bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-0"
             >
-              <FunnelIcon className="h-4 w-4 mr-2" />
-              Filters
-              {Object.keys(filters).length > 0 && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
-                  {Object.keys(filters).length}
-                </span>
-              )}
-            </button>
+              {dateRangeOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Last updated: <span className="font-medium text-gray-900 dark:text-gray-100">Just now</span>
-          </div>
+          <button
+            onClick={() => setShowFiltersModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <FunnelIcon className="h-4 w-4 mr-2" />
+            Filters
+            {Object.keys(filters).length > 0 && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
+                {Object.keys(filters).length}
+              </span>
+            )}
+          </button>
+        </div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          Last updated: <span className="font-medium text-gray-700 dark:text-gray-300">{getTimeAgo(lastUpdated)}</span>
         </div>
       </div>
 
