@@ -10,6 +10,11 @@ import {
   ArrowTrendingDownIcon,
 } from '@heroicons/react/24/outline';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import html2canvas from 'html2canvas';
+import toast from 'react-hot-toast';
 
 const COLORS = ['#1890ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1', '#13c2c2'];
 
@@ -40,14 +45,146 @@ const DashboardOverview = ({ dateRange, filters, onFiltersChange }: DashboardOve
   const projectsByCategory = data?.projectsByCategory || [];
   const performanceMetrics = data?.performanceMetrics || [];
 
-  const exportToPDF = () => {
-    // Implementation for PDF export
-    console.log('Exporting to PDF...');
+  const exportToPDF = async () => {
+    try {
+      toast.loading('Generating PDF...', { id: 'pdf-export' });
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+
+      // Add header
+      pdf.setFontSize(20);
+      pdf.setTextColor(24, 144, 255);
+      pdf.text('Executive Dashboard Report', pageWidth / 2, 20, { align: 'center' });
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(100);
+      pdf.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, 28, { align: 'center' });
+      pdf.text(`Date Range: ${dateRange}`, pageWidth / 2, 34, { align: 'center' });
+
+      // Add KPI Data
+      const kpiTableData = Object.entries(kpiData).map(([key, data]) => {
+        const labels = {
+          totalRevenue: 'Total Revenue',
+          activeProjects: 'Active Projects',
+          customerSatisfaction: 'Customer Satisfaction',
+          avgProjectTime: 'Avg Project Time (days)',
+          newCustomers: 'New Customers',
+          equipmentUtilization: 'Equipment Utilization',
+        };
+
+        const formats = {
+          totalRevenue: '$',
+          customerSatisfaction: '%',
+          equipmentUtilization: '%',
+        };
+
+        return [
+          labels[key],
+          `${formats[key] === '$' ? '$' : ''}${data.value}${formats[key] === '%' ? '%' : ''}`,
+          `${data.change > 0 ? '+' : ''}${data.change}%`,
+          data.trend === 'up' ? '↑' : '↓'
+        ];
+      });
+
+      autoTable(pdf, {
+        startY: 42,
+        head: [['Metric', 'Value', 'Change', 'Trend']],
+        body: kpiTableData,
+        theme: 'grid',
+        headStyles: { fillColor: [24, 144, 255] },
+      });
+
+      // Add Revenue Data
+      if (revenueOverTime.length > 0) {
+        const finalY = (pdf as any).lastAutoTable.finalY || 42;
+
+        pdf.setFontSize(14);
+        pdf.setTextColor(0);
+        pdf.text('Revenue Over Time', 14, finalY + 15);
+
+        const revenueTableData = revenueOverTime.map(item => [
+          item.month,
+          `$${item.revenue.toLocaleString()}`,
+          `$${item.profit.toLocaleString()}`
+        ]);
+
+        autoTable(pdf, {
+          startY: finalY + 20,
+          head: [['Month', 'Revenue', 'Profit']],
+          body: revenueTableData,
+          theme: 'striped',
+          headStyles: { fillColor: [24, 144, 255] },
+        });
+      }
+
+      // Save PDF
+      pdf.save(`dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('PDF exported successfully!', { id: 'pdf-export' });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast.error('Failed to export PDF', { id: 'pdf-export' });
+    }
   };
 
   const exportToExcel = () => {
-    // Implementation for Excel export
-    console.log('Exporting to Excel...');
+    try {
+      toast.loading('Generating Excel file...', { id: 'excel-export' });
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+
+      // KPI Data Sheet
+      const kpiData = Object.entries(kpiData).map(([key, data]) => {
+        const labels = {
+          totalRevenue: 'Total Revenue',
+          activeProjects: 'Active Projects',
+          customerSatisfaction: 'Customer Satisfaction',
+          avgProjectTime: 'Avg Project Time (days)',
+          newCustomers: 'New Customers',
+          equipmentUtilization: 'Equipment Utilization',
+        };
+
+        return {
+          Metric: labels[key],
+          Value: data.value,
+          Change: `${data.change}%`,
+          Trend: data.trend
+        };
+      });
+
+      const ws1 = XLSX.utils.json_to_sheet(kpiData);
+      XLSX.utils.book_append_sheet(wb, ws1, 'KPIs');
+
+      // Revenue Data Sheet
+      if (revenueOverTime.length > 0) {
+        const ws2 = XLSX.utils.json_to_sheet(revenueOverTime);
+        XLSX.utils.book_append_sheet(wb, ws2, 'Revenue Over Time');
+      }
+
+      // Projects by Category Sheet
+      if (projectsByCategory.length > 0) {
+        const ws3 = XLSX.utils.json_to_sheet(projectsByCategory);
+        XLSX.utils.book_append_sheet(wb, ws3, 'Projects by Category');
+      }
+
+      // Performance Metrics Sheet
+      if (performanceMetrics.length > 0) {
+        const ws4 = XLSX.utils.json_to_sheet(performanceMetrics);
+        XLSX.utils.book_append_sheet(wb, ws4, 'Performance Metrics');
+      }
+
+      // Save file
+      XLSX.writeFile(wb, `dashboard-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast.success('Excel file exported successfully!', { id: 'excel-export' });
+    } catch (error) {
+      console.error('Excel export error:', error);
+      toast.error('Failed to export Excel file', { id: 'excel-export' });
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   if (isLoading) {
@@ -105,7 +242,10 @@ const DashboardOverview = ({ dateRange, filters, onFiltersChange }: DashboardOve
               <ArrowDownTrayIcon className="h-4 w-4 mr-1.5" />
               Excel
             </button>
-            <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
               <PrinterIcon className="h-4 w-4 mr-1.5" />
               Print
             </button>

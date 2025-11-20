@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import {
   ChartBarIcon,
   CurrencyDollarIcon,
@@ -11,7 +11,9 @@ import {
   ArrowDownTrayIcon,
   CalendarDaysIcon,
   FunnelIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { Dialog, Transition } from '@headlessui/react';
 import DashboardOverview from '../components/reports/DashboardOverview';
 import RevenueAnalytics from '../components/reports/RevenueAnalytics';
 import ProjectAnalytics from '../components/reports/ProjectAnalytics';
@@ -20,6 +22,8 @@ import EquipmentROI from '../components/reports/EquipmentROI';
 import TeamPerformance from '../components/reports/TeamPerformance';
 import GeographicAnalytics from '../components/reports/GeographicAnalytics';
 import FinancialReports from '../components/reports/FinancialReports';
+import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 
 const reportSections = [
   {
@@ -84,8 +88,37 @@ const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('overview');
   const [dateRange, setDateRange] = useState('last30days');
   const [filters, setFilters] = useState({});
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
 
   const ActiveComponent = reportSections.find(section => section.id === selectedReport)?.component || DashboardOverview;
+
+  const handleExportAll = () => {
+    toast.loading('Generating complete report...', { id: 'export-all' });
+
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // Add a summary sheet
+      const summaryData = [
+        ['Business Intelligence Reports'],
+        ['Generated:', new Date().toLocaleString()],
+        ['Date Range:', dateRange],
+        [],
+        ['Report Sections:'],
+        ...reportSections.map(section => [section.name, section.description])
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, ws, 'Summary');
+
+      // Save file
+      XLSX.writeFile(wb, `complete-business-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast.success('Complete report exported successfully!', { id: 'export-all' });
+    } catch (error) {
+      console.error('Export all error:', error);
+      toast.error('Failed to export complete report', { id: 'export-all' });
+    }
+  };
 
   const dateRangeOptions = [
     { value: 'today', label: 'Today' },
@@ -116,7 +149,10 @@ const Reports = () => {
               </p>
             </div>
             <div className="mt-4 sm:mt-0 flex space-x-3">
-              <button className="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition-colors duration-200">
+              <button
+                onClick={handleExportAll}
+                className="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition-colors duration-200"
+              >
                 <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
                 Export All
               </button>
@@ -143,9 +179,17 @@ const Reports = () => {
                 ))}
               </select>
             </div>
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <button
+              onClick={() => setShowFiltersModal(true)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
               <FunnelIcon className="h-4 w-4 mr-2" />
               Filters
+              {Object.keys(filters).length > 0 && (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
+                  {Object.keys(filters).length}
+                </span>
+              )}
             </button>
           </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -189,13 +233,125 @@ const Reports = () => {
 
         {/* Report Content */}
         <div className="lg:col-span-3">
-          <ActiveComponent 
+          <ActiveComponent
             dateRange={dateRange}
             filters={filters}
             onFiltersChange={setFilters}
           />
         </div>
       </div>
+
+      {/* Filters Modal */}
+      <Transition appear show={showFiltersModal} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setShowFiltersModal(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/25 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl transition-all">
+                  <div className="flex items-center justify-between mb-4">
+                    <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      Report Filters
+                    </Dialog.Title>
+                    <button
+                      onClick={() => setShowFiltersModal(false)}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Category
+                      </label>
+                      <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        <option value="">All Categories</option>
+                        <option value="indoor">Indoor Signs</option>
+                        <option value="outdoor">Outdoor Signs</option>
+                        <option value="vehicle">Vehicle Graphics</option>
+                        <option value="digital">Digital Signage</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Status
+                      </label>
+                      <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        <option value="">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Revenue Range
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="number"
+                          placeholder="Min"
+                          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Max"
+                          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex space-x-3">
+                    <button
+                      onClick={() => {
+                        setFilters({});
+                        toast.success('Filters cleared');
+                      }}
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      Clear All
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowFiltersModal(false);
+                        toast.success('Filters applied');
+                      }}
+                      className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   );
 };
