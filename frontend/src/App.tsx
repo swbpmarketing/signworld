@@ -8,6 +8,7 @@ import Layout from './components/Layout';
 // import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import DashboardRouter from './pages/DashboardRouter';
 import Calendar from './pages/Calendar';
@@ -52,12 +53,12 @@ function App() {
           <AuthProvider>
             <Toaster position="top-right" />
             <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
-              <Route
-                path="/"
-                element={<Layout />}
-              >
-                <Route index element={<Navigate to="/dashboard" replace />} />
+
+              {/* Protected routes with Layout */}
+              <Route element={<Layout />}>
                 <Route path="dashboard" element={<DashboardRouter />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="calendar" element={<Calendar />} />

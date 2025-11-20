@@ -118,6 +118,7 @@ app.use('/api/videos', require('./routes/videos'));
 app.use('/api/equipment', require('./routes/equipment'));
 app.use('/api/faqs', require('./routes/faqs'));
 app.use('/api/search', require('./routes/search'));
+app.use('/api/ai', require('./src/routes/ai'));
 
 // Add API route debugging
 app.use('/api/*', (req, res, next) => {

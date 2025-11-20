@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useDarkMode } from "../context/DarkModeContext";
 import {
@@ -22,8 +22,8 @@ import {
   MoonIcon,
   SunIcon,
 } from "@heroicons/react/24/outline";
-import { useState } from "react";
-import AISearchBox from "./AISearchBox";
+import { useState, useEffect } from "react";
+import AISearchModal from "./AISearchModal";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['admin', 'owner', 'vendor'] },
@@ -47,13 +47,32 @@ const Layout = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
 
   // Filter navigation based on user role
   const filteredNavigation = navigation.filter(item =>
     !user?.role || item.roles.includes(user.role)
   );
 
+  // Keyboard shortcut for search (Ctrl+K or Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchModalOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   console.log("Layout: Rendering with user:", user);
+
+  // Redirect to login if not authenticated
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex">
@@ -124,15 +143,15 @@ const Layout = () => {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen md:ml-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <header className="sticky top-0 z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md">
           <div className="px-6">
-            <div className="flex h-14 items-center justify-between">
+            <div className="flex items-center justify-between h-16">
               {/* Left side - Mobile menu + Breadcrumbs */}
               <div className="flex items-center space-x-4">
                 {/* Mobile menu button */}
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none md:hidden transition-colors"
+                  className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none md:hidden transition-colors"
                   onClick={() => setSidebarOpen(true)}
                 >
                   <span className="sr-only">Open sidebar</span>
@@ -153,10 +172,10 @@ const Layout = () => {
 
                 {/* Breadcrumb Navigation */}
                 <nav className="flex items-center space-x-2 text-sm">
-                  <Link to="/dashboard" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                  <Link to="/dashboard" className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors">
                     <HomeIcon className="h-4 w-4" />
                   </Link>
-                  <span className="text-gray-400 dark:text-gray-600">/</span>
+                  <span className="text-gray-300 dark:text-gray-600">/</span>
                   <span className="font-medium text-gray-900 dark:text-gray-100">
                     {filteredNavigation.find((item) => item.href === location.pathname)
                       ?.name || "Dashboard"}
@@ -165,57 +184,61 @@ const Layout = () => {
               </div>
 
               {/* Right side - Search + Actions */}
-              <div className="flex items-center space-x-3">
-                {/* Search */}
-                <button
-                  type="button"
-                  className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[200px] sm:min-w-[280px]"
-                >
-                  <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  <span className="flex-1 text-left">Search</span>
-                  <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded text-gray-700 dark:text-gray-300">
-                    CTRL K
-                  </kbd>
-                </button>
+              <div className="flex items-center space-x-4">
+                {/* Pill Container for Search to Profile */}
+                <div className="flex items-center space-x-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-full">
+                  {/* Search */}
+                  <button
+                    type="button"
+                    onClick={() => setSearchModalOpen(true)}
+                    className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                  >
+                    <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span className="hidden sm:inline">Search</span>
+                    <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      CTRL K
+                    </kbd>
+                  </button>
 
-                {/* Dark mode toggle */}
-                <button
-                  type="button"
-                  className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                  title={darkMode ? "Light mode" : "Dark mode"}
-                  onClick={toggleDarkMode}
-                >
-                  {darkMode ? (
-                    <SunIcon className="h-5 w-5" />
-                  ) : (
-                    <MoonIcon className="h-5 w-5" />
-                  )}
-                </button>
+                  {/* Dark mode toggle */}
+                  <button
+                    type="button"
+                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    title={darkMode ? "Light mode" : "Dark mode"}
+                    onClick={toggleDarkMode}
+                  >
+                    {darkMode ? (
+                      <SunIcon className="h-5 w-5" />
+                    ) : (
+                      <MoonIcon className="h-5 w-5" />
+                    )}
+                  </button>
 
-                {/* Notifications */}
-                <button
-                  type="button"
-                  className="relative p-2 text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                  title="Notifications"
-                >
-                  <BellIcon className="h-5 w-5" />
-                  <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800"></span>
-                </button>
+                  {/* Notifications */}
+                  <button
+                    type="button"
+                    className="relative p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    title="Notifications"
+                  >
+                    <BellIcon className="h-5 w-5" />
+                    <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-primary-500 ring-2 ring-white dark:ring-gray-900"></span>
+                  </button>
 
-                {/* User Avatar */}
-                <button
-                  type="button"
-                  className="relative"
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                >
-                  <img
-                    className="h-8 w-8 rounded-full object-cover ring-2 ring-gray-200 hover:ring-gray-300 transition-all"
-                    src="https://i.pravatar.cc/150?img=8"
-                    alt={user?.name || "User profile"}
-                  />
-                </button>
+                  {/* User Avatar */}
+                  <button
+                    type="button"
+                    className="relative"
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  >
+                    <img
+                      className="h-8 w-8 rounded-full object-cover"
+                      src="https://i.pravatar.cc/150?img=8"
+                      alt={user?.name || "User profile"}
+                    />
+                  </button>
+                </div>
 
                 {/* User dropdown */}
                 {userMenuOpen && (
@@ -272,6 +295,13 @@ const Layout = () => {
           </div>
         </main>
       </div>
+
+      {/* AI Search Modal */}
+      <AISearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        userRole={user?.role}
+      />
     </div>
   );
 };
