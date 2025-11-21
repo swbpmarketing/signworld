@@ -68,9 +68,9 @@ export default defineConfig({
             return 'vendor-calendar';
           }
 
-          // Chart libraries - large bundle
+          // Chart libraries - bundle with React to avoid forwardRef issues
           if (id.includes('node_modules/recharts')) {
-            return 'vendor-charts';
+            return 'vendor-react';
           }
 
           // Document generation - large bundle
@@ -108,6 +108,6 @@ export default defineConfig({
   },
   assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg'],
   optimizeDeps: {
-    include: ['leaflet']
+    include: ['leaflet', 'react', 'react-dom', 'recharts']
   }
 })
