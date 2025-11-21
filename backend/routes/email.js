@@ -198,6 +198,7 @@ router.post('/test', protect, async (req, res) => {
       });
     }
 
+    // Send test email to the logged-in user
     const result = await emailService.sendWelcomeEmail({
       to: req.user.email,
       name: req.user.name

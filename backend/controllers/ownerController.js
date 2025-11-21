@@ -394,6 +394,144 @@ exports.updateOwner = async (req, res) => {
   }
 };
 
+// @desc    Create new owner (admin only)
+// @route   POST /api/owners
+// @access  Private/Admin
+exports.createOwner = async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      password,
+      phone,
+      company,
+      address,
+      specialties,
+      equipment,
+      yearsInBusiness,
+      sendWelcomeEmail
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide name, email, and password'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'A user with this email already exists'
+      });
+    }
+
+    // Create owner
+    const owner = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password,
+      role: 'owner',
+      phone,
+      company,
+      address,
+      specialties: specialties || [],
+      equipment: equipment || [],
+      yearsInBusiness,
+      isActive: true
+    });
+
+    // Send welcome email if requested
+    if (sendWelcomeEmail) {
+      const emailService = require('../services/emailService');
+      await emailService.sendWelcomeEmail({
+        to: owner.email,
+        name: owner.name
+      });
+    }
+
+    // Return owner without password
+    const ownerData = await User.findById(owner._id).select('-password');
+
+    res.status(201).json({
+      success: true,
+      message: 'Owner created successfully',
+      data: ownerData
+    });
+  } catch (error) {
+    console.error('Create owner error:', error);
+
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: 'A user with this email already exists'
+      });
+    }
+
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        error: messages.join(', ')
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Server Error - Unable to create owner'
+    });
+  }
+};
+
+// @desc    Delete owner (admin only)
+// @route   DELETE /api/owners/:id
+// @access  Private/Admin
+exports.deleteOwner = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid owner ID format',
+      });
+    }
+
+    const owner = await User.findOne({
+      _id: id,
+      role: 'owner'
+    });
+
+    if (!owner) {
+      return res.status(404).json({
+        success: false,
+        error: 'Owner not found',
+      });
+    }
+
+    // Soft delete by setting isActive to false
+    owner.isActive = false;
+    await owner.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Owner deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete owner error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error - Unable to delete owner',
+    });
+  }
+};
+
 // @desc    Get owner statistics
 // @route   GET /api/owners/:id/stats
 // @access  Public

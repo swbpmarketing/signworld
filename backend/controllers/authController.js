@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
+const { sendWelcomeEmail } = require('../utils/emailService');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -18,6 +19,9 @@ exports.register = async (req, res) => {
       });
     }
 
+    // Store plain password for email (before it gets hashed by mongoose)
+    const plainPassword = password;
+
     // Create user
     const user = await User.create({
       name,
@@ -29,6 +33,17 @@ exports.register = async (req, res) => {
       address,
       openDate,
       specialties,
+    });
+
+    // Send welcome email with credentials (non-blocking)
+    sendWelcomeEmail({
+      name: user.name,
+      email: user.email,
+      password: plainPassword,
+      role: user.role,
+    }).catch(err => {
+      console.error('Failed to send welcome email:', err);
+      // Don't fail the registration if email fails
     });
 
     // Create token

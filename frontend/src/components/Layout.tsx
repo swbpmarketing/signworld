@@ -30,6 +30,7 @@ import { useEventNotifications } from "../hooks/useEventNotifications";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['admin', 'owner', 'vendor'] },
   { name: "Reports", href: "/reports", icon: ChartBarIcon, roles: ['admin', 'owner'] },
+  { name: "User Management", href: "/users", icon: UsersIcon, roles: ['admin'] },
   { name: "Calendar", href: "/calendar", icon: CalendarIcon, roles: ['admin', 'owner'] },
   { name: "Convention", href: "/convention", icon: CalendarIcon, roles: ['admin', 'owner'] },
   { name: "Success Stories", href: "/brags", icon: NewspaperIcon, roles: ['admin', 'owner'] },
@@ -37,7 +38,7 @@ const navigation = [
   { name: "Library", href: "/library", icon: FolderIcon, roles: ['admin', 'owner'] },
   { name: "Owners Roster", href: "/owners", icon: UserGroupIcon, roles: ['admin', 'owner'] },
   { name: "Map Search", href: "/map", icon: MapIcon, roles: ['admin', 'owner'] },
-  { name: "Partners", href: "/partners", icon: UsersIcon, roles: ['admin', 'owner', 'vendor'] },
+  { name: "Partners", href: "/partners", icon: UserGroupIcon, roles: ['admin', 'owner', 'vendor'] },
   { name: "Videos", href: "/videos", icon: VideoCameraIcon, roles: ['admin', 'owner'] },
   { name: "Equipment", href: "/equipment", icon: ShoppingBagIcon, roles: ['admin', 'owner'] },
   { name: "FAQs", href: "/faqs", icon: QuestionMarkCircleIcon, roles: ['admin', 'owner', 'vendor'] },

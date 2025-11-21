@@ -3,12 +3,11 @@ import axios from 'axios';
 // Check for injected API URL from GitHub Pages deployment
 const injectedApiUrl = (window as any)?.API_BASE_URL;
 
-// VITE_API_URL should already include /api (e.g., http://localhost:9000/api)
+// In development, use relative /api path which will be proxied by Vite
+// In production, use /api path which will hit the same domain
 const API_BASE_URL = import.meta.env.VITE_API_URL ||
   injectedApiUrl ||
-  (import.meta.env.DEV
-    ? 'http://localhost:9000/api'
-    : '/api');
+  '/api';
 
 // Log the API URL for debugging
 console.log('🔗 API Configuration:', {

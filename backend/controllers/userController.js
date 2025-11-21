@@ -33,6 +33,7 @@ exports.getUsers = async (req, res) => {
     res.status(200).json({
       success: true,
       count,
+      total: count,
       pagination: {
         page: Number(page),
         pages: Math.ceil(count / limit),
@@ -126,7 +127,7 @@ exports.updateUser = async (req, res) => {
 // @access  Private/Admin
 exports.deleteUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findByIdAndDelete(req.params.id);
 
     if (!user) {
       return res.status(404).json({
@@ -134,10 +135,6 @@ exports.deleteUser = async (req, res) => {
         error: 'User not found',
       });
     }
-
-    // Soft delete - just deactivate
-    user.isActive = false;
-    await user.save();
 
     res.status(200).json({
       success: true,

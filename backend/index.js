@@ -5,7 +5,14 @@ const path = require('path');
 const connectDB = require('./config/db');
 
 // Load env vars
-dotenv.config();
+dotenv.config({ path: require('path').join(__dirname, '.env') });
+
+// Debug: Log email configuration
+console.log('Email Configuration Loaded:');
+console.log('EMAIL_HOST:', process.env.EMAIL_HOST);
+console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
+console.log('EMAIL_USER:', process.env.EMAIL_USER);
+console.log('EMAIL_FROM:', process.env.EMAIL_FROM);
 
 // Connect to database
 connectDB();

@@ -30,6 +30,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 const UserProfile = lazy(() => import('./pages/UserProfile'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Billing = lazy(() => import('./pages/Billing'));
+const UserManagement = lazy(() => import('./pages/UserManagement'));
 
 // Loading component for Suspense fallback
 const LoadingFallback = () => (
@@ -72,6 +73,7 @@ function App() {
                 <Route element={<Layout />}>
                   <Route path="dashboard" element={<DashboardRouter />} />
                   <Route path="reports" element={<Reports />} />
+                  <Route path="users" element={<UserManagement />} />
                   <Route path="calendar" element={<Calendar />} />
                   <Route path="convention" element={<Convention />} />
                   <Route path="brags" element={<Brags />} />

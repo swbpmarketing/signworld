@@ -6,7 +6,9 @@ const {
   getOwner,
   getOwnerReviews,
   createOwnerReview,
+  createOwner,
   updateOwner,
+  deleteOwner,
   getOwnerStats
 } = require('../controllers/ownerController');
 
@@ -19,5 +21,9 @@ router.get('/:id/stats', getOwnerStats);
 // Protected routes
 router.post('/:id/reviews', protect, createOwnerReview);
 router.put('/:id', protect, updateOwner);
+
+// Admin only routes
+router.post('/', protect, authorize('admin'), createOwner);
+router.delete('/:id', protect, authorize('admin'), deleteOwner);
 
 module.exports = router;

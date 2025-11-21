@@ -209,3 +209,43 @@ export const getRecommendedOwners = async (
     throw error;
   }
 };
+
+// Create new owner (admin only)
+export const createOwner = async (ownerData: {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  company?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  };
+  specialties?: string[];
+  equipment?: string[];
+  yearsInBusiness?: number;
+  sendWelcomeEmail?: boolean;
+}): Promise<Owner> => {
+  try {
+    const response = await api.post('/owners', ownerData);
+    return response.data.data || response.data;
+  } catch (error: any) {
+    console.error('Error creating owner:', error);
+    const errorMessage = error.response?.data?.error || error.message || 'Failed to create owner';
+    throw new Error(errorMessage);
+  }
+};
+
+// Delete owner (admin only)
+export const deleteOwner = async (ownerId: string): Promise<void> => {
+  try {
+    await api.delete(`/owners/${ownerId}`);
+  } catch (error: any) {
+    console.error('Error deleting owner:', error);
+    const errorMessage = error.response?.data?.error || error.message || 'Failed to delete owner';
+    throw new Error(errorMessage);
+  }
+};

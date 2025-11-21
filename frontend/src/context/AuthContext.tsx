@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../config/axios';
 import { useNavigate } from 'react-router-dom';
 
 interface User {
@@ -34,16 +34,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Set axios defaults
-  axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-  console.log('AuthContext: API URL set to', axios.defaults.baseURL);
-  
   useEffect(() => {
     console.log('AuthContext: Checking for existing token');
     const token = localStorage.getItem('token');
     if (token) {
       console.log('AuthContext: Token found, attempting to fetch user');
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       // Verify token and get user info
       fetchUser();
     } else {
@@ -55,13 +50,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchUser = async () => {
     try {
       console.log('AuthContext: Fetching user data');
-      const response = await axios.get('/auth/me');
+      const response = await api.get('/auth/me');
       console.log('AuthContext: User data received', response.data);
       setUser(response.data.data);
     } catch (error: any) {
       console.error('AuthContext: Error fetching user', error.response?.status, error.message);
       localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
       // Don't navigate to login here - let the app render normally
     } finally {
       setLoading(false);
@@ -70,12 +64,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post('/auth/login', { email, password });
+      const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
-      
+
       localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
+
       setUser(user);
       navigate('/dashboard');
     } catch (error: any) {
@@ -85,7 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
     navigate('/login');
   };

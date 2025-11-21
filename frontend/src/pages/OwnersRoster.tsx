@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getOwners } from '../services/ownerService';
 import type { Owner } from '../services/ownerService';
+import { useAuth } from '../context/AuthContext';
+import AddOwnerModal from '../components/AddOwnerModal';
 import {
   UserGroupIcon,
   MagnifyingGlassIcon,
@@ -19,6 +21,7 @@ import {
   ChevronUpIcon,
   Squares2X2Icon,
   ListBulletIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 
@@ -157,15 +160,17 @@ const specialtyFilters = [
 ];
 
 const OwnersRoster = () => {
+  const { isAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTerritory, setSelectedTerritory] = useState('All Territories');
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Fetch owners from API
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['owners', page, searchQuery, selectedTerritory, selectedSpecialties],
     queryFn: async () => {
       try {
@@ -288,13 +293,31 @@ const OwnersRoster = () => {
                 Connect with Sign Company franchise owners across the country
               </p>
             </div>
-            <button className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200">
-              <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-              Export Directory
-            </button>
+            <div className="flex gap-2 mt-4 sm:mt-0">
+              {isAdmin && (
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Add Owner
+                </button>
+              )}
+              <button className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200">
+                <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+                Export Directory
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Add Owner Modal */}
+      <AddOwnerModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => refetch()}
+      />
 
       {/* Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

@@ -1,10 +1,18 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Create Brevo SMTP transporter
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || 'smtp-relay.brevo.com',
+  port: process.env.EMAIL_PORT || 587,
+  secure: false, // Use TLS
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 
 // Default sender email
-const DEFAULT_FROM = process.env.EMAIL_FROM || 'SignWorld <noreply@signworld.com>';
+const DEFAULT_FROM = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'SignWorld <noreply@signworld.com>';
 
 class EmailService {
   /**
@@ -12,20 +20,15 @@ class EmailService {
    */
   async sendWelcomeEmail({ to, name }) {
     try {
-      const { data, error } = await resend.emails.send({
+      const info = await transporter.sendMail({
         from: DEFAULT_FROM,
         to,
         subject: 'Welcome to SignWorld Dashboard',
         html: this.getWelcomeTemplate(name),
       });
 
-      if (error) {
-        console.error('Error sending welcome email:', error);
-        throw error;
-      }
-
-      console.log('Welcome email sent successfully:', data);
-      return { success: true, data };
+      console.log('Welcome email sent successfully:', info.messageId);
+      return { success: true, data: info };
     } catch (error) {
       console.error('Failed to send welcome email:', error);
       return { success: false, error: error.message };
@@ -37,20 +40,15 @@ class EmailService {
    */
   async sendEventReminder({ to, name, event, reminderTime }) {
     try {
-      const { data, error } = await resend.emails.send({
+      const info = await transporter.sendMail({
         from: DEFAULT_FROM,
         to,
         subject: `Reminder: ${event.title} - ${reminderTime}`,
         html: this.getEventReminderTemplate(name, event, reminderTime),
       });
 
-      if (error) {
-        console.error('Error sending event reminder:', error);
-        throw error;
-      }
-
-      console.log('Event reminder sent successfully:', data);
-      return { success: true, data };
+      console.log('Event reminder sent successfully:', info.messageId);
+      return { success: true, data: info };
     } catch (error) {
       console.error('Failed to send event reminder:', error);
       return { success: false, error: error.message };
@@ -64,7 +62,7 @@ class EmailService {
     try {
       const adminEmail = process.env.ADMIN_EMAIL || 'admin@signworld.com';
 
-      const { data, error } = await resend.emails.send({
+      const info = await transporter.sendMail({
         from: DEFAULT_FROM,
         to: adminEmail,
         replyTo: email,
@@ -72,13 +70,8 @@ class EmailService {
         html: this.getContactFormTemplate(name, email, message),
       });
 
-      if (error) {
-        console.error('Error sending contact form email:', error);
-        throw error;
-      }
-
-      console.log('Contact form email sent successfully:', data);
-      return { success: true, data };
+      console.log('Contact form email sent successfully:', info.messageId);
+      return { success: true, data: info };
     } catch (error) {
       console.error('Failed to send contact form email:', error);
       return { success: false, error: error.message };
@@ -92,20 +85,15 @@ class EmailService {
     try {
       const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
-      const { data, error } = await resend.emails.send({
+      const info = await transporter.sendMail({
         from: DEFAULT_FROM,
         to,
         subject: 'Password Reset Request - SignWorld Dashboard',
         html: this.getPasswordResetTemplate(name, resetUrl),
       });
 
-      if (error) {
-        console.error('Error sending password reset email:', error);
-        throw error;
-      }
-
-      console.log('Password reset email sent successfully:', data);
-      return { success: true, data };
+      console.log('Password reset email sent successfully:', info.messageId);
+      return { success: true, data: info };
     } catch (error) {
       console.error('Failed to send password reset email:', error);
       return { success: false, error: error.message };
@@ -119,20 +107,15 @@ class EmailService {
     try {
       const threadUrl = `${process.env.CLIENT_URL}/forum/thread/${thread._id}`;
 
-      const { data, error } = await resend.emails.send({
+      const info = await transporter.sendMail({
         from: DEFAULT_FROM,
         to,
         subject: `New reply in: ${thread.title}`,
         html: this.getForumNotificationTemplate(name, thread, post, threadUrl),
       });
 
-      if (error) {
-        console.error('Error sending forum notification:', error);
-        throw error;
-      }
-
-      console.log('Forum notification sent successfully:', data);
-      return { success: true, data };
+      console.log('Forum notification sent successfully:', info.messageId);
+      return { success: true, data: info };
     } catch (error) {
       console.error('Failed to send forum notification:', error);
       return { success: false, error: error.message };
