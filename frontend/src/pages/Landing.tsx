@@ -18,6 +18,7 @@ import {
   ClockIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import emailService from '../services/emailService';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -46,12 +47,20 @@ const Landing = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    setTimeout(() => {
+    try {
+      await emailService.sendContactForm({
+        name: contactForm.name,
+        email: contactForm.email,
+        message: contactForm.subject ? `${contactForm.subject}\n\n${contactForm.message}` : contactForm.message
+      });
+
       toast.success('Thank you for contacting us! We\'ll get back to you soon.');
       setContactForm({ name: '', email: '', subject: '', message: '' });
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send message. Please try again.');
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
