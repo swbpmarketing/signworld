@@ -32,76 +32,52 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true, // Enable sourcemaps for debugging production errors
+    sourcemap: true,
     minify: 'terser',
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Core React libraries
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
-            return 'vendor-react';
-          }
-
-          // Router and state management
-          if (id.includes('node_modules/react-router-dom') || id.includes('node_modules/zustand')) {
-            return 'vendor-router';
-          }
-
-          // Data fetching and forms
-          if (id.includes('node_modules/@tanstack/react-query') ||
-              id.includes('node_modules/axios') ||
-              id.includes('node_modules/react-hook-form')) {
-            return 'vendor-data';
-          }
-
-          // Map libraries - large bundle
-          if (id.includes('node_modules/leaflet') ||
-              id.includes('node_modules/react-leaflet') ||
-              id.includes('node_modules/@react-google-maps')) {
-            return 'vendor-maps';
-          }
-
-          // Calendar libraries - large bundle
-          if (id.includes('node_modules/@fullcalendar') ||
-              id.includes('node_modules/date-fns')) {
-            return 'vendor-calendar';
-          }
-
-          // Chart libraries - bundle with React to avoid forwardRef issues
-          if (id.includes('node_modules/recharts')) {
-            return 'vendor-react';
-          }
-
-          // Document generation - large bundle
-          if (id.includes('node_modules/jspdf') ||
-              id.includes('node_modules/html2canvas') ||
-              id.includes('node_modules/xlsx')) {
-            return 'vendor-documents';
-          }
-
-          // Rich text editor - large bundle
-          if (id.includes('node_modules/react-quill') ||
-              id.includes('node_modules/quill')) {
-            return 'vendor-editor';
-          }
-
-          // Animation libraries
-          if (id.includes('node_modules/framer-motion')) {
-            return 'vendor-animation';
-          }
-
-          // UI libraries
-          if (id.includes('node_modules/@headlessui') ||
-              id.includes('node_modules/@heroicons') ||
-              id.includes('node_modules/lucide-react')) {
-            return 'vendor-ui';
-          }
-
-          // Other vendor libraries
-          if (id.includes('node_modules')) {
-            return 'vendor-misc';
-          }
+        manualChunks: {
+          // Bundle all React-related libraries together to prevent multiple instances
+          'vendor-react': [
+            'react',
+            'react-dom',
+            'react-router-dom',
+            'recharts',
+            '@tanstack/react-query',
+            'react-hook-form',
+            'react-hot-toast',
+            '@headlessui/react',
+            '@heroicons/react',
+            'lucide-react',
+            'framer-motion'
+          ],
+          // Map libraries
+          'vendor-maps': [
+            'leaflet',
+            'react-leaflet',
+            '@react-google-maps/api'
+          ],
+          // Calendar libraries
+          'vendor-calendar': [
+            '@fullcalendar/core',
+            '@fullcalendar/daygrid',
+            '@fullcalendar/interaction',
+            '@fullcalendar/react',
+            '@fullcalendar/timegrid',
+            'date-fns'
+          ],
+          // Document generation
+          'vendor-documents': [
+            'jspdf',
+            'jspdf-autotable',
+            'html2canvas',
+            'xlsx'
+          ],
+          // Editor
+          'vendor-editor': [
+            'react-quill'
+          ]
         }
       }
     }
