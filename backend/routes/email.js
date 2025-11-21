@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const emailService = require('../services/emailService');
-const { auth } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 
 // Rate limiter for email endpoints (prevent spam)
@@ -68,7 +68,7 @@ router.post('/contact', emailLimiter, async (req, res) => {
  * @desc    Send event reminder email
  * @access  Private
  */
-router.post('/event-reminder', auth, async (req, res) => {
+router.post('/event-reminder', protect, async (req, res) => {
   try {
     const { eventId, reminderTime } = req.body;
 
@@ -128,7 +128,7 @@ router.post('/event-reminder', auth, async (req, res) => {
  * @desc    Send welcome email to new users (admin only)
  * @access  Private/Admin
  */
-router.post('/welcome', auth, async (req, res) => {
+router.post('/welcome', protect, async (req, res) => {
   try {
     const { userId } = req.body;
 
@@ -188,7 +188,7 @@ router.post('/welcome', auth, async (req, res) => {
  * @desc    Test email configuration (admin only)
  * @access  Private/Admin
  */
-router.post('/test', auth, async (req, res) => {
+router.post('/test', protect, async (req, res) => {
   try {
     // Check if user is admin
     if (req.user.role !== 'admin') {
