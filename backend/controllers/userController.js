@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { sendWelcomeEmail } = require('../utils/emailService');
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -79,7 +80,24 @@ exports.getUser = async (req, res) => {
 // @access  Private/Admin
 exports.createUser = async (req, res) => {
   try {
+    // Store the plain text password before it gets hashed
+    const plainPassword = req.body.password;
+
     const user = await User.create(req.body);
+
+    // Send welcome email with credentials
+    try {
+      await sendWelcomeEmail({
+        name: user.name,
+        email: user.email,
+        password: plainPassword,
+        role: user.role,
+      });
+      console.log('Welcome email sent successfully to:', user.email);
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Don't fail the request if email fails
+    }
 
     res.status(201).json({
       success: true,
