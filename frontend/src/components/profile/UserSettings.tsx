@@ -19,6 +19,7 @@ import {
   CheckIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import CustomSelect from '../CustomSelect';
 
 interface UserSettingsFormData {
   name: string;
@@ -337,17 +338,17 @@ const UserSettings = () => {
             <LanguageIcon className="h-5 w-5 inline mr-2" />
             Language
           </label>
-          <select
+          <CustomSelect
             value={formData.language}
-            onChange={(e) => handleInputChange('language', e.target.value)}
+            onChange={(value) => handleInputChange('language', value)}
             disabled={!isEditing}
-            className="w-full py-3 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
-          >
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-          </select>
+            options={[
+              { value: 'en', label: 'English' },
+              { value: 'es', label: 'Spanish' },
+              { value: 'fr', label: 'French' },
+              { value: 'de', label: 'German' },
+            ]}
+          />
         </div>
 
         <div>
@@ -355,17 +356,17 @@ const UserSettings = () => {
             <GlobeAltIcon className="h-5 w-5 inline mr-2" />
             Timezone
           </label>
-          <select
+          <CustomSelect
             value={formData.timezone}
-            onChange={(e) => handleInputChange('timezone', e.target.value)}
+            onChange={(value) => handleInputChange('timezone', value)}
             disabled={!isEditing}
-            className="w-full py-3 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
-          >
-            <option value="America/New_York">Eastern Time (ET)</option>
-            <option value="America/Chicago">Central Time (CT)</option>
-            <option value="America/Denver">Mountain Time (MT)</option>
-            <option value="America/Los_Angeles">Pacific Time (PT)</option>
-          </select>
+            options={[
+              { value: 'America/New_York', label: 'Eastern Time (ET)' },
+              { value: 'America/Chicago', label: 'Central Time (CT)' },
+              { value: 'America/Denver', label: 'Mountain Time (MT)' },
+              { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+            ]}
+          />
         </div>
       </div>
     </div>

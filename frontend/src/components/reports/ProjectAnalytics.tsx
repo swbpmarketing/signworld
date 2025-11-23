@@ -68,14 +68,14 @@ const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ dateRange, filters,
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <div className="flex items-center">
-              <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+              <div className={`p-3 rounded-lg ${stat.bgColor} dark:bg-opacity-20`}>
+                <stat.icon className={`h-6 w-6 ${stat.color} dark:opacity-90`} />
               </div>
               <div className="ml-4">
-                <p className="text-sm text-gray-600">{stat.label}</p>
-                <p className="mt-1 text-2xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
               </div>
             </div>
           </div>
@@ -83,21 +83,21 @@ const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ dateRange, filters,
       </div>
 
       {/* Project Status Overview */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Project Status Overview</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Project Status Overview</h3>
         <div className="space-y-4">
           {projectStatusData.map((status, index) => (
             <div key={index}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">{status.status}</span>
-                <span className="text-sm font-semibold text-gray-900">{status.count} projects</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{status.status}</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{status.count} projects</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full ${
-                    status.status === 'Completed' ? 'bg-green-600' :
-                    status.status === 'In Progress' ? 'bg-blue-600' :
-                    'bg-yellow-600'
+                    status.status === 'Completed' ? 'bg-green-600 dark:bg-green-500' :
+                    status.status === 'In Progress' ? 'bg-blue-600 dark:bg-blue-500' :
+                    'bg-yellow-600 dark:bg-yellow-500'
                   }`}
                   style={{ width: `${status.percentage}%` }}
                 />
@@ -108,15 +108,22 @@ const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ dateRange, filters,
       </div>
 
       {/* Project Completion Trend */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Project Completion Trend</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Project Completion Trend</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={completionTrendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="week" />
-              <YAxis />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+              <XAxis dataKey="week" className="text-gray-600 dark:text-gray-400" />
+              <YAxis className="text-gray-600 dark:text-gray-400" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--tooltip-bg, #fff)',
+                  border: '1px solid var(--tooltip-border, #e5e7eb)',
+                  borderRadius: '0.5rem',
+                  color: 'var(--tooltip-text, #111827)'
+                }}
+              />
               <Legend />
               <Bar dataKey="completed" fill="#10b981" name="Completed" />
               <Bar dataKey="started" fill="#3b82f6" name="Started" />
@@ -126,18 +133,18 @@ const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ dateRange, filters,
       </div>
 
       {/* Project Types and Duration */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Average Project Duration by Type</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Average Project Duration by Type</h3>
         <div className="space-y-4">
           {projectTypeData.map((type, index) => (
-            <div key={index} className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg">
+            <div key={index} className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
               <div>
-                <p className="text-sm font-medium text-gray-900">{type.type}</p>
-                <p className="text-xs text-gray-500">{type.count} projects</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{type.type}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{type.count} projects</p>
               </div>
               <div className="text-right">
-                <p className="text-lg font-semibold text-gray-900">{type.avgDays} days</p>
-                <p className="text-xs text-gray-500">avg. duration</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{type.avgDays} days</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">avg. duration</p>
               </div>
             </div>
           ))}

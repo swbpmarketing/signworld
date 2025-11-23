@@ -14,6 +14,7 @@ import {
   PencilIcon,
 } from '@heroicons/react/24/outline';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const UserProfile = () => {
   const { user } = useAuth();
@@ -110,7 +111,15 @@ const UserProfile = () => {
 
         {/* Tab Content */}
         <div className="p-6">
-          {activeTab === 'profile' && (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+            >
+              {activeTab === 'profile' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
@@ -334,6 +343,8 @@ const UserProfile = () => {
               </div>
             </div>
           )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </div>

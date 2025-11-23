@@ -206,26 +206,26 @@ const FAQs = () => {
       </div>
 
       {/* Search Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <div className="max-w-3xl mx-auto">
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search for answers..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           <div className="mt-4">
-            <p className="text-sm text-gray-600 mb-2">Popular searches:</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Popular searches:</p>
             <div className="flex flex-wrap gap-2">
               {popularSearches.map((search) => (
                 <button
                   key={search}
                   onClick={() => setSearchQuery(search)}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 >
                   {search}
                 </button>
@@ -237,26 +237,26 @@ const FAQs = () => {
 
       {/* Quick Help Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow cursor-pointer">
-          <PhoneIcon className="h-10 w-10 text-primary-600 mb-4" />
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Call Support</h3>
-          <p className="text-gray-600 text-xs sm:text-sm mb-4">Speak directly with our support team</p>
-          <p className="text-primary-600 font-medium">1-800-SIGNWORLD</p>
-          <p className="text-xs text-gray-500 mt-1">Mon-Fri 8AM-6PM EST</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow cursor-pointer">
+          <PhoneIcon className="h-10 w-10 text-primary-600 dark:text-primary-500 mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Call Support</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-4">Speak directly with our support team</p>
+          <p className="text-primary-600 dark:text-primary-400 font-medium">1-800-SIGNWORLD</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Mon-Fri 8AM-6PM EST</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow cursor-pointer">
-          <EnvelopeIcon className="h-10 w-10 text-primary-600 mb-4" />
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Email Support</h3>
-          <p className="text-gray-600 text-xs sm:text-sm mb-4">Get help via email</p>
-          <p className="text-primary-600 font-medium">support@signcompany.com</p>
-          <p className="text-xs text-gray-500 mt-1">Response within 24 hours</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow cursor-pointer">
+          <EnvelopeIcon className="h-10 w-10 text-primary-600 dark:text-primary-500 mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Email Support</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-4">Get help via email</p>
+          <p className="text-primary-600 dark:text-primary-400 font-medium">support@signcompany.com</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Response within 24 hours</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow cursor-pointer">
-          <DocumentTextIcon className="h-10 w-10 text-primary-600 mb-4" />
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Documentation</h3>
-          <p className="text-gray-600 text-xs sm:text-sm mb-4">Browse our resource library</p>
-          <p className="text-primary-600 font-medium">View Resources →</p>
-          <p className="text-xs text-gray-500 mt-1">Guides, templates & more</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow cursor-pointer">
+          <DocumentTextIcon className="h-10 w-10 text-primary-600 dark:text-primary-500 mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Documentation</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-4">Browse our resource library</p>
+          <p className="text-primary-600 dark:text-primary-400 font-medium">View Resources →</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Guides, templates & more</p>
         </div>
       </div>
 
@@ -264,9 +264,9 @@ const FAQs = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Categories Sidebar */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 sticky top-20">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 sticky top-20">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Categories</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
               <nav className="space-y-2">
                 {categories.map((category) => (
                   <button
@@ -274,18 +274,18 @@ const FAQs = () => {
                     onClick={() => setSelectedCategory(category.name)}
                     className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
                       selectedCategory === category.name
-                        ? 'bg-primary-50 text-primary-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
                     }`}
                   >
                     <div className="flex items-center">
                       <category.icon className={`h-5 w-5 mr-3 ${
-                        selectedCategory === category.name ? 'text-primary-600' : 'text-gray-400'
+                        selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
                       }`} />
                       <span>{category.name}</span>
                     </div>
                     <span className={`text-sm ${
-                      selectedCategory === category.name ? 'text-primary-600' : 'text-gray-400'
+                      selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
                     }`}>
                       {category.count}
                     </span>
@@ -300,8 +300,8 @@ const FAQs = () => {
         <div className="lg:col-span-3">
           {searchQuery && (
             <div className="mb-6">
-              <p className="text-sm text-gray-600">
-                Showing {filteredFAQs.length} results for "<span className="font-medium text-gray-900">{searchQuery}</span>"
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Showing {filteredFAQs.length} results for "<span className="font-medium text-gray-900 dark:text-gray-100">{searchQuery}</span>"
               </p>
             </div>
           )}
@@ -310,7 +310,7 @@ const FAQs = () => {
             {filteredFAQs.map((faq) => (
               <div
                 key={faq.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-200"
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all duration-200"
               >
                 <button
                   onClick={() => toggleFAQ(faq.id)}
@@ -318,11 +318,11 @@ const FAQs = () => {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 pr-4">
-                      <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 pr-4">
+                      <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 pr-4">
                         {faq.question}
                       </h4>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                           {faq.category}
                         </span>
                         <span>{faq.views.toLocaleString()} views</span>
@@ -331,26 +331,26 @@ const FAQs = () => {
                     <div className={`transform transition-transform duration-200 ${
                       expandedFAQs.includes(faq.id) ? 'rotate-180' : ''
                     }`}>
-                      <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                      <ChevronDownIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     </div>
                   </div>
                 </button>
 
                 {expandedFAQs.includes(faq.id) && (
-                  <div className="px-6 pb-6 border-t border-gray-100">
+                  <div className="px-6 pb-6 border-t border-gray-100 dark:border-gray-700">
                     <div className="pt-4">
-                      <p className="text-gray-600 whitespace-pre-line">{faq.answer}</p>
-                      
+                      <p className="text-gray-600 dark:text-gray-400 whitespace-pre-line">{faq.answer}</p>
+
                       <div className="mt-6 flex items-center justify-between">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-                          <p className="text-sm text-gray-600">Was this helpful?</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Was this helpful?</p>
                           <div className="flex items-center gap-4">
                             <button
                               onClick={() => handleHelpfulVote(faq.id, 'helpful')}
                               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                                 helpfulVotes[faq.id] === 'helpful'
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'text-gray-600 hover:bg-gray-100'
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                               }`}
                             >
                               <CheckCircleIcon className="h-4 w-4" />
@@ -360,15 +360,15 @@ const FAQs = () => {
                               onClick={() => handleHelpfulVote(faq.id, 'not-helpful')}
                               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                                 helpfulVotes[faq.id] === 'not-helpful'
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'text-gray-600 hover:bg-gray-100'
+                                  ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                               }`}
                             >
                               No ({faq.notHelpful + (helpfulVotes[faq.id] === 'not-helpful' ? 1 : 0)})
                             </button>
                           </div>
                         </div>
-                        <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                        <button className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
                           Contact Support →
                         </button>
                       </div>
@@ -381,8 +381,8 @@ const FAQs = () => {
 
           {filteredFAQs.length === 0 && (
             <div className="text-center py-12">
-              <QuestionMarkCircleIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 mb-4">No FAQs found matching your search</p>
+              <QuestionMarkCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400 mb-4">No FAQs found matching your search</p>
               <button className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors">
                 Contact Support
               </button>

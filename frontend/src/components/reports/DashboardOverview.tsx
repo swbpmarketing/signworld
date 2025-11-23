@@ -211,42 +211,42 @@ const DashboardOverview = ({ dateRange, filters }: DashboardOverviewProps) => {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 min-w-0 w-full">
       {/* Header with Export Options */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Executive Dashboard</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Executive Dashboard</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Real-time business metrics and performance indicators
           </p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={exportToPDF}
-            className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="inline-flex items-center px-3 sm:px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <ArrowDownTrayIcon className="h-4 w-4 mr-1.5" />
-            PDF
+            <ArrowDownTrayIcon className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">PDF</span>
           </button>
           <button
             onClick={exportToExcel}
-            className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="inline-flex items-center px-3 sm:px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <ArrowDownTrayIcon className="h-4 w-4 mr-1.5" />
-            Excel
+            <ArrowDownTrayIcon className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Excel</span>
           </button>
           <button
             onClick={handlePrint}
-            className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="inline-flex items-center px-3 sm:px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <PrinterIcon className="h-4 w-4 mr-1.5" />
-            Print
+            <PrinterIcon className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Print</span>
           </button>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full min-w-0">
         {Object.entries(kpiData).map(([key, data]) => {
           const labels = {
             totalRevenue: 'Total Revenue',
@@ -264,16 +264,16 @@ const DashboardOverview = ({ dateRange, filters }: DashboardOverviewProps) => {
           };
 
           return (
-            <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-5 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-200 flex flex-col h-full">
-              <div className="flex items-start justify-between mb-3">
-                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{labels[key]}</p>
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+            <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-5 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-200 flex flex-col h-full min-w-0 w-full">
+              <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex-1 min-w-0">{labels[key]}</p>
+                <span className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 ${
                   data.trend === 'up' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                 }`}>
                   {data.trend === 'up' ? '↑' : '↓'} {Math.abs(data.change)}%
                 </span>
               </div>
-              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-auto">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mt-auto">
                 {formats[key] === '$' && '$'}
                 {formats[key] === '$' ? data.value.toLocaleString() : data.value}
                 {formats[key] === '%' && '%'}
@@ -284,23 +284,23 @@ const DashboardOverview = ({ dateRange, filters }: DashboardOverviewProps) => {
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 min-w-0">
         {/* Revenue Trend Chart - Takes 2 columns */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Revenue & Profit Trend</h3>
-            <div className="flex items-center space-x-4 text-sm">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-100 dark:border-gray-700 min-w-0 overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">Revenue & Profit Trend</h3>
+            <div className="flex items-center space-x-3 sm:space-x-4 text-xs sm:text-sm">
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                <div className="w-2.5 sm:w-3 h-2.5 sm:h-3 bg-blue-500 rounded-full mr-1.5 sm:mr-2"></div>
                 <span className="text-gray-600 dark:text-gray-400">Revenue</span>
               </div>
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                <div className="w-2.5 sm:w-3 h-2.5 sm:h-3 bg-green-500 rounded-full mr-1.5 sm:mr-2"></div>
                 <span className="text-gray-600 dark:text-gray-400">Profit</span>
               </div>
             </div>
           </div>
-          <div className="h-72">
+          <div className="h-64 sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueOverTime}>
                 <defs>
@@ -342,9 +342,9 @@ const DashboardOverview = ({ dateRange, filters }: DashboardOverviewProps) => {
         </div>
 
         {/* Projects by Category */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-100 dark:border-gray-700">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Projects by Category</h3>
-          <div className="h-80">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-100 dark:border-gray-700 min-w-0 overflow-hidden">
+          <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Projects by Category</h3>
+          <div className="h-64 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -393,21 +393,21 @@ const DashboardOverview = ({ dateRange, filters }: DashboardOverviewProps) => {
       </div>
 
       {/* Performance Metrics */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-100 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Performance vs Targets</h3>
-          <div className="flex items-center space-x-4 text-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-100 dark:border-gray-700 min-w-0 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
+          <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">Performance vs Targets</h3>
+          <div className="flex items-center space-x-3 sm:space-x-4 text-xs sm:text-sm">
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+              <div className="w-2.5 sm:w-3 h-2.5 sm:h-3 bg-blue-500 rounded-full mr-1.5 sm:mr-2"></div>
               <span className="text-gray-600 dark:text-gray-400">Current</span>
             </div>
             <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+              <div className="w-2.5 sm:w-3 h-2.5 sm:h-3 bg-green-500 rounded-full mr-1.5 sm:mr-2"></div>
               <span className="text-gray-600 dark:text-gray-400">Target</span>
             </div>
           </div>
         </div>
-        <div className="h-72">
+        <div className="h-64 sm:h-72 overflow-x-auto">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={performanceMetrics} layout="horizontal" barGap={8}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />

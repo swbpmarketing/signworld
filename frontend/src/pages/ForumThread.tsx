@@ -21,12 +21,13 @@ import {
   PhotoIcon,
   FaceSmileIcon,
 } from '@heroicons/react/24/outline';
-import { 
-  BookmarkIcon as BookmarkSolidIcon, 
+import {
+  BookmarkIcon as BookmarkSolidIcon,
   HeartIcon as HeartSolidIcon,
   ChevronUpIcon as ChevronUpSolidIcon,
   ChevronDownIcon as ChevronDownSolidIcon,
 } from '@heroicons/react/24/solid';
+import CustomSelect from '../components/CustomSelect';
 
 interface Reply {
   id: number;
@@ -439,15 +440,17 @@ const ForumThread = () => {
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{thread.replies} Replies</h3>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
-            >
-              <option value="oldest">Oldest First</option>
-              <option value="newest">Newest First</option>
-              <option value="popular">Most Popular</option>
-            </select>
+            <div className="w-48">
+              <CustomSelect
+                value={sortBy}
+                onChange={(value) => setSortBy(value as any)}
+                options={[
+                  { value: 'oldest', label: 'Oldest First' },
+                  { value: 'newest', label: 'Newest First' },
+                  { value: 'popular', label: 'Most Popular' },
+                ]}
+              />
+            </div>
           </div>
         </div>
         <div className="p-6 space-y-6">

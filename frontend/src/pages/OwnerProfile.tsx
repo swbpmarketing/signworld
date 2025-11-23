@@ -13,6 +13,7 @@ import {
   ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
+import { AnimatePresence, motion } from 'framer-motion';
 import './OwnerProfile.css';
 
 // Mock data for demonstration
@@ -218,8 +219,16 @@ const OwnerProfile = () => {
 
         {/* Tab Content */}
         <div className="p-6">
-          {/* Overview Tab */}
-          {activeTab === 'overview' && (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+            >
+              {/* Overview Tab */}
+              {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Contact Information */}
               <div>
@@ -414,6 +423,8 @@ const OwnerProfile = () => {
               </div>
             </div>
           )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </div>

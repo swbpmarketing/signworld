@@ -81,33 +81,40 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange, filters,
       {/* Financial Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-2">
-              <stat.icon className={`h-8 w-8 ${stat.positive ? 'text-green-600' : 'text-red-600'}`} />
-              <span className={`text-sm font-medium ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>
+              <stat.icon className={`h-8 w-8 ${stat.positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
+              <span className={`text-sm font-medium ${stat.positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {stat.change}
               </span>
             </div>
-            <p className="text-sm text-gray-600">{stat.label}</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">{stat.value}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</p>
+            <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
           </div>
         ))}
       </div>
 
       {/* Cash Flow Analysis */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Cash Flow Analysis</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Cash Flow Analysis</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={cashFlowData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+              <XAxis dataKey="month" className="text-gray-600 dark:text-gray-400" />
+              <YAxis className="text-gray-600 dark:text-gray-400" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--tooltip-bg, #fff)',
+                  border: '1px solid var(--tooltip-border, #e5e7eb)',
+                  borderRadius: '0.5rem',
+                  color: 'var(--tooltip-text, #111827)'
+                }}
+              />
               <Legend />
-              <Area type="monotone" dataKey="income" stackId="1" stroke="#52c41a" fill="#52c41a" fillOpacity={0.6} name="Income" />
-              <Area type="monotone" dataKey="expenses" stackId="2" stroke="#f5222d" fill="#f5222d" fillOpacity={0.6} name="Expenses" />
-              <Line type="monotone" dataKey="netCash" stroke="#1890ff" strokeWidth={3} name="Net Cash Flow" />
+              <Area type="monotone" dataKey="income" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Income" />
+              <Area type="monotone" dataKey="expenses" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Expenses" />
+              <Line type="monotone" dataKey="netCash" stroke="#3b82f6" strokeWidth={3} name="Net Cash Flow" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -115,29 +122,29 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange, filters,
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Expense Breakdown */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Expense Breakdown</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Expense Breakdown</h3>
           <div className="space-y-4">
             {expenseBreakdown.map((expense, index) => (
               <div key={index}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">{expense.category}</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{expense.category}</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     ${(expense.amount / 1000).toFixed(0)}k ({expense.percentage}%)
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
-                    className="bg-blue-600 h-2 rounded-full"
+                    className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full"
                     style={{ width: `${expense.percentage}%` }}
                   />
                 </div>
               </div>
             ))}
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-700">Total Expenses</span>
-                <span className="text-sm font-bold text-gray-900">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Expenses</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
                   ${(expenseBreakdown.reduce((sum, exp) => sum + exp.amount, 0) / 1000).toFixed(0)}k
                 </span>
               </div>
@@ -146,19 +153,26 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange, filters,
         </div>
 
         {/* Profit Margins Trend */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Profit Margins Trend</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Profit Margins Trend</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={profitMargins} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                <XAxis dataKey="month" className="text-gray-600 dark:text-gray-400" />
+                <YAxis className="text-gray-600 dark:text-gray-400" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--tooltip-bg, #fff)',
+                    border: '1px solid var(--tooltip-border, #e5e7eb)',
+                    borderRadius: '0.5rem',
+                    color: 'var(--tooltip-text, #111827)'
+                  }}
+                />
                 <Legend />
-                <Line type="monotone" dataKey="gross" stroke="#52c41a" strokeWidth={2} name="Gross Margin %" />
-                <Line type="monotone" dataKey="operating" stroke="#1890ff" strokeWidth={2} name="Operating Margin %" />
-                <Line type="monotone" dataKey="net" stroke="#722ed1" strokeWidth={2} name="Net Margin %" />
+                <Line type="monotone" dataKey="gross" stroke="#10b981" strokeWidth={2} name="Gross Margin %" />
+                <Line type="monotone" dataKey="operating" stroke="#3b82f6" strokeWidth={2} name="Operating Margin %" />
+                <Line type="monotone" dataKey="net" stroke="#8b5cf6" strokeWidth={2} name="Net Margin %" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -166,74 +180,74 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange, filters,
       </div>
 
       {/* Financial Summary */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial Summary</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Financial Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <h4 className="text-sm font-medium text-gray-500 uppercase mb-3">Income Statement</h4>
+            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Income Statement</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Revenue</span>
-                <span className="text-sm font-medium text-gray-900">${(financialSummary.totalRevenue / 1000).toFixed(0)}k</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Revenue</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">${(financialSummary.totalRevenue / 1000).toFixed(0)}k</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Cost of Goods Sold</span>
-                <span className="text-sm font-medium text-gray-900">-${((financialSummary.totalRevenue - financialSummary.grossProfit) / 1000).toFixed(0)}k</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Cost of Goods Sold</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">-${((financialSummary.totalRevenue - financialSummary.grossProfit) / 1000).toFixed(0)}k</span>
               </div>
-              <div className="flex justify-between pt-2 border-t">
-                <span className="text-sm font-medium text-gray-700">Gross Profit</span>
-                <span className="text-sm font-bold text-gray-900">${(financialSummary.grossProfit / 1000).toFixed(0)}k</span>
+              <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Gross Profit</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">${(financialSummary.grossProfit / 1000).toFixed(0)}k</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Operating Expenses</span>
-                <span className="text-sm font-medium text-gray-900">-${((financialSummary.grossProfit - financialSummary.netIncome) / 1000).toFixed(0)}k</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Operating Expenses</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">-${((financialSummary.grossProfit - financialSummary.netIncome) / 1000).toFixed(0)}k</span>
               </div>
-              <div className="flex justify-between pt-2 border-t">
-                <span className="text-sm font-medium text-gray-700">Net Income</span>
-                <span className="text-sm font-bold text-green-600">${(financialSummary.netIncome / 1000).toFixed(1)}k</span>
+              <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Net Income</span>
+                <span className="text-sm font-bold text-green-600 dark:text-green-400">${(financialSummary.netIncome / 1000).toFixed(1)}k</span>
               </div>
             </div>
           </div>
-          
+
           <div>
-            <h4 className="text-sm font-medium text-gray-500 uppercase mb-3">Key Metrics</h4>
+            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Key Metrics</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">EBITDA</span>
-                <span className="text-sm font-medium text-gray-900">${(financialSummary.ebitda / 1000).toFixed(0)}k</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">EBITDA</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">${(financialSummary.ebitda / 1000).toFixed(0)}k</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Current Ratio</span>
-                <span className="text-sm font-medium text-gray-900">{financialSummary.currentRatio}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Current Ratio</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{financialSummary.currentRatio}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Debt to Equity</span>
-                <span className="text-sm font-medium text-gray-900">0.45</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Debt to Equity</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">0.45</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">ROE</span>
-                <span className="text-sm font-medium text-gray-900">22.5%</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">ROE</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">22.5%</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">ROA</span>
-                <span className="text-sm font-medium text-gray-900">15.8%</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">ROA</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">15.8%</span>
               </div>
             </div>
           </div>
-          
+
           <div>
-            <h4 className="text-sm font-medium text-gray-500 uppercase mb-3">Quick Actions</h4>
+            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Quick Actions</h4>
             <div className="space-y-2">
-              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
                 Download P&L Statement
               </button>
-              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
                 Export Balance Sheet
               </button>
-              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
                 Generate Tax Report
               </button>
-              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
                 View Audit Trail
               </button>
             </div>

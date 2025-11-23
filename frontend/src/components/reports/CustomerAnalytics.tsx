@@ -76,15 +76,15 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({ dateRange, filter
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">{stat.label}</p>
-                <p className="mt-1 text-2xl font-bold text-gray-900">{stat.value}</p>
-                <p className="mt-1 text-sm text-green-600">{stat.change}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
+                <p className="mt-1 text-sm text-green-600 dark:text-green-400">{stat.change}</p>
               </div>
-              <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+              <div className={`p-3 rounded-lg ${stat.bgColor} dark:bg-opacity-20`}>
+                <stat.icon className={`h-6 w-6 ${stat.color} dark:opacity-90`} />
               </div>
             </div>
           </div>
@@ -92,25 +92,32 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({ dateRange, filter
       </div>
 
       {/* Customer Growth Chart */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Growth</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Customer Growth</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={customerGrowthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+              <XAxis dataKey="month" className="text-gray-600 dark:text-gray-400" />
+              <YAxis className="text-gray-600 dark:text-gray-400" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--tooltip-bg, #fff)',
+                  border: '1px solid var(--tooltip-border, #e5e7eb)',
+                  borderRadius: '0.5rem',
+                  color: 'var(--tooltip-text, #111827)'
+                }}
+              />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="total" 
-                stroke="#1890ff" 
+              <Line
+                type="monotone"
+                dataKey="total"
+                stroke="#3b82f6"
                 strokeWidth={3}
                 name="Total Customers"
-                dot={{ fill: '#1890ff' }}
+                dot={{ fill: '#3b82f6' }}
               />
-              <Bar dataKey="new" fill="#52c41a" name="New Customers" />
+              <Bar dataKey="new" fill="#10b981" name="New Customers" />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -118,8 +125,8 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({ dateRange, filter
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Customer Types */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Distribution</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Customer Distribution</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -137,7 +144,14 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({ dateRange, filter
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--tooltip-bg, #fff)',
+                    border: '1px solid var(--tooltip-border, #e5e7eb)',
+                    borderRadius: '0.5rem',
+                    color: 'var(--tooltip-text, #111827)'
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -145,47 +159,47 @@ const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({ dateRange, filter
             {customerTypeData.map((type, index) => (
               <div key={index} className="flex items-center justify-between text-sm">
                 <div className="flex items-center">
-                  <div 
+                  <div
                     className="w-3 h-3 rounded-full mr-2"
                     style={{ backgroundColor: COLORS[index % COLORS.length] }}
                   />
-                  <span className="text-gray-700">{type.name}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{type.name}</span>
                 </div>
-                <span className="font-medium text-gray-900">{type.count} customers</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">{type.count} customers</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Customer Satisfaction */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Satisfaction</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Customer Satisfaction</h3>
           <div className="space-y-4">
             {satisfactionData.map((rating, index) => (
               <div key={index}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
-                    <span className="text-sm font-medium text-gray-700">{rating.rating}</span>
-                    <span className="ml-2 text-sm text-gray-500">({rating.count})</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{rating.rating}</span>
+                    <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">({rating.count})</span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-900">{rating.percentage}%</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{rating.percentage}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
                     className={`h-2 rounded-full ${
-                      index === 0 ? 'bg-green-600' :
-                      index === 1 ? 'bg-green-500' :
-                      index === 2 ? 'bg-yellow-500' :
-                      index === 3 ? 'bg-orange-500' :
-                      'bg-red-500'
+                      index === 0 ? 'bg-green-600 dark:bg-green-500' :
+                      index === 1 ? 'bg-green-500 dark:bg-green-400' :
+                      index === 2 ? 'bg-yellow-500 dark:bg-yellow-400' :
+                      index === 3 ? 'bg-orange-500 dark:bg-orange-400' :
+                      'bg-red-500 dark:bg-red-400'
                     }`}
                     style={{ width: `${rating.percentage}%` }}
                   />
                 </div>
               </div>
             ))}
-            <div className="mt-6 p-4 bg-green-50 rounded-lg">
-              <p className="text-sm text-green-800">
+            <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
+              <p className="text-sm text-green-800 dark:text-green-400">
                 <span className="font-semibold">89%</span> of customers would recommend Sign Company
               </p>
             </div>

@@ -6,6 +6,7 @@ import CalendarShareLinksCompact from '../components/calendar/CalendarShareLinks
 import CalendarShareSection from '../components/calendar/CalendarShareSection';
 import calendarService, { type CalendarEvent } from '../services/calendarService';
 import toast from 'react-hot-toast';
+import CustomSelect from '../components/CustomSelect';
 
 // Map backend CalendarEvent to frontend Event interface
 interface Event {
@@ -254,31 +255,31 @@ const Calendar = () => {
       )}
 
       {/* Header */}
-      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+        <div className="flex flex-col gap-4">
           <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 dark:from-primary-400 dark:to-primary-600 bg-clip-text text-transparent">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 dark:from-primary-400 dark:to-primary-600 bg-clip-text text-transparent">
               Calendar & Events
             </h2>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Manage your schedule and stay updated with Sign Company events</p>
+            <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">Manage your schedule and stay updated with Sign Company events</p>
           </div>
-          <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
             <CalendarShareLinksCompact
               events={events}
               calendarName="Sign Company Calendar"
-              className="sm:order-last"
+              className="order-last sm:order-first w-full sm:w-auto"
             />
             <button
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 active:from-primary-800 active:to-primary-900 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg text-sm font-medium"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
               Add Event
             </button>
-            <div className="flex justify-center rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-sm">
+            <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-sm">
               <button
                 onClick={() => setViewMode('month')}
-                className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-200 ${
                   viewMode === 'month'
                     ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm'
                     : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -288,7 +289,7 @@ const Calendar = () => {
               </button>
               <button
                 onClick={() => setViewMode('week')}
-                className={`px-4 py-2 text-sm font-medium transition-all duration-200 border-l border-gray-300 dark:border-gray-600 ${
+                className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-200 border-l border-gray-300 dark:border-gray-600 ${
                   viewMode === 'week'
                     ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm'
                     : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -298,7 +299,7 @@ const Calendar = () => {
               </button>
               <button
                 onClick={() => setViewMode('day')}
-                className={`px-4 py-2 text-sm font-medium transition-all duration-200 border-l border-gray-300 dark:border-gray-600 ${
+                className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-200 border-l border-gray-300 dark:border-gray-600 ${
                   viewMode === 'day'
                     ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm'
                     : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -314,40 +315,40 @@ const Calendar = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar View */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-3 sm:p-6 border border-gray-100 dark:border-gray-700">
             {/* Calendar Navigation */}
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {format(currentMonth, 'MMMM yyyy')}
               </h3>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <button
                   onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                  className="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200 hover:shadow-md border border-gray-200 dark:border-gray-600"
+                  className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600"
                 >
-                  <ChevronLeftIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                  <ChevronLeftIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-300" />
                 </button>
                 <button
                   onClick={() => setCurrentMonth(new Date())}
-                  className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 active:from-primary-800 active:to-primary-900 rounded-lg transition-all duration-200 shadow-sm"
                 >
                   Today
                 </button>
                 <button
                   onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                  className="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200 hover:shadow-md border border-gray-200 dark:border-gray-600"
+                  className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600"
                 >
-                  <ChevronRightIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                  <ChevronRightIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-300" />
                 </button>
               </div>
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 shadow-inner">
+            <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 rounded-lg sm:rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 shadow-inner">
               {/* Week days */}
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <div key={day} className="bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-1 sm:px-2 py-3 sm:py-4 text-center border-b-2 border-gray-300 dark:border-gray-600">
-                  <span className="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">{day}</span>
+                <div key={day} className="bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-0.5 sm:px-2 py-2 sm:py-3 text-center border-b-2 border-gray-300 dark:border-gray-600">
+                  <span className="text-[10px] sm:text-xs md:text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">{day}</span>
                 </div>
               ))}
 
@@ -363,20 +364,20 @@ const Calendar = () => {
                     key={idx}
                     onClick={() => setSelectedDate(day)}
                     className={`
-                      bg-white dark:bg-gray-800 p-1 sm:p-2 min-h-[80px] sm:min-h-[110px] cursor-pointer transition-all duration-200 border-r border-b border-gray-100 dark:border-gray-700 last:border-r-0
+                      bg-white dark:bg-gray-800 p-0.5 sm:p-1.5 md:p-2 min-h-[60px] sm:min-h-[85px] md:min-h-[110px] cursor-pointer transition-all duration-200 border-r border-b border-gray-100 dark:border-gray-700 last:border-r-0 overflow-hidden
                       ${!isCurrentMonth ? 'text-gray-400 dark:text-gray-600 bg-gray-50/50 dark:bg-gray-900/50' : 'text-gray-900 dark:text-gray-100'}
-                      ${isSelected ? 'ring-2 ring-primary-500 dark:ring-primary-400 bg-primary-50/50 dark:bg-primary-900/20 shadow-md' : 'hover:bg-gray-50 dark:hover:bg-gray-750 hover:shadow-sm'}
+                      ${isSelected ? 'ring-1 sm:ring-2 ring-primary-500 dark:ring-primary-400 bg-primary-50/50 dark:bg-primary-900/20 shadow-sm' : 'hover:bg-gray-50 dark:hover:bg-gray-750'}
                     `}
                   >
                     <div className={`
-                      inline-flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 text-xs sm:text-base rounded-full mb-1 transition-all duration-200
+                      inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 md:w-9 md:h-9 text-[10px] sm:text-xs md:text-base rounded-full mb-0.5 sm:mb-1 transition-all duration-200
                       ${isTodayDate
-                        ? 'bg-gradient-to-br from-primary-600 to-primary-700 dark:from-primary-500 dark:to-primary-600 text-white font-bold shadow-md ring-2 ring-primary-200 dark:ring-primary-800'
+                        ? 'bg-gradient-to-br from-primary-600 to-primary-700 dark:from-primary-500 dark:to-primary-600 text-white font-bold shadow-sm ring-1 sm:ring-2 ring-primary-200 dark:ring-primary-800'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-700 font-medium'}
                     `}>
                       {format(day, 'd')}
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-0.5 sm:space-y-1">
                       {dayEvents.slice(0, 2).map((event) => (
                         <div
                           key={event.id}
@@ -385,16 +386,16 @@ const Calendar = () => {
                             setSelectedEvent(event);
                           }}
                           className={`
-                            text-[10px] sm:text-xs px-1.5 sm:px-2 py-1 rounded-md border cursor-pointer
+                            text-[8px] sm:text-[10px] md:text-xs px-0.5 sm:px-1 md:px-1.5 py-0.5 sm:py-1 rounded border cursor-pointer
                             ${getEventTypeColor(event.type)}
-                            hover:shadow-md transition-all duration-200 transform hover:scale-105
+                            hover:shadow-sm transition-all duration-200
                           `}
                         >
-                          <p className="truncate font-semibold text-[10px] sm:text-xs">{event.title}</p>
+                          <p className="truncate font-semibold">{event.title}</p>
                         </div>
                       ))}
                       {dayEvents.length > 2 && (
-                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 px-1 sm:px-2 font-medium">+{dayEvents.length - 2} more</p>
+                        <p className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 px-0.5 sm:px-1 font-medium">+{dayEvents.length - 2}</p>
                       )}
                     </div>
                   </div>
@@ -674,26 +675,24 @@ const Calendar = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Event Type
-                </label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleFormChange}
-                  required
-                  className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 dark:focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-800 transition-all outline-none"
-                >
-                  <option value="">Select event type</option>
-                  <option value="meeting">Meeting</option>
-                  <option value="training">Training Session</option>
-                  <option value="convention">Convention</option>
-                  <option value="webinar">Webinar</option>
-                  <option value="social">Social Event</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
+              <CustomSelect
+                label="Event Type"
+                value={formData.category}
+                onChange={(value) => {
+                  handleFormChange({ target: { name: 'category', value } } as any);
+                }}
+                options={[
+                  { value: '', label: 'Select event type' },
+                  { value: 'meeting', label: 'Meeting' },
+                  { value: 'training', label: 'Training Session' },
+                  { value: 'convention', label: 'Convention' },
+                  { value: 'webinar', label: 'Webinar' },
+                  { value: 'social', label: 'Social Event' },
+                  { value: 'other', label: 'Other' },
+                ]}
+                placeholder="Select event type"
+                required
+              />
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">

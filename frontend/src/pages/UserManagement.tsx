@@ -10,6 +10,7 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import api from '../config/axios';
+import CustomSelect from '../components/CustomSelect';
 
 interface User {
   _id: string;
@@ -220,30 +221,32 @@ const UserManagement = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-8 sm:px-8 sm:py-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
-                <UsersIcon className="h-8 w-8 mr-3" />
-                User Management
-              </h1>
-              <p className="mt-3 text-lg text-primary-100">
-                Manage all users and their access permissions
-              </p>
+        <div className="px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center flex-wrap gap-2">
+                  <UsersIcon className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0" />
+                  <span>User Management</span>
+                </h1>
+                <p className="mt-2 text-sm sm:text-base md:text-lg text-primary-100">
+                  Manage all users and their access permissions
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-primary-700 bg-white hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-colors whitespace-nowrap flex-shrink-0"
+              >
+                <PlusIcon className="h-5 w-5 sm:mr-2" />
+                <span className="hidden sm:inline">Create User</span>
+              </button>
             </div>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-primary-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-colors"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              Create User
-            </button>
           </div>
         </div>
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4">
         <div className="relative">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
@@ -251,7 +254,7 @@ const UserManagement = () => {
             placeholder="Search by name or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+            className="w-full pl-10 pr-4 py-2.5 sm:py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
           />
         </div>
       </div>
@@ -272,34 +275,102 @@ const UserManagement = () => {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3 p-4">
+              {users.map((user) => (
+                <div
+                  key={user._id}
+                  className={`
+                    bg-white dark:bg-gray-800 rounded-lg border-2 p-4 transition-all
+                    ${selectedUsers.includes(user._id)
+                      ? 'border-primary-500 dark:border-primary-400 bg-primary-50/50 dark:bg-primary-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    }
+                  `}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 cursor-pointer flex-shrink-0"
+                      checked={selectedUsers.includes(user._id)}
+                      onChange={() => toggleSelectUser(user._id)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                            {user.name}
+                          </h3>
+                          <p className="text-xs text-blue-600 dark:text-blue-400 truncate mt-0.5">
+                            {user.email}
+                          </p>
+                        </div>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${getRoleBadgeColor(user.role)}`}>
+                          {user.role}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-4">
+                          {user.isActive ? (
+                            <span className="inline-flex items-center text-green-600 dark:text-green-400 font-medium">
+                              <span className="h-2 w-2 rounded-full bg-green-400 mr-1.5"></span>
+                              Active
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-gray-500 dark:text-gray-400 font-medium">
+                              <span className="h-2 w-2 rounded-full bg-gray-400 mr-1.5"></span>
+                              Inactive
+                            </span>
+                          )}
+                          {user.company && (
+                            <span className="text-gray-600 dark:text-gray-400 truncate">
+                              {user.company}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleOpenUserDetails(user)}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th scope="col" className="relative w-12 px-6 sm:w-16 sm:px-8">
+                    <th scope="col" className="relative w-12 px-3 sm:w-16 sm:px-6">
                       <input
                         type="checkbox"
-                        className="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700"
+                        className="absolute left-3 sm:left-4 top-1/2 -mt-2.5 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 cursor-pointer"
                         checked={selectedUsers.length === users.length && users.length > 0}
                         onChange={toggleSelectAll}
                       />
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Name
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Email
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Role
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="hidden lg:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Company
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="hidden lg:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -312,35 +383,53 @@ const UserManagement = () => {
                         selectedUsers.includes(user._id) ? 'bg-primary-50 dark:bg-primary-900/10' : ''
                       }`}
                     >
-                      <td className="relative w-12 px-6 sm:w-16 sm:px-8">
+                      <td className="relative w-12 px-3 sm:w-16 sm:px-6">
                         <input
                           type="checkbox"
-                          className="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700"
+                          className="absolute left-3 sm:left-4 top-1/2 -mt-2.5 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 cursor-pointer"
                           checked={selectedUsers.includes(user._id)}
                           onChange={() => toggleSelectUser(user._id)}
                         />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4">
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {user.name}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                          {user.email}
+                        <div className="md:hidden text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
+                            {user.role}
+                          </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4">
+                        <div className="text-sm text-blue-600 dark:text-blue-400">
+                          {user.email}
+                        </div>
+                        <div className="lg:hidden text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {user.isActive ? (
+                            <span className="inline-flex items-center text-green-600 dark:text-green-400">
+                              <span className="h-2 w-2 rounded-full bg-green-400 mr-1"></span>
+                              Active
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-gray-500 dark:text-gray-400">
+                              <span className="h-2 w-2 rounded-full bg-gray-400 mr-1"></span>
+                              Inactive
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="hidden md:table-cell px-3 sm:px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
                           {user.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="hidden lg:table-cell px-3 sm:px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900 dark:text-gray-100">
                           {user.company || '-'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="hidden lg:table-cell px-3 sm:px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           user.isActive
                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
@@ -349,12 +438,12 @@ const UserManagement = () => {
                           {user.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => handleOpenUserDetails(user)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium"
                         >
-                          Action
+                          View
                         </button>
                       </td>
                     </tr>
@@ -364,24 +453,27 @@ const UserManagement = () => {
             </div>
 
             {/* Pagination */}
-            <div className="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
-              <div className="flex-1 flex justify-between sm:hidden">
+            <div className="bg-white dark:bg-gray-800 px-3 sm:px-4 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between w-full sm:hidden">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Previous
                 </button>
+                <span className="inline-flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+                  {page} / {totalPages}
+                </span>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Next
                 </button>
               </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between w-full">
                 <div>
                   <p className="text-sm text-gray-700 dark:text-gray-300">
                     Showing <span className="font-medium">{(page - 1) * limit + 1}</span> to{' '}
@@ -389,15 +481,15 @@ const UserManagement = () => {
                     <span className="font-medium">{total}</span> results
                   </p>
                 </div>
-                <div>
+                <div className="flex items-center gap-2">
                   <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                    {[...Array(totalPages)].map((_, index) => {
+                    {[...Array(Math.min(totalPages, 5))].map((_, index) => {
                       const pageNum = index + 1;
                       return (
                         <button
                           key={pageNum}
                           onClick={() => setPage(pageNum)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors ${
                             page === pageNum
                               ? 'z-10 bg-primary-50 dark:bg-primary-900/30 border-primary-500 text-primary-600 dark:text-primary-400'
                               : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -408,7 +500,7 @@ const UserManagement = () => {
                       );
                     })}
                   </nav>
-                  <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
                     {limit} / page
                   </span>
                 </div>
@@ -420,21 +512,22 @@ const UserManagement = () => {
 
       {/* Create User Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-start sm:items-center justify-center pt-16 sm:pt-0 p-4">
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex-shrink-0 bg-white dark:bg-gray-800 flex items-center justify-between p-4 sm:p-5 md:p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
                 Create New User
               </h3>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="p-6 space-y-4">
+            <form onSubmit={handleCreateUser} className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6 space-y-4 sm:space-y-5">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Name <span className="text-red-500">*</span>
@@ -443,7 +536,7 @@ const UserManagement = () => {
                   type="text"
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
                   required
                 />
               </div>
@@ -456,7 +549,7 @@ const UserManagement = () => {
                   type="email"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
                   required
                 />
               </div>
@@ -469,26 +562,23 @@ const UserManagement = () => {
                   type="password"
                   value={newUser.password}
                   onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
                   required
                   minLength={6}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Role <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'admin' | 'owner' | 'vendor' })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
-                >
-                  <option value="vendor">Vendor</option>
-                  <option value="owner">Owner</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
+              <CustomSelect
+                label="Role"
+                value={newUser.role}
+                onChange={(value) => setNewUser({ ...newUser, role: value as 'admin' | 'owner' | 'vendor' })}
+                options={[
+                  { value: 'vendor', label: 'Vendor' },
+                  { value: 'owner', label: 'Owner' },
+                  { value: 'admin', label: 'Admin' },
+                ]}
+                required
+              />
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -498,7 +588,7 @@ const UserManagement = () => {
                   type="tel"
                   value={newUser.phone}
                   onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
                 />
               </div>
 
@@ -510,22 +600,23 @@ const UserManagement = () => {
                   type="text"
                   value={newUser.company}
                   onChange={(e) => setNewUser({ ...newUser, company: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                  className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
                 />
               </div>
+              </div>
 
-              <div className="flex justify-end gap-3 pt-4">
+              <div className="flex-shrink-0 bg-white dark:bg-gray-800 p-4 sm:p-5 md:p-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-gray-200 dark:border-gray-700">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  className="w-full sm:w-auto px-4 py-2.5 sm:py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={createUserMutation.isPending}
-                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-4 py-2.5 sm:py-3 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
                 >
                   {createUserMutation.isPending ? 'Creating...' : 'Create User'}
                 </button>
@@ -537,23 +628,24 @@ const UserManagement = () => {
 
       {/* User Details Modal */}
       {isUserDetailsModalOpen && selectedUser && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-start sm:items-center justify-center pt-16 sm:pt-0 p-4">
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-3xl w-full max-h-[80vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex-shrink-0 bg-white dark:bg-gray-800 flex items-center justify-between p-4 sm:p-5 md:p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
                 {isEditMode ? 'Edit User' : 'User Details'}
               </h3>
               <button
                 onClick={handleCloseUserDetails}
-                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
             {isEditMode ? (
-              <form onSubmit={handleSaveEdit} className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSaveEdit} className="flex flex-col flex-1 overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Name <span className="text-red-500">*</span>
@@ -562,7 +654,7 @@ const UserManagement = () => {
                       type="text"
                       value={editUserData.name}
                       onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                      className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
                       required
                     />
                   </div>
@@ -575,25 +667,22 @@ const UserManagement = () => {
                       type="email"
                       value={editUserData.email}
                       onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                      className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
                       required
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Role <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={editUserData.role}
-                      onChange={(e) => setEditUserData({ ...editUserData, role: e.target.value as 'admin' | 'owner' | 'vendor' })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
-                    >
-                      <option value="vendor">Vendor</option>
-                      <option value="owner">Owner</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
+                  <CustomSelect
+                    label="Role"
+                    value={editUserData.role}
+                    onChange={(value) => setEditUserData({ ...editUserData, role: value as 'admin' | 'owner' | 'vendor' })}
+                    options={[
+                      { value: 'vendor', label: 'Vendor' },
+                      { value: 'owner', label: 'Owner' },
+                      { value: 'admin', label: 'Admin' },
+                    ]}
+                    required
+                  />
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -603,7 +692,7 @@ const UserManagement = () => {
                       type="tel"
                       value={editUserData.phone}
                       onChange={(e) => setEditUserData({ ...editUserData, phone: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                      className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
                     />
                   </div>
 
@@ -615,31 +704,33 @@ const UserManagement = () => {
                       type="text"
                       value={editUserData.company}
                       onChange={(e) => setEditUserData({ ...editUserData, company: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                      className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
                     />
+                  </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4">
+                <div className="flex-shrink-0 bg-white dark:bg-gray-800 p-4 sm:p-5 md:p-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-gray-200 dark:border-gray-700">
                   <button
                     type="button"
                     onClick={() => setIsEditMode(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    className="w-full sm:w-auto px-4 py-2.5 sm:py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={updateUserMutation.isPending}
-                    className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto px-4 py-2.5 sm:py-3 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
                   >
                     {updateUserMutation.isPending ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </form>
             ) : (
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col flex-1 overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                       Name
@@ -702,23 +793,24 @@ const UserManagement = () => {
                       })}
                     </p>
                   </div>
+                  </div>
                 </div>
 
-                <div className="flex justify-between gap-3 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex-shrink-0 bg-white dark:bg-gray-800 p-4 sm:p-5 md:p-6 flex flex-col-reverse sm:flex-row justify-between gap-3 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleDeleteUser}
                     disabled={deleteUserMutation.isPending}
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 sm:py-3 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 active:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
                   >
-                    <TrashIcon className="h-5 w-5 mr-2" />
-                    {deleteUserMutation.isPending ? 'Deleting...' : 'Delete'}
+                    <TrashIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                    {deleteUserMutation.isPending ? 'Deleting...' : 'Delete User'}
                   </button>
                   <button
                     onClick={handleEditUser}
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 sm:py-3 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors shadow-sm"
                   >
-                    <PencilIcon className="h-5 w-5 mr-2" />
-                    Edit
+                    <PencilIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                    Edit User
                   </button>
                 </div>
               </div>

@@ -250,43 +250,43 @@ const Brags = () => {
 
       {/* Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <FireIcon className="h-8 w-8 text-orange-500 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">156</p>
-          <p className="text-sm text-gray-600">Success Stories</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">156</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Success Stories</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <ChartBarIcon className="h-8 w-8 text-green-500 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">$45M</p>
-          <p className="text-sm text-gray-600">Revenue Generated</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">$45M</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Revenue Generated</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <SparklesIcon className="h-8 w-8 text-purple-500 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">89</p>
-          <p className="text-sm text-gray-600">Awards Won</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">89</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Awards Won</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <StarIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">4.9</p>
-          <p className="text-sm text-gray-600">Avg. Rating</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">4.9</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Avg. Rating</p>
         </div>
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search success stories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
-          <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-            <FunnelIcon className="h-5 w-5 mr-2 text-gray-500" />
+          <button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200">
+            <FunnelIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
             Filter
           </button>
         </div>
@@ -296,8 +296,8 @@ const Brags = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Categories Sidebar */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-20">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Categories</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 sticky top-20">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
             <nav className="space-y-2">
               {categories.map((category) => (
                 <button
@@ -305,13 +305,13 @@ const Brags = () => {
                   onClick={() => handleCategoryClick(category.name)}
                   className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
                     selectedCategory === category.name
-                      ? 'bg-primary-50 text-primary-700 font-medium border-l-4 border-primary-600'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium border-l-4 border-primary-600 dark:border-primary-500'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
                   }`}
                 >
                   <span>{category.name}</span>
                   <span className={`text-sm ${
-                    selectedCategory === category.name ? 'text-primary-600' : 'text-gray-400'
+                    selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
                   }`}>
                     {category.count}
                   </span>
@@ -324,16 +324,16 @@ const Brags = () => {
         {/* Stories Grid */}
         <div className="lg:col-span-3 space-y-6">
           {filteredStories.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-              <TrophyIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No stories found</h3>
-              <p className="text-gray-500">Try adjusting your filters or search query</p>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
+              <TrophyIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No stories found</h3>
+              <p className="text-gray-500 dark:text-gray-400">Try adjusting your filters or search query</p>
             </div>
           ) : (
             filteredStories.map((story) => (
             <article
               key={story.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300"
             >
               <div className="flex flex-col">
                 <div className="w-full h-48 sm:h-64">
@@ -351,54 +351,54 @@ const Brags = () => {
                         {story.authorAvatar}
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">{story.author}</p>
-                        <p className="text-xs text-gray-500">{story.location} • {story.date}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{story.author}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{story.location} • {story.date}</p>
                       </div>
                     </div>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400">
                       {story.category}
                     </span>
                   </div>
 
                   {/* Story Content */}
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 hover:text-primary-600 cursor-pointer transition-colors line-clamp-2">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 hover:text-primary-600 dark:hover:text-primary-400 cursor-pointer transition-colors line-clamp-2">
                     {story.title}
                   </h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-4 line-clamp-2">{story.excerpt}</p>
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{story.excerpt}</p>
 
                   {/* Metrics */}
                   {story.metrics && (
                     <div className="flex flex-wrap gap-2 sm:gap-4 mb-4">
                       {story.metrics.revenue && (
                         <div className="flex items-center text-xs sm:text-sm">
-                          <div className="p-2 bg-green-100 rounded-lg">
-                            <ChartBarIcon className="h-5 w-5 text-green-600" />
+                          <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                            <ChartBarIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
                           </div>
                           <div className="ml-2">
-                            <p className="text-xs text-gray-500">Revenue</p>
-                            <p className="text-sm sm:text-base font-bold text-gray-900">{story.metrics.revenue}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Revenue</p>
+                            <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">{story.metrics.revenue}</p>
                           </div>
                         </div>
                       )}
                       {story.metrics.growth && (
                         <div className="flex items-center">
-                          <div className="p-2 bg-purple-100 rounded-lg">
-                            <SparklesIcon className="h-5 w-5 text-purple-600" />
+                          <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                            <SparklesIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                           </div>
                           <div className="ml-2">
-                            <p className="text-xs text-gray-500">Growth</p>
-                            <p className="text-sm sm:text-base font-bold text-gray-900">{story.metrics.growth}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Growth</p>
+                            <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">{story.metrics.growth}</p>
                           </div>
                         </div>
                       )}
                       {story.metrics.timeframe && (
                         <div className="flex items-center">
-                          <div className="p-2 bg-blue-100 rounded-lg">
-                            <ClockIcon className="h-5 w-5 text-blue-600" />
+                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                            <ClockIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                           </div>
                           <div className="ml-2">
-                            <p className="text-xs text-gray-500">Timeframe</p>
-                            <p className="text-sm sm:text-base font-bold text-gray-900">{story.metrics.timeframe}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Timeframe</p>
+                            <p className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">{story.metrics.timeframe}</p>
                           </div>
                         </div>
                       )}
@@ -411,7 +411,7 @@ const Brags = () => {
                       {story.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
                         >
                           #{tag}
                         </span>
@@ -420,23 +420,23 @@ const Brags = () => {
                     <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-0">
                       <button
                         onClick={() => handleLike(story.id)}
-                        className="flex items-center gap-1 text-gray-500 hover:text-red-500 transition-colors"
+                        className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                       >
                         {story.isLiked ? (
-                          <HeartSolidIcon className="h-5 w-5 text-red-500" />
+                          <HeartSolidIcon className="h-5 w-5 text-red-500 dark:text-red-400" />
                         ) : (
                           <HeartIcon className="h-5 w-5" />
                         )}
                         <span className="text-sm">{story.likes}</span>
                       </button>
-                      <button className="flex items-center gap-1 text-gray-500 hover:text-primary-600 transition-colors">
+                      <button className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                         <ChatBubbleLeftIcon className="h-5 w-5" />
                         <span className="text-sm">{story.comments}</span>
                       </button>
-                      <button className="flex items-center gap-1 text-gray-500 hover:text-primary-600 transition-colors">
+                      <button className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                         <ShareIcon className="h-5 w-5" />
                       </button>
-                      <span className="text-xs sm:text-sm text-gray-500">{story.readTime}</span>
+                      <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{story.readTime}</span>
                     </div>
                   </div>
                 </div>

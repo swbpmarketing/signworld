@@ -232,43 +232,43 @@ const Videos = () => {
 
       {/* Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
-          <VideoCameraIcon className="h-8 w-8 text-primary-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">156</p>
-          <p className="text-sm text-gray-600">Total Videos</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
+          <VideoCameraIcon className="h-8 w-8 text-primary-600 dark:text-primary-500 mx-auto mb-2" />
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">156</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Videos</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <ClockIcon className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">48h</p>
-          <p className="text-sm text-gray-600">Total Content</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">48h</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Content</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <EyeIcon className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">234K</p>
-          <p className="text-sm text-gray-600">Total Views</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">234K</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Views</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <StarIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900">4.8</p>
-          <p className="text-sm text-gray-600">Avg. Rating</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">4.8</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Avg. Rating</p>
         </div>
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search videos by title, topic, or instructor..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
-          <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-            <FunnelIcon className="h-5 w-5 mr-2 text-gray-500" />
+          <button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200">
+            <FunnelIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
             Filter
           </button>
         </div>
@@ -279,9 +279,9 @@ const Videos = () => {
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
           {/* Categories */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Categories</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
               <nav className="space-y-2">
                 {categories.map((category) => (
                   <button
@@ -289,18 +289,18 @@ const Videos = () => {
                     onClick={() => setSelectedCategory(category.name)}
                     className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
                       selectedCategory === category.name
-                        ? 'bg-primary-50 text-primary-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
                     }`}
                   >
                     <div className="flex items-center">
                       <category.icon className={`h-5 w-5 mr-3 ${
-                        selectedCategory === category.name ? 'text-primary-600' : 'text-gray-400'
+                        selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
                       }`} />
                       <span>{category.name}</span>
                     </div>
                     <span className={`text-sm ${
-                      selectedCategory === category.name ? 'text-primary-600' : 'text-gray-400'
+                      selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
                     }`}>
                       {category.count}
                     </span>
@@ -311,24 +311,24 @@ const Videos = () => {
           </div>
 
           {/* Playlists */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Popular Playlists</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Popular Playlists</h3>
             <div className="space-y-3">
               {playlists.map((playlist) => (
                 <button
                   key={playlist.name}
-                  className="w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                  className="w-full text-left p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-900 group-hover:text-primary-600">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
                         {playlist.name}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         {playlist.videos} videos • {playlist.duration}
                       </p>
                     </div>
-                    <ChevronRightIcon className="h-4 w-4 text-gray-400 group-hover:text-primary-600 flex-shrink-0 mt-0.5" />
+                    <ChevronRightIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 flex-shrink-0 mt-0.5" />
                   </div>
                 </button>
               ))}
@@ -341,15 +341,15 @@ const Videos = () => {
           {/* Featured Video */}
           {!searchQuery && selectedCategory === 'All Videos' && (
             <div className="mb-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Featured Video</h3>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Featured Video</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                 <div className="aspect-w-16 aspect-h-9 relative group cursor-pointer">
                   <img
                     src={videos[0].thumbnail}
                     alt={videos[0].title}
                     className="w-full h-80 object-cover"
                   />
-                  <div 
+                  <div
                     onClick={() => openVideo(videos[0])}
                     className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <PlaySolidIcon className="h-16 w-16 text-white" />
@@ -366,17 +366,17 @@ const Videos = () => {
                   </div>
                 </div>
                 <div className="p-6">
-                  <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2 line-clamp-2">{videos[0].title}</h4>
-                  <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2">{videos[0].description}</p>
+                  <h4 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">{videos[0].title}</h4>
+                  <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-4 line-clamp-2">{videos[0].description}</p>
                   <div className="flex items-center justify-between">
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-500">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-500 dark:text-gray-400">
                       <span>{videos[0].instructor}</span>
                       <span className="hidden sm:inline">•</span>
                       <span>{videos[0].views.toLocaleString()} views</span>
                       <span className="hidden sm:inline">•</span>
                       <span>{videos[0].uploadDate}</span>
                     </div>
-                    <button 
+                    <button
                       onClick={() => openVideo(videos[0])}
                       className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors">
                       <PlayIcon className="h-4 w-4 mr-2" />
@@ -394,7 +394,7 @@ const Videos = () => {
             {filteredVideos.map((video) => (
               <div
                 key={video.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
               >
                 <div 
                   onClick={() => openVideo(video)}
@@ -422,7 +422,7 @@ const Videos = () => {
                 </div>
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-2 gap-2">
-                    <h4 className="text-sm sm:text-base font-semibold text-gray-900 line-clamp-2 flex-1">
+                    <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 flex-1">
                       {video.title}
                     </h4>
                     <button
@@ -430,36 +430,36 @@ const Videos = () => {
                         e.stopPropagation();
                         toggleBookmark(video.id);
                       }}
-                      className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      className="ml-2 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                     >
                       {video.isBookmarked ? (
-                        <BookmarkSolidIcon className="h-5 w-5 text-primary-600" />
+                        <BookmarkSolidIcon className="h-5 w-5 text-primary-600 dark:text-primary-500" />
                       ) : (
-                        <BookmarkIcon className="h-5 w-5 text-gray-400" />
+                        <BookmarkIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                       )}
                     </button>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 mb-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      video.level === 'Beginner' ? 'bg-green-100 text-green-700' :
-                      video.level === 'Intermediate' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
+                      video.level === 'Beginner' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                      video.level === 'Intermediate' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                      'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                     }`}>
                       {video.level}
                     </span>
-                    <span className="text-xs text-gray-500">{video.category}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{video.category}</span>
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-gray-500 text-xs sm:text-sm">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
                       <span>{video.instructor}</span>
                       <div className="flex items-center">
                         <StarSolidIcon className="h-4 w-4 text-yellow-400 mr-1" />
                         <span>{video.rating}</span>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-gray-500 text-xs sm:text-sm">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
                       <span className="whitespace-nowrap">{video.views.toLocaleString()} views</span>
                       <span className="whitespace-nowrap">{video.uploadDate}</span>
                     </div>
@@ -473,9 +473,9 @@ const Videos = () => {
           {/* Empty State */}
           {!isLoading && filteredVideos.length === 0 && (
             <div className="text-center py-12">
-              <VideoCameraIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No videos found</h3>
-              <p className="text-gray-500">Try adjusting your search or filter criteria</p>
+              <VideoCameraIcon className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No videos found</h3>
+              <p className="text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria</p>
             </div>
           )}
 

@@ -74,14 +74,14 @@ const GeographicAnalytics: React.FC<GeographicAnalyticsProps> = ({ dateRange, fi
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">{stat.label}</p>
-                <p className="mt-1 text-2xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
               </div>
-              <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+              <div className={`p-3 rounded-lg ${stat.bgColor} dark:bg-opacity-20`}>
+                <stat.icon className={`h-6 w-6 ${stat.color} dark:opacity-90`} />
               </div>
             </div>
           </div>
@@ -89,26 +89,33 @@ const GeographicAnalytics: React.FC<GeographicAnalyticsProps> = ({ dateRange, fi
       </div>
 
       {/* Regional Performance */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue by Region</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Revenue by Region</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={regionData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="region" />
-              <YAxis />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+              <XAxis dataKey="region" className="text-gray-600 dark:text-gray-400" />
+              <YAxis className="text-gray-600 dark:text-gray-400" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--tooltip-bg, #fff)',
+                  border: '1px solid var(--tooltip-border, #e5e7eb)',
+                  borderRadius: '0.5rem',
+                  color: 'var(--tooltip-text, #111827)'
+                }}
+              />
               <Legend />
-              <Bar dataKey="revenue" fill="#1890ff" name="Revenue ($)" />
-              <Bar dataKey="stores" fill="#52c41a" name="Store Count" />
+              <Bar dataKey="revenue" fill="#3b82f6" name="Revenue ($)" />
+              <Bar dataKey="stores" fill="#10b981" name="Store Count" />
             </BarChart>
           </ResponsiveContainer>
         </div>
         <div className="mt-4 grid grid-cols-5 gap-4">
           {regionData.map((region, index) => (
             <div key={index} className="text-center">
-              <p className="text-xs text-gray-500">{region.region}</p>
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-xs text-gray-500 dark:text-gray-400">{region.region}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {region.growth > 0 ? '+' : ''}{region.growth}% YoY
               </p>
             </div>
@@ -118,28 +125,28 @@ const GeographicAnalytics: React.FC<GeographicAnalyticsProps> = ({ dateRange, fi
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Cities */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Performing Cities</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Top Performing Cities</h3>
           <div className="space-y-3">
             {cityPerformance.slice(0, 6).map((city, index) => (
-              <div key={index} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
+              <div key={index} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 <div className="flex items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
                     index === 0 ? 'bg-yellow-500' :
                     index === 1 ? 'bg-gray-400' :
                     index === 2 ? 'bg-orange-600' :
-                    'bg-gray-300'
+                    'bg-gray-300 dark:bg-gray-600'
                   }`}>
                     {index + 1}
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-900">{city.city}</p>
-                    <p className="text-xs text-gray-500">{city.projects} projects</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{city.city}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{city.projects} projects</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">${(city.revenue / 1000).toFixed(0)}k</p>
-                  <p className="text-xs text-gray-500">{city.distance} mi</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">${(city.revenue / 1000).toFixed(0)}k</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{city.distance} mi</p>
                 </div>
               </div>
             ))}
@@ -147,8 +154,8 @@ const GeographicAnalytics: React.FC<GeographicAnalyticsProps> = ({ dateRange, fi
         </div>
 
         {/* Service Area Distribution */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Service Area Distribution</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Service Area Distribution</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -166,7 +173,14 @@ const GeographicAnalytics: React.FC<GeographicAnalyticsProps> = ({ dateRange, fi
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--tooltip-bg, #fff)',
+                    border: '1px solid var(--tooltip-border, #e5e7eb)',
+                    borderRadius: '0.5rem',
+                    color: 'var(--tooltip-text, #111827)'
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -174,13 +188,13 @@ const GeographicAnalytics: React.FC<GeographicAnalyticsProps> = ({ dateRange, fi
             {serviceAreaData.map((area, index) => (
               <div key={index} className="flex items-center justify-between text-sm">
                 <div className="flex items-center">
-                  <div 
+                  <div
                     className="w-3 h-3 rounded-full mr-2"
                     style={{ backgroundColor: COLORS[index % COLORS.length] }}
                   />
-                  <span className="text-gray-700">{area.range}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{area.range}</span>
                 </div>
-                <span className="font-medium text-gray-900">{area.projects} projects</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">{area.projects} projects</span>
               </div>
             ))}
           </div>
@@ -188,13 +202,13 @@ const GeographicAnalytics: React.FC<GeographicAnalyticsProps> = ({ dateRange, fi
       </div>
 
       {/* Market Penetration Map Placeholder */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Coverage Map</h3>
-        <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Market Coverage Map</h3>
+        <div className="h-96 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
           <div className="text-center">
-            <MapPinIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500">Interactive map showing service coverage</p>
-            <p className="text-sm text-gray-400 mt-1">Integration with mapping service required</p>
+            <MapPinIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+            <p className="text-gray-500 dark:text-gray-400">Interactive map showing service coverage</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Integration with mapping service required</p>
           </div>
         </div>
       </div>

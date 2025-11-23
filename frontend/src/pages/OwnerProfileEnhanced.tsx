@@ -15,6 +15,7 @@ import {
   FlagIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { getOwnerProfile, getOwnerReviews, submitOwnerReview } from '../services/ownerService';
 import type { Owner, Review } from '../services/ownerService';
@@ -23,12 +24,12 @@ import './OwnerProfile.css';
 // Loading skeleton component
 const ProfileSkeleton = () => (
   <div className="space-y-6">
-    <div className="bg-gradient-to-r from-gray-200 to-gray-300 rounded-xl shadow-lg overflow-hidden h-64 skeleton"></div>
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="bg-gradient-to-r from-gray-200 dark:from-gray-700 to-gray-300 dark:to-gray-800 rounded-xl shadow-lg overflow-hidden h-64 skeleton"></div>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
       <div className="space-y-4">
-        <div className="h-8 bg-gray-200 rounded w-1/3 skeleton"></div>
-        <div className="h-4 bg-gray-200 rounded w-full skeleton"></div>
-        <div className="h-4 bg-gray-200 rounded w-3/4 skeleton"></div>
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 skeleton"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full skeleton"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 skeleton"></div>
       </div>
     </div>
   </div>
@@ -121,7 +122,7 @@ const OwnerProfileEnhanced = () => {
         {i < Math.floor(rating) ? (
           <StarIconSolid className="h-5 w-5 text-yellow-400" />
         ) : (
-          <StarIcon className="h-5 w-5 text-gray-300" />
+          <StarIcon className="h-5 w-5 text-gray-300 dark:text-gray-600" />
         )}
       </button>
     ));
@@ -149,7 +150,7 @@ const OwnerProfileEnhanced = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             {error || 'Owner not found'}
           </h2>
           <button
@@ -170,7 +171,7 @@ const OwnerProfileEnhanced = () => {
       <div className="flex justify-between items-center">
         <button
           onClick={() => navigate('/owners')}
-          className="inline-flex items-center text-gray-600 hover:text-gray-900"
+          className="inline-flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
         >
           <ArrowLeftIcon className="h-5 w-5 mr-2" />
           Back to Directory
@@ -178,13 +179,13 @@ const OwnerProfileEnhanced = () => {
         <div className="flex items-center space-x-3">
           <button
             onClick={handleShare}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             title="Share profile"
           >
             <ShareIcon className="h-5 w-5" />
           </button>
           <button
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             title="Report profile"
           >
             <FlagIcon className="h-5 w-5" />
@@ -258,8 +259,8 @@ const OwnerProfileEnhanced = () => {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
             {['overview', 'equipment', 'reviews'].map((tab) => (
               <button
@@ -268,8 +269,8 @@ const OwnerProfileEnhanced = () => {
                 className={`
                   tab-button py-4 px-1 border-b-2 font-medium text-sm capitalize
                   ${activeTab === tab
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                   }
                 `}
               >
@@ -281,56 +282,64 @@ const OwnerProfileEnhanced = () => {
 
         {/* Tab Content */}
         <div className="p-6">
-          {/* Overview Tab */}
-          {activeTab === 'overview' && (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+            >
+              {/* Overview Tab */}
+              {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Contact Information */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Contact Information</h3>
                 <div className="space-y-3">
                   <div className="flex items-start">
-                    <PhoneIcon className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                    <PhoneIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Phone</p>
-                      <p className="text-sm text-gray-600">{owner.phone}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Phone</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{owner.phone}</p>
                     </div>
                   </div>
                   <div className="flex items-start">
-                    <EnvelopeIcon className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                    <EnvelopeIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Email</p>
-                      <p className="text-sm text-gray-600">{owner.email}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Email</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{owner.email}</p>
                     </div>
                   </div>
                   <div className="flex items-start">
-                    <MapPinIcon className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                    <MapPinIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Address</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Address</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         {owner.address.street}<br />
                         {owner.address.city}, {owner.address.state} {owner.address.zipCode}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-start">
-                    <CalendarIcon className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                    <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Open Since</p>
-                      <p className="text-sm text-gray-600">{formatDate(owner.openDate)}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Open Since</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(owner.openDate)}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Social Links */}
                 <div className="mt-6">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Connect Online</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Connect Online</h4>
                   <div className="flex space-x-3">
                     {owner.socialLinks.facebook && (
                       <a
                         href={owner.socialLinks.facebook}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="social-link text-gray-400 hover:text-primary-600 transition-colors"
+                        className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                       >
                         <span className="sr-only">Facebook</span>
                         <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -343,7 +352,7 @@ const OwnerProfileEnhanced = () => {
                         href={owner.socialLinks.linkedin}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="social-link text-gray-400 hover:text-primary-600 transition-colors"
+                        className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                       >
                         <span className="sr-only">LinkedIn</span>
                         <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -356,7 +365,7 @@ const OwnerProfileEnhanced = () => {
                         href={owner.socialLinks.instagram}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="social-link text-gray-400 hover:text-primary-600 transition-colors"
+                        className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                       >
                         <span className="sr-only">Instagram</span>
                         <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -369,7 +378,7 @@ const OwnerProfileEnhanced = () => {
                         href={owner.socialLinks.website}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="social-link text-gray-400 hover:text-primary-600 transition-colors"
+                        className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                       >
                         <span className="sr-only">Website</span>
                         <GlobeAltIcon className="h-6 w-6" />
@@ -381,12 +390,12 @@ const OwnerProfileEnhanced = () => {
 
               {/* Specialties and Mentoring */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Specialties</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Specialties</h3>
                 <div className="flex flex-wrap gap-2 mb-6">
                   {owner.specialties.map((specialty, index) => (
                     <span
                       key={index}
-                      className="specialty-tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-100 text-primary-800"
+                      className="specialty-tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300"
                     >
                       {specialty}
                     </span>
@@ -395,18 +404,18 @@ const OwnerProfileEnhanced = () => {
 
                 {/* Mentoring Status */}
                 {owner.mentoring.available && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mentoring-badge">
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mentoring-badge">
                     <div className="flex items-start">
-                      <AcademicCapIcon className="h-5 w-5 text-green-600 mr-3 mt-0.5" />
+                      <AcademicCapIcon className="h-5 w-5 text-green-600 dark:text-green-400 mr-3 mt-0.5" />
                       <div>
-                        <h4 className="text-sm font-semibold text-green-900">Available for Mentoring</h4>
-                        <p className="text-sm text-green-700 mt-1">
+                        <h4 className="text-sm font-semibold text-green-900 dark:text-green-100">Available for Mentoring</h4>
+                        <p className="text-sm text-green-700 dark:text-green-300 mt-1">
                           {owner.name} is available to mentor in the following areas:
                         </p>
                         <ul className="mt-2 space-y-1">
                           {owner.mentoring.areas.map((area, index) => (
-                            <li key={index} className="text-sm text-green-700 flex items-center">
-                              <span className="w-1.5 h-1.5 bg-green-600 rounded-full mr-2"></span>
+                            <li key={index} className="text-sm text-green-700 dark:text-green-300 flex items-center">
+                              <span className="w-1.5 h-1.5 bg-green-600 dark:bg-green-400 rounded-full mr-2"></span>
                               {area}
                             </li>
                           ))}
@@ -422,12 +431,12 @@ const OwnerProfileEnhanced = () => {
           {/* Equipment Tab */}
           {activeTab === 'equipment' && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Equipment & Capabilities</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Equipment & Capabilities</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {owner.equipment.map((item, index) => (
-                  <div key={index} className="equipment-card flex items-start bg-gray-50 rounded-lg p-4">
-                    <WrenchScrewdriverIcon className="h-5 w-5 text-primary-600 mr-3 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-gray-700">{item}</p>
+                  <div key={index} className="equipment-card flex items-start bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                    <WrenchScrewdriverIcon className="h-5 w-5 text-primary-600 dark:text-primary-400 mr-3 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{item}</p>
                   </div>
                 ))}
               </div>
@@ -438,13 +447,13 @@ const OwnerProfileEnhanced = () => {
           {activeTab === 'reviews' && (
             <div>
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Reviews & Ratings</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Reviews & Ratings</h3>
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center">
                       {renderStars(owner.rating?.averageRating || owner.stats?.averageRating || 0)}
                     </div>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
                       {owner.rating?.averageRating || owner.stats?.averageRating || 0} out of 5 ({owner.rating?.totalRatings || owner.stats?.totalRatings || 0} reviews)
                     </span>
                   </div>
@@ -462,11 +471,11 @@ const OwnerProfileEnhanced = () => {
               <div className="space-y-6 reviews-container">
                 {reviews.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-gray-500">No reviews yet. Be the first to review!</p>
+                    <p className="text-gray-500 dark:text-gray-400">No reviews yet. Be the first to review!</p>
                   </div>
                 ) : (
                   reviews.map((review) => (
-                    <div key={review.id} className="review-card border-b border-gray-200 pb-6 last:border-0">
+                    <div key={review.id} className="review-card border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0">
                       <div className="flex items-start space-x-4">
                         <img
                           className="h-10 w-10 rounded-full object-cover"
@@ -476,15 +485,15 @@ const OwnerProfileEnhanced = () => {
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="text-sm font-semibold text-gray-900">{review.reviewer.name}</h4>
-                              <p className="text-sm text-gray-500">{review.reviewer.company}</p>
+                              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{review.reviewer.name}</h4>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">{review.reviewer.company}</p>
                             </div>
-                            <time className="text-sm text-gray-500">{formatDate(review.createdAt)}</time>
+                            <time className="text-sm text-gray-500 dark:text-gray-400">{formatDate(review.createdAt)}</time>
                           </div>
                           <div className="mt-2 flex items-center">
                             {renderStars(review.rating)}
                           </div>
-                          <p className="mt-3 text-sm text-gray-700">{review.comment}</p>
+                          <p className="mt-3 text-sm text-gray-700 dark:text-gray-300">{review.comment}</p>
                         </div>
                       </div>
                     </div>
@@ -493,29 +502,30 @@ const OwnerProfileEnhanced = () => {
               </div>
             </div>
           )}
-
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
       {/* Review Modal */}
       {showReviewModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Write a Review</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Write a Review</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rating</label>
                 <div className="flex items-center space-x-1">
                   {renderStars(reviewForm.rating, true)}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Your Review</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Your Review</label>
                 <textarea
                   value={reviewForm.comment}
                   onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Share your experience working with this owner..."
                 />
               </div>
@@ -523,7 +533,7 @@ const OwnerProfileEnhanced = () => {
             <div className="mt-6 flex justify-end space-x-3">
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
               >
                 Cancel
               </button>

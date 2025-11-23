@@ -527,56 +527,56 @@ const Equipment = () => {
 
       {/* Benefits Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <TagIcon className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <p className="text-lg font-bold text-gray-900">Member Pricing</p>
-          <p className="text-sm text-gray-600">Save up to 40%</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-gray-100">Member Pricing</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Save up to 40%</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <TruckIcon className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-          <p className="text-lg font-bold text-gray-900">Free Shipping</p>
-          <p className="text-sm text-gray-600">On orders $500+</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-gray-100">Free Shipping</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">On orders $500+</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <ShieldCheckIcon className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-          <p className="text-lg font-bold text-gray-900">Warranty Plus</p>
-          <p className="text-sm text-gray-600">Extended coverage</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-gray-100">Warranty Plus</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Extended coverage</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <SparklesIcon className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-          <p className="text-lg font-bold text-gray-900">0% Financing</p>
-          <p className="text-sm text-gray-600">Up to 60 months</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-gray-100">0% Financing</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Up to 60 months</p>
         </div>
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search equipment by name, brand, or model..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           <div className="flex gap-2">
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-              <FunnelIcon className="h-5 w-5 mr-2 text-gray-500" />
+            <button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200">
+              <FunnelIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
               Filter
             </button>
-            <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+            <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 ${viewMode === 'grid' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'} transition-colors duration-200`}
+                className={`p-2 ${viewMode === 'grid' ? 'bg-primary-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'} transition-colors duration-200`}
               >
                 <Squares2X2Icon className="h-5 w-5" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'} transition-colors duration-200`}
+                className={`p-2 ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'} transition-colors duration-200`}
               >
                 <ListBulletIcon className="h-5 w-5" />
               </button>
@@ -590,9 +590,9 @@ const Equipment = () => {
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
           {/* Categories */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Categories</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
               <nav className="space-y-2">
                 {categories.map((category) => (
                   <button
@@ -600,18 +600,18 @@ const Equipment = () => {
                     onClick={() => setSelectedCategory(category.name)}
                     className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
                       selectedCategory === category.name
-                        ? 'bg-primary-50 text-primary-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
                     }`}
                   >
                     <div className="flex items-center">
                       <category.icon className={`h-5 w-5 mr-3 ${
-                        selectedCategory === category.name ? 'text-primary-600' : 'text-gray-400'
+                        selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
                       }`} />
                       <span>{category.name}</span>
                     </div>
                     <span className={`text-sm ${
-                      selectedCategory === category.name ? 'text-primary-600' : 'text-gray-400'
+                      selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
                     }`}>
                       {category.count}
                     </span>
@@ -622,16 +622,16 @@ const Equipment = () => {
           </div>
 
           {/* Brands Filter */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Brands</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Brands</h3>
             <div className="space-y-2">
               {brands.map((brand) => (
                 <label key={brand} className="flex items-center">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                   />
-                  <span className="ml-2 text-sm text-gray-700">{brand}</span>
+                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{brand}</span>
                 </label>
               ))}
             </div>
@@ -664,7 +664,7 @@ const Equipment = () => {
               {filteredEquipment.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300"
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300"
                 >
                   <div className="relative">
                     <img
@@ -684,51 +684,51 @@ const Equipment = () => {
                     )}
                     <button
                       onClick={() => toggleFavorite(item.id)}
-                      className="absolute bottom-2 right-2 p-2 bg-white/90 backdrop-blur rounded-lg hover:bg-white transition-colors"
+                      className="absolute bottom-2 right-2 p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"
                     >
                       {item.isFavorite ? (
                         <HeartSolidIcon className="h-5 w-5 text-red-500" />
                       ) : (
-                        <HeartIcon className="h-5 w-5 text-gray-600" />
+                        <HeartIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                       )}
                     </button>
                   </div>
                   <div className="p-6">
                     <div className="mb-2">
-                      <span className="text-sm text-gray-500">{item.brand} • {item.model}</span>
-                      <h3 className="text-base sm:text-lg font-bold text-gray-900 mt-1 line-clamp-2">{item.name}</h3>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{item.brand} • {item.model}</span>
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mt-1 line-clamp-2">{item.name}</h3>
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-600 mb-4 line-clamp-2">{item.description}</p>
-                    
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{item.description}</p>
+
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <p className="text-lg sm:text-2xl font-bold text-gray-900">{item.price}</p>
+                        <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{item.price}</p>
                         {item.priceNote && (
-                          <p className="text-xs text-gray-500">{item.priceNote}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{item.priceNote}</p>
                         )}
                       </div>
                       <div className="flex items-center">
                         <StarSolidIcon className="h-4 w-4 text-yellow-400" />
-                        <span className="ml-1 text-sm font-medium text-gray-700">{item.rating}</span>
-                        <span className="ml-1 text-sm text-gray-500">({item.reviews})</span>
+                        <span className="ml-1 text-sm font-medium text-gray-700 dark:text-gray-300">{item.rating}</span>
+                        <span className="ml-1 text-sm text-gray-500 dark:text-gray-400">({item.reviews})</span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between text-sm mb-4">
                       <span className={`inline-flex items-center ${
-                        item.inStock ? 'text-green-600' : 'text-red-600'
+                        item.inStock ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                       }`}>
                         <CheckIcon className="h-4 w-4 mr-1" />
                         {item.inStock ? 'In Stock' : 'Out of Stock'}
                       </span>
-                      <span className="text-gray-500 flex items-center">
+                      <span className="text-gray-500 dark:text-gray-400 flex items-center">
                         <ClockIcon className="h-4 w-4 mr-1" />
                         {item.leadTime}
                       </span>
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-2">
-                      <button className="flex-1 inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                      <button className="flex-1 inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 text-xs sm:text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
                         <InformationCircleIcon className="h-4 w-4 mr-1.5" />
                         View Details
                       </button>
@@ -738,7 +738,7 @@ const Equipment = () => {
                         className={`flex-1 inline-flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
                           item.inStock
                             ? 'bg-primary-600 text-white hover:bg-primary-700'
-                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                         }`}
                       >
                         <ShoppingCartIcon className="h-4 w-4 mr-1.5" />
@@ -754,7 +754,7 @@ const Equipment = () => {
               {filteredEquipment.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200"
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-all duration-200"
                 >
                   <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                     <img
@@ -763,10 +763,10 @@ const Equipment = () => {
                       className="w-full sm:w-32 h-48 sm:h-32 object-cover rounded-lg flex-shrink-0"
                     />
                     <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm text-gray-500">{item.brand} • {item.model}</span>
+                      <div className="flex flex-col lg:flex-row items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{item.brand} • {item.model}</span>
                             {item.isNew && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500 text-white">
                                 New
@@ -778,57 +778,58 @@ const Equipment = () => {
                               </span>
                             )}
                           </div>
-                          <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">{item.name}</h3>
-                          <p className="text-gray-600 mb-4">{item.description}</p>
-                          
-                          <div className="flex items-center gap-6 text-sm">
+                          <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{item.name}</h3>
+                          <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{item.description}</p>
+
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-sm">
                             <span className={`inline-flex items-center ${
-                              item.inStock ? 'text-green-600' : 'text-red-600'
+                              item.inStock ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                             }`}>
                               <CheckIcon className="h-4 w-4 mr-1" />
                               {item.inStock ? 'In Stock' : 'Out of Stock'}
                             </span>
-                            <span className="text-gray-500 flex items-center">
+                            <span className="text-gray-500 dark:text-gray-400 flex items-center">
                               <ClockIcon className="h-4 w-4 mr-1" />
                               {item.leadTime}
                             </span>
-                            <span className="text-gray-500 flex items-center">
+                            <span className="text-gray-500 dark:text-gray-400 flex items-center">
                               <ShieldCheckIcon className="h-4 w-4 mr-1" />
                               {item.warranty}
                             </span>
                             <div className="flex items-center">
                               <StarSolidIcon className="h-4 w-4 text-yellow-400" />
-                              <span className="ml-1 font-medium text-gray-700">{item.rating}</span>
-                              <span className="ml-1 text-gray-500">({item.reviews} reviews)</span>
+                              <span className="ml-1 font-medium text-gray-700 dark:text-gray-300">{item.rating}</span>
+                              <span className="ml-1 text-gray-500 dark:text-gray-400">({item.reviews} reviews)</span>
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg sm:text-2xl font-bold text-gray-900">{item.price}</p>
+                        <div className="w-full lg:w-auto lg:text-right">
+                          <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">{item.price}</p>
                           {item.priceNote && (
-                            <p className="text-sm text-gray-500">{item.priceNote}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{item.priceNote}</p>
                           )}
-                          <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <div className="flex flex-wrap lg:flex-nowrap items-stretch gap-2">
                             <button
                               onClick={() => toggleFavorite(item.id)}
-                              className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                              className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                             >
                               {item.isFavorite ? (
                                 <HeartSolidIcon className="h-5 w-5 text-red-500" />
                               ) : (
-                                <HeartIcon className="h-5 w-5 text-gray-600" />
+                                <HeartIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                               )}
                             </button>
-                            <button className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                            <button className="flex-1 lg:flex-initial inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors whitespace-nowrap">
+                              <InformationCircleIcon className="h-4 w-4 mr-1.5" />
                               View Details
                             </button>
                             <button
                               onClick={() => addToCart(item.id)}
                               disabled={!item.inStock}
-                              className={`inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              className={`flex-1 lg:flex-initial inline-flex items-center justify-center px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
                                 item.inStock
                                   ? 'bg-primary-600 text-white hover:bg-primary-700'
-                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                               }`}
                             >
                               <ShoppingCartIcon className="h-4 w-4 mr-1.5" />
