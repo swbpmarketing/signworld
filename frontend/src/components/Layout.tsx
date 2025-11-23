@@ -163,15 +163,15 @@ const Layout = () => {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen md:ml-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
-          <div className="px-3 sm:px-4 md:px-6">
-            <div className="flex items-center justify-between h-14 sm:h-16">
+        <header className="sticky top-0 z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md">
+          <div className="px-6">
+            <div className="flex items-center justify-between h-16">
               {/* Left side - Mobile menu + Breadcrumbs */}
               <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
                 {/* Mobile menu button */}
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 focus:outline-none md:hidden transition-colors flex-shrink-0"
+                  className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none md:hidden transition-colors"
                   onClick={() => setSidebarOpen(true)}
                 >
                   <span className="sr-only">Open sidebar</span>
@@ -204,73 +204,149 @@ const Layout = () => {
               </div>
 
               {/* Right side - Search + Actions */}
-              <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
-                {/* Search */}
-                <button
-                  type="button"
-                  onClick={() => setSearchModalOpen(true)}
-                  className="flex items-center justify-center p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                  title="Search (Ctrl+K)"
-                >
-                  <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </button>
-
-                {/* Dark mode toggle */}
-                <button
-                  type="button"
-                  className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                  title={darkMode ? "Light mode" : "Dark mode"}
-                  onClick={toggleDarkMode}
-                >
-                  {darkMode ? (
-                    <SunIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                  ) : (
-                    <MoonIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                  )}
-                </button>
-
-                {/* Notifications */}
-                <div className="relative">
+              <div className="flex items-center space-x-4">
+                {/* Mobile view - Individual buttons */}
+                <div className="flex sm:hidden items-center space-x-1.5">
+                  {/* Search */}
                   <button
                     type="button"
-                    className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                    title="Notifications"
-                    onClick={() => setNotificationPanelOpen(!notificationPanelOpen)}
+                    onClick={() => setSearchModalOpen(true)}
+                    className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                    title="Search (Ctrl+K)"
                   >
-                    <BellIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center h-4 w-4 sm:h-5 sm:w-5 text-[10px] sm:text-xs font-medium text-white bg-primary-500 rounded-full ring-1 sm:ring-2 ring-white dark:ring-gray-900">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </button>
+
+                  {/* Dark mode toggle */}
+                  <button
+                    type="button"
+                    className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                    title={darkMode ? "Light mode" : "Dark mode"}
+                    onClick={toggleDarkMode}
+                  >
+                    {darkMode ? (
+                      <SunIcon className="h-4 w-4" />
+                    ) : (
+                      <MoonIcon className="h-4 w-4" />
                     )}
                   </button>
 
-                  <NotificationPanel
-                    notifications={notifications}
-                    unreadCount={unreadCount}
-                    isOpen={notificationPanelOpen}
-                    onClose={() => setNotificationPanelOpen(false)}
-                    onMarkAsRead={markAsRead}
-                    onMarkAllAsRead={markAllAsRead}
-                    onDismiss={dismissNotification}
-                    onClearAll={clearAll}
-                  />
+                  {/* Notifications */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                      title="Notifications"
+                      onClick={() => setNotificationPanelOpen(!notificationPanelOpen)}
+                    >
+                      <BellIcon className="h-4 w-4" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center h-4 w-4 text-[10px] font-medium text-white bg-primary-500 rounded-full ring-1 ring-white dark:ring-gray-900">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    <NotificationPanel
+                      notifications={notifications}
+                      unreadCount={unreadCount}
+                      isOpen={notificationPanelOpen}
+                      onClose={() => setNotificationPanelOpen(false)}
+                      onMarkAsRead={markAsRead}
+                      onMarkAllAsRead={markAllAsRead}
+                      onDismiss={dismissNotification}
+                      onClearAll={clearAll}
+                    />
+                  </div>
+
+                  {/* User Avatar */}
+                  <button
+                    type="button"
+                    className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  >
+                    <img
+                      className="h-7 w-7 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
+                      src="https://i.pravatar.cc/150?img=8"
+                      alt={user?.name || "User profile"}
+                    />
+                  </button>
                 </div>
 
-                {/* User Avatar */}
-                <button
-                  type="button"
-                  className="relative p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                >
-                  <img
-                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
-                    src="https://i.pravatar.cc/150?img=8"
-                    alt={user?.name || "User profile"}
-                  />
-                </button>
+                {/* Desktop view - Pill Container */}
+                <div className="hidden sm:flex items-center space-x-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-full">
+                  {/* Search */}
+                  <button
+                    type="button"
+                    onClick={() => setSearchModalOpen(true)}
+                    className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                  >
+                    <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span className="hidden sm:inline">Search</span>
+                    <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                      CTRL K
+                    </kbd>
+                  </button>
+
+                  {/* Dark mode toggle */}
+                  <button
+                    type="button"
+                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    title={darkMode ? "Light mode" : "Dark mode"}
+                    onClick={toggleDarkMode}
+                  >
+                    {darkMode ? (
+                      <SunIcon className="h-5 w-5" />
+                    ) : (
+                      <MoonIcon className="h-5 w-5" />
+                    )}
+                  </button>
+
+                  {/* Notifications */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="relative p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      title="Notifications"
+                      onClick={() => setNotificationPanelOpen(!notificationPanelOpen)}
+                    >
+                      <BellIcon className="h-5 w-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center h-5 w-5 text-xs font-medium text-white bg-primary-500 rounded-full ring-2 ring-white dark:ring-gray-800">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    <NotificationPanel
+                      notifications={notifications}
+                      unreadCount={unreadCount}
+                      isOpen={notificationPanelOpen}
+                      onClose={() => setNotificationPanelOpen(false)}
+                      onMarkAsRead={markAsRead}
+                      onMarkAllAsRead={markAllAsRead}
+                      onDismiss={dismissNotification}
+                      onClearAll={clearAll}
+                    />
+                  </div>
+
+                  {/* User Avatar */}
+                  <button
+                    type="button"
+                    className="relative"
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  >
+                    <img
+                      className="h-8 w-8 rounded-full object-cover"
+                      src="https://i.pravatar.cc/150?img=8"
+                      alt={user?.name || "User profile"}
+                    />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
