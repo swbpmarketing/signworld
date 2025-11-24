@@ -513,7 +513,7 @@ const UserManagement = () => {
       {/* Create User Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-start sm:items-center justify-center pt-16 sm:pt-0 p-4">
-          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[80vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 flex items-center justify-between p-4 sm:p-5 md:p-6 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
                 Create New User
@@ -796,7 +796,7 @@ const UserManagement = () => {
                   </div>
                 </div>
 
-                <div className="flex-shrink-0 bg-white dark:bg-gray-800 p-4 sm:p-5 md:p-6 flex flex-col-reverse sm:flex-row justify-between gap-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex-shrink-0 bg-white dark:bg-gray-800 p-4 sm:p-5 md:p-6 flex flex-col-reverse sm:flex-row justify-end gap-3 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleDeleteUser}
                     disabled={deleteUserMutation.isPending}

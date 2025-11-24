@@ -71,6 +71,11 @@ const Layout = () => {
     !user?.role || item.roles.includes(user.role)
   );
 
+  // Set page title for dashboard
+  useEffect(() => {
+    document.title = 'Sign Company Dashboard';
+  }, []);
+
   // Keyboard shortcut for search (Ctrl+K or Cmd+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -109,14 +114,16 @@ const Layout = () => {
       >
         <div className="flex h-full flex-col bg-white dark:bg-gray-800">
           {/* Logo */}
-          <div className="flex h-16 items-center justify-center px-6 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-white">
+          <div className="flex h-16 items-center justify-center px-6 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
             <img
               src="https://storage.googleapis.com/msgsndr/DecfA7BjYEDxFe8pqRZs/media/688c08634a3ff3102330f5bf.png"
               alt="Sign Company Logo"
               className="h-10 w-auto object-contain"
               style={{
                 maxWidth: '180px',
-                filter: 'invert(32%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(65%) contrast(110%)'
+                filter: darkMode
+                  ? 'brightness(0) invert(1)'
+                  : 'invert(32%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(65%) contrast(110%)'
               }}
             />
           </div>

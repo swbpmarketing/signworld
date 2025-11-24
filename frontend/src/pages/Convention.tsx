@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { CalendarDaysIcon, MapPinIcon, ClockIcon, TicketIcon, UserGroupIcon, SparklesIcon, MicrophoneIcon, AcademicCapIcon, GlobeAmericasIcon } from '@heroicons/react/24/outline';
+import { CalendarDaysIcon, MapPinIcon, ClockIcon, TicketIcon, UserGroupIcon, SparklesIcon, MicrophoneIcon, AcademicCapIcon, GlobeAmericasIcon, Cog6ToothIcon, PhotoIcon, DocumentIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../hooks/useToast';
+import ToastContainer from '../components/ToastContainer';
 
 interface Speaker {
   id: string;
@@ -28,10 +31,40 @@ interface Schedule {
 }
 
 const Convention = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const toast = useToast();
+
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedSpeaker, setSelectedSpeaker] = useState<Speaker | null>(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isRegistered, setIsRegistered] = useState(false);
+
+  // Admin state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadType, setUploadType] = useState<'gallery' | 'documents'>('gallery');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [conventions, setConventions] = useState<any[]>([]);
+  const [selectedConvention, setSelectedConvention] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [newConvention, setNewConvention] = useState({
+    title: '',
+    description: '',
+    startDate: '',
+    endDate: '',
+    location: {
+      venue: '',
+      address: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: 'USA'
+    },
+    isActive: true,
+    isFeatured: false
+  });
 
   // Convention date - August 22, 2025
   const conventionDate = new Date(2025, 7, 22, 9, 0, 0);
@@ -56,6 +89,75 @@ const Convention = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Load conventions for admin
+  useEffect(() => {
+    if (isAdmin) {
+      fetchConventions();
+    }
+  }, [isAdmin]);
+
+  const fetchConventions = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/conventions');
+      const data = await response.json();
+      if (data.success) {
+        setConventions(data.data);
+        if (data.data.length > 0 && !selectedConvention) {
+          setSelectedConvention(data.data[0]._id);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching conventions:', error);
+    }
+  };
+
+  const handleCreateConvention = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://127.0.0.1:5000/api/conventions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newConvention)
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Convention created successfully!');
+        setShowCreateModal(false);
+        fetchConventions();
+        setSelectedConvention(data.data._id);
+        // Reset form
+        setNewConvention({
+          title: '',
+          description: '',
+          startDate: '',
+          endDate: '',
+          location: {
+            venue: '',
+            address: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            country: 'USA'
+          },
+          isActive: true,
+          isFeatured: false
+        });
+      } else {
+        toast.error(`Error: ${data.error || 'Failed to create convention'}`);
+      }
+    } catch (error: any) {
+      console.error('Error creating convention:', error);
+      toast.error(`Failed to create convention: ${error.message || 'Network error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Mock speakers data
   const speakers: Speaker[] = [
@@ -142,7 +244,62 @@ const Convention = () => {
     { id: 'schedule', label: 'Schedule', icon: CalendarDaysIcon },
     { id: 'speakers', label: 'Speakers', icon: MicrophoneIcon },
     { id: 'registration', label: 'Registration', icon: TicketIcon },
+    ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Cog6ToothIcon }] : []),
   ];
+
+  // File upload handler
+  const handleFileUpload = async () => {
+    if (selectedFiles.length === 0) return;
+    if (!selectedConvention) {
+      toast.warning('Please select a convention first');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+
+      selectedFiles.forEach(file => {
+        formData.append(uploadType, file);
+      });
+
+      if (uploadType === 'gallery') {
+        formData.append('caption', 'Convention Gallery');
+        formData.append('year', new Date().getFullYear().toString());
+      }
+
+      const endpoint = uploadType === 'gallery' ? 'gallery' : 'documents';
+      const response = await fetch(`http://127.0.0.1:5000/api/conventions/${selectedConvention}/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (response.ok) {
+        toast.success(`${uploadType === 'gallery' ? 'Images' : 'Documents'} uploaded successfully!`);
+        setSelectedFiles([]);
+        setShowUploadModal(false);
+        fetchConventions(); // Refresh to show updated data
+      } else {
+        const error = await response.json();
+        toast.error(`Error: ${error.error || 'Upload failed'}`);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload files');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSelectedFiles(Array.from(e.target.files));
+    }
+  };
 
   const getEventTypeIcon = (type: string) => {
     switch (type) {
@@ -167,7 +324,9 @@ const Convention = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+      <div className="space-y-6">
       {/* Hero Section with Countdown */}
       <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl shadow-lg p-3 sm:p-4 md:p-6 lg:p-8 text-white overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-center">
@@ -470,10 +629,397 @@ const Convention = () => {
               )}
             </div>
           )}
+
+          {/* Admin Tab */}
+          {activeTab === 'admin' && isAdmin && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Convention Management</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Create and manage conventions, upload files</p>
+                  </div>
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="py-2 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm flex items-center"
+                  >
+                    <PlusIcon className="h-5 w-5 mr-2" />
+                    Create Convention
+                  </button>
+                </div>
+
+                {/* Convention Selector */}
+                {conventions.length > 0 && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Convention
+                    </label>
+                    <select
+                      value={selectedConvention}
+                      onChange={(e) => setSelectedConvention(e.target.value)}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      {conventions.map((conv) => (
+                        <option key={conv._id} value={conv._id}>
+                          {conv.title} - {new Date(conv.startDate).toLocaleDateString()}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Files will be uploaded to the selected convention
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {conventions.length === 0 ? (
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-6 text-center">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-400 mb-3">
+                    No conventions found. Create your first convention to start uploading files.
+                  </p>
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="py-2 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm inline-flex items-center"
+                  >
+                    <PlusIcon className="h-5 w-5 mr-2" />
+                    Create First Convention
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Upload Gallery Images */}
+                <div className="bg-white dark:bg-gray-700 rounded-lg p-6 border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center mb-4">
+                    <PhotoIcon className="h-8 w-8 text-primary-600 dark:text-primary-400 mr-3" />
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Gallery Images</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Upload convention photos</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setUploadType('gallery');
+                      setShowUploadModal(true);
+                    }}
+                    className="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm flex items-center justify-center"
+                  >
+                    <PlusIcon className="h-5 w-5 mr-2" />
+                    Upload Images
+                  </button>
+                </div>
+
+                {/* Upload Documents */}
+                <div className="bg-white dark:bg-gray-700 rounded-lg p-6 border border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center mb-4">
+                    <DocumentIcon className="h-8 w-8 text-secondary-600 dark:text-secondary-400 mr-3" />
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Documents</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Upload schedules, brochures, PDFs</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setUploadType('documents');
+                      setShowUploadModal(true);
+                    }}
+                    className="w-full py-3 px-4 bg-secondary-600 text-white font-medium rounded-lg hover:bg-secondary-700 active:bg-secondary-800 transition-colors shadow-sm flex items-center justify-center"
+                  >
+                    <PlusIcon className="h-5 w-5 mr-2" />
+                    Upload Documents
+                  </button>
+                </div>
+              </div>
+              )}
+            </div>
+          )}
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Create Convention Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
+            <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Create New Convention</h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Convention Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={newConvention.title}
+                    onChange={(e) => setNewConvention({ ...newConvention, title: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., Sign Company Convention 2025"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Description *
+                  </label>
+                  <textarea
+                    value={newConvention.description}
+                    onChange={(e) => setNewConvention({ ...newConvention, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Describe the convention..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={newConvention.startDate}
+                    onChange={(e) => setNewConvention({ ...newConvention, startDate: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    End Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={newConvention.endDate}
+                    onChange={(e) => setNewConvention({ ...newConvention, endDate: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Venue
+                  </label>
+                  <input
+                    type="text"
+                    value={newConvention.location.venue}
+                    onChange={(e) => setNewConvention({ ...newConvention, location: { ...newConvention.location, venue: e.target.value } })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., Las Vegas Convention Center"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Address
+                  </label>
+                  <input
+                    type="text"
+                    value={newConvention.location.address}
+                    onChange={(e) => setNewConvention({ ...newConvention, location: { ...newConvention.location, address: e.target.value } })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Street address"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={newConvention.location.city}
+                    onChange={(e) => setNewConvention({ ...newConvention, location: { ...newConvention.location, city: e.target.value } })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="City"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    value={newConvention.location.state}
+                    onChange={(e) => setNewConvention({ ...newConvention, location: { ...newConvention.location, state: e.target.value } })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="State"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    ZIP Code
+                  </label>
+                  <input
+                    type="text"
+                    value={newConvention.location.zipCode}
+                    onChange={(e) => setNewConvention({ ...newConvention, location: { ...newConvention.location, zipCode: e.target.value } })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="ZIP Code"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Country
+                  </label>
+                  <input
+                    type="text"
+                    value={newConvention.location.country}
+                    onChange={(e) => setNewConvention({ ...newConvention, location: { ...newConvention.location, country: e.target.value } })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Country"
+                  />
+                </div>
+
+                <div className="md:col-span-2 flex items-center space-x-6">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={newConvention.isActive}
+                      onChange={(e) => setNewConvention({ ...newConvention, isActive: e.target.checked })}
+                      className="mr-2 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Active</span>
+                  </label>
+
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={newConvention.isFeatured}
+                      onChange={(e) => setNewConvention({ ...newConvention, isFeatured: e.target.checked })}
+                      className="mr-2 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Featured</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateConvention}
+                disabled={loading || !newConvention.title || !newConvention.description || !newConvention.startDate || !newConvention.endDate}
+                className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Creating...' : 'Create Convention'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* File Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full">
+            <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center">
+                {uploadType === 'gallery' ? (
+                  <PhotoIcon className="h-6 w-6 text-primary-600 dark:text-primary-400 mr-2" />
+                ) : (
+                  <DocumentIcon className="h-6 w-6 text-secondary-600 dark:text-secondary-400 mr-2" />
+                )}
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Upload {uploadType === 'gallery' ? 'Images' : 'Documents'}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setSelectedFiles([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Select {uploadType === 'gallery' ? 'Images' : 'Documents'}
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept={uploadType === 'gallery' ? 'image/*' : '.pdf,.doc,.docx,.xls,.xlsx,.txt'}
+                    onChange={handleFileChange}
+                    className="block w-full text-sm text-gray-900 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer focus:outline-none"
+                  />
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    {uploadType === 'gallery'
+                      ? 'Upload up to 20 images (JPG, PNG, GIF). Max 10MB per file.'
+                      : 'Upload up to 10 documents (PDF, DOC, DOCX, XLS, XLSX). Max 10MB per file.'}
+                  </p>
+                </div>
+
+                {selectedFiles.length > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                      Selected Files ({selectedFiles.length})
+                    </h4>
+                    <ul className="space-y-2 max-h-40 overflow-y-auto">
+                      {selectedFiles.map((file, idx) => (
+                        <li key={idx} className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+                          <span className="truncate">{file.name}</span>
+                          <button
+                            onClick={() => {
+                              setSelectedFiles(selectedFiles.filter((_, i) => i !== idx));
+                            }}
+                            className="ml-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setSelectedFiles([]);
+                  }}
+                  className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleFileUpload}
+                  disabled={selectedFiles.length === 0 || uploading}
+                  className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {uploading ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Speaker Details Modal */}
       {selectedSpeaker && (
@@ -522,7 +1068,8 @@ const Convention = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -184,11 +184,28 @@ const Calendar = () => {
     return colors[category] || colors.other;
   };
 
+  // Calculate date ranges based on view mode
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calendarStart = startOfWeek(monthStart);
   const calendarEnd = endOfWeek(monthEnd);
-  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+
+  // Get days based on view mode
+  const getDaysForView = () => {
+    switch (viewMode) {
+      case 'week':
+        const weekStart = startOfWeek(currentMonth);
+        const weekEnd = endOfWeek(currentMonth);
+        return eachDayOfInterval({ start: weekStart, end: weekEnd });
+      case 'day':
+        return [currentMonth];
+      case 'month':
+      default:
+        return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+    }
+  };
+
+  const days = getDaysForView();
 
   const getEventTypeColor = (type: Event['type']) => {
     switch (type) {
@@ -319,11 +336,23 @@ const Calendar = () => {
             {/* Calendar Navigation */}
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {format(currentMonth, 'MMMM yyyy')}
+                {viewMode === 'day'
+                  ? format(currentMonth, 'EEEE, MMMM d, yyyy')
+                  : viewMode === 'week'
+                  ? `Week of ${format(startOfWeek(currentMonth), 'MMMM d, yyyy')}`
+                  : format(currentMonth, 'MMMM yyyy')}
               </h3>
               <div className="flex items-center gap-1 sm:gap-2">
                 <button
-                  onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                  onClick={() => {
+                    if (viewMode === 'day') {
+                      setCurrentMonth(addDays(currentMonth, -1));
+                    } else if (viewMode === 'week') {
+                      setCurrentMonth(addDays(currentMonth, -7));
+                    } else {
+                      setCurrentMonth(subMonths(currentMonth, 1));
+                    }
+                  }}
                   className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600"
                 >
                   <ChevronLeftIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-300" />
@@ -335,7 +364,15 @@ const Calendar = () => {
                   Today
                 </button>
                 <button
-                  onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                  onClick={() => {
+                    if (viewMode === 'day') {
+                      setCurrentMonth(addDays(currentMonth, 1));
+                    } else if (viewMode === 'week') {
+                      setCurrentMonth(addDays(currentMonth, 7));
+                    } else {
+                      setCurrentMonth(addMonths(currentMonth, 1));
+                    }
+                  }}
                   className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all duration-200 border border-gray-200 dark:border-gray-600"
                 >
                   <ChevronRightIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-300" />
@@ -344,13 +381,21 @@ const Calendar = () => {
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-700 rounded-lg sm:rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 shadow-inner">
-              {/* Week days */}
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <div key={day} className="bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-0.5 sm:px-2 py-2 sm:py-3 text-center border-b-2 border-gray-300 dark:border-gray-600">
-                  <span className="text-[10px] sm:text-xs md:text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">{day}</span>
+            <div className={`grid gap-px bg-gray-200 dark:bg-gray-700 rounded-lg sm:rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 shadow-inner ${
+              viewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7'
+            }`}>
+              {/* Week days / Day header */}
+              {viewMode === 'day' ? (
+                <div className="bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-4 py-3 text-center border-b-2 border-gray-300 dark:border-gray-600">
+                  <span className="text-sm md:text-base font-bold text-gray-700 dark:text-gray-200">{format(currentMonth, 'EEEE, MMMM d, yyyy')}</span>
                 </div>
-              ))}
+              ) : (
+                ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                  <div key={day} className="bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-0.5 sm:px-2 py-2 sm:py-3 text-center border-b-2 border-gray-300 dark:border-gray-600">
+                    <span className="text-[10px] sm:text-xs md:text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">{day}</span>
+                  </div>
+                ))
+              )}
 
               {/* Calendar days */}
               {days.map((day, idx) => {
@@ -358,44 +403,62 @@ const Calendar = () => {
                 const isCurrentMonth = isSameMonth(day, currentMonth);
                 const isSelected = selectedDate && isSameDay(day, selectedDate);
                 const isTodayDate = isToday(day);
+                const isPastDate = day < startOfDay(new Date()) && !isTodayDate;
 
                 return (
                   <div
                     key={idx}
-                    onClick={() => setSelectedDate(day)}
+                    onClick={() => !isPastDate && setSelectedDate(day)}
                     className={`
-                      bg-white dark:bg-gray-800 p-0.5 sm:p-1.5 md:p-2 min-h-[60px] sm:min-h-[85px] md:min-h-[110px] cursor-pointer transition-all duration-200 border-r border-b border-gray-100 dark:border-gray-700 last:border-r-0 overflow-hidden
-                      ${!isCurrentMonth ? 'text-gray-400 dark:text-gray-600 bg-gray-50/50 dark:bg-gray-900/50' : 'text-gray-900 dark:text-gray-100'}
-                      ${isSelected ? 'ring-1 sm:ring-2 ring-primary-500 dark:ring-primary-400 bg-primary-50/50 dark:bg-primary-900/20 shadow-sm' : 'hover:bg-gray-50 dark:hover:bg-gray-750'}
+                      bg-white dark:bg-gray-800 p-0.5 sm:p-1.5 md:p-2 transition-all duration-200 border-r border-b border-gray-100 dark:border-gray-700 last:border-r-0 overflow-hidden
+                      ${viewMode === 'day' ? 'min-h-[400px] p-4' : viewMode === 'week' ? 'min-h-[150px] sm:min-h-[200px]' : 'min-h-[60px] sm:min-h-[85px] md:min-h-[110px]'}
+                      ${isPastDate ? 'opacity-40 cursor-not-allowed bg-gray-100 dark:bg-gray-900' : 'cursor-pointer'}
+                      ${!isCurrentMonth && viewMode === 'month' ? 'text-gray-400 dark:text-gray-600 bg-gray-50/50 dark:bg-gray-900/50' : 'text-gray-900 dark:text-gray-100'}
+                      ${isSelected ? 'ring-1 sm:ring-2 ring-primary-500 dark:ring-primary-400 bg-primary-50/50 dark:bg-primary-900/20 shadow-sm' : !isPastDate && 'hover:bg-gray-50 dark:hover:bg-gray-750'}
                     `}
                   >
                     <div className={`
-                      inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 md:w-9 md:h-9 text-[10px] sm:text-xs md:text-base rounded-full mb-0.5 sm:mb-1 transition-all duration-200
+                      inline-flex items-center justify-center rounded-full mb-0.5 sm:mb-1 transition-all duration-200
+                      ${viewMode === 'day' ? 'w-12 h-12 text-lg' : viewMode === 'week' ? 'w-8 h-8 text-sm' : 'w-5 h-5 sm:w-7 sm:h-7 md:w-9 md:h-9 text-[10px] sm:text-xs md:text-base'}
                       ${isTodayDate
                         ? 'bg-gradient-to-br from-primary-600 to-primary-700 dark:from-primary-500 dark:to-primary-600 text-white font-bold shadow-sm ring-1 sm:ring-2 ring-primary-200 dark:ring-primary-800'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-700 font-medium'}
                     `}>
                       {format(day, 'd')}
                     </div>
+                    {viewMode === 'week' && (
+                      <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold mb-2">
+                        {format(day, 'EEE')}
+                      </p>
+                    )}
                     <div className="space-y-0.5 sm:space-y-1">
-                      {dayEvents.slice(0, 2).map((event) => (
+                      {dayEvents.slice(0, viewMode === 'day' ? dayEvents.length : viewMode === 'week' ? 5 : 2).map((event) => (
                         <div
                           key={event.id}
                           onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedEvent(event);
+                            if (!isPastDate) {
+                              e.stopPropagation();
+                              setSelectedEvent(event);
+                            }
                           }}
                           className={`
-                            text-[8px] sm:text-[10px] md:text-xs px-0.5 sm:px-1 md:px-1.5 py-0.5 sm:py-1 rounded border cursor-pointer
+                            px-0.5 sm:px-1 md:px-1.5 py-0.5 sm:py-1 rounded border
+                            ${viewMode === 'day' ? 'text-sm p-3 mb-2' : viewMode === 'week' ? 'text-xs py-1.5' : 'text-[8px] sm:text-[10px] md:text-xs'}
+                            ${isPastDate ? 'cursor-not-allowed' : 'cursor-pointer hover:shadow-sm'}
                             ${getEventTypeColor(event.type)}
-                            hover:shadow-sm transition-all duration-200
+                            transition-all duration-200
                           `}
                         >
                           <p className="truncate font-semibold">{event.title}</p>
+                          {viewMode !== 'month' && (
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{event.time}</p>
+                          )}
                         </div>
                       ))}
-                      {dayEvents.length > 2 && (
-                        <p className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 px-0.5 sm:px-1 font-medium">+{dayEvents.length - 2}</p>
+                      {dayEvents.length > (viewMode === 'day' ? dayEvents.length : viewMode === 'week' ? 5 : 2) && (
+                        <p className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 px-0.5 sm:px-1 font-medium">
+                          +{dayEvents.length - (viewMode === 'week' ? 5 : 2)}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -656,6 +719,7 @@ const Calendar = () => {
                     name="date"
                     value={formData.date}
                     onChange={handleFormChange}
+                    min={format(new Date(), 'yyyy-MM-dd')}
                     required
                     className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-primary-500 dark:focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-800 transition-all outline-none"
                   />

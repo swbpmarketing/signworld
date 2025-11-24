@@ -31,6 +31,11 @@ const Landing = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
+  // Set page title
+  useEffect(() => {
+    document.title = 'Sign Company';
+  }, []);
+
   // Track mouse for subtle parallax effect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {

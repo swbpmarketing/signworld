@@ -2,8 +2,11 @@ const express = require('express');
 const fetch = require('node-fetch');
 const router = express.Router();
 
-// OpenRouter API configuration
+// API configuration - supports both OpenAI and OpenRouter
+const USE_OPENAI = process.env.OPENAI_API_KEY ? true : false;
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 // System prompt with portal context
@@ -45,34 +48,52 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ error: 'Invalid messages format' });
     }
 
-    if (!OPENROUTER_API_KEY) {
-      console.error('OpenRouter API key not configured');
+    // Check if any API key is configured
+    if (!OPENAI_API_KEY && !OPENROUTER_API_KEY) {
+      console.error('No AI API key configured');
       return res.status(500).json({ error: 'AI service not configured' });
     }
 
-    // Call OpenRouter API
-    const response = await fetch(OPENROUTER_API_URL, {
+    // Determine which API to use
+    const apiUrl = USE_OPENAI ? OPENAI_API_URL : OPENROUTER_API_URL;
+    const apiKey = USE_OPENAI ? OPENAI_API_KEY : OPENROUTER_API_KEY;
+    const model = USE_OPENAI ? 'gpt-4o-mini' : 'anthropic/claude-3.5-sonnet';
+
+    console.log(`Using ${USE_OPENAI ? 'OpenAI' : 'OpenRouter'} API with model: ${model}`);
+
+    // Prepare headers
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    };
+
+    // Add OpenRouter-specific headers
+    if (!USE_OPENAI) {
+      headers['HTTP-Referer'] = process.env.FRONTEND_URL || 'http://localhost:5173';
+      headers['X-Title'] = 'SignWorld Portal AI Assistant';
+    }
+
+    // Prepare request body
+    const requestBody = {
+      model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...messages
+      ],
+      temperature: 0.7,
+      max_tokens: 500
+    };
+
+    // Call AI API
+    const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:5173',
-        'X-Title': 'SignWorld Portal AI Assistant'
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          ...messages
-        ],
-        temperature: 0.7,
-        max_tokens: 500
-      })
+      headers,
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('OpenRouter API error:', errorData);
+      console.error('AI API error:', errorData);
       return res.status(response.status).json({
         error: errorData.error?.message || 'AI service error'
       });

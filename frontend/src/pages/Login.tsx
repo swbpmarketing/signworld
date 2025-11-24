@@ -19,6 +19,11 @@ const Login = () => {
     formState: { errors },
   } = useForm<LoginFormData>();
 
+  // Set page title
+  useEffect(() => {
+    document.title = 'Sign Company - Login';
+  }, []);
+
   // Redirect to dashboard if already logged in
   useEffect(() => {
     if (user) {
