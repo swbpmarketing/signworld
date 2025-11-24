@@ -4,10 +4,20 @@ const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
 
-// Load env vars
-dotenv.config({ path: require('path').join(__dirname, '.env') });
+// Load env vars - override any existing environment variables
+dotenv.config({ path: require('path').join(__dirname, '.env'), override: true });
 
-// Debug: Log email configuration
+// Debug AWS configuration
+console.log('AWS Configuration:');
+console.log('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID);
+console.log('AWS_REGION:', process.env.AWS_REGION);
+console.log('AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET);
+
+// Force development mode (temporary fix for environment variable issue)
+process.env.NODE_ENV = 'development';
+
+// Debug: Log environment and email configuration
+console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('Email Configuration Loaded:');
 console.log('EMAIL_HOST:', process.env.EMAIL_HOST);
 console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
@@ -28,7 +38,7 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or Postman)
     if (!origin) return callback(null, true);
-    
+
     const allowedOrigins = [
       process.env.CLIENT_URL || 'http://localhost:5173',
       'http://localhost:5173',
@@ -36,7 +46,7 @@ const corsOptions = {
       'https://sign-company.onrender.com',
       'https://customadesign.github.io'
     ];
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -46,10 +56,15 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
+
+// Explicit OPTIONS handler for all API routes
+app.options('*', cors(corsOptions));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -178,8 +193,10 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-const PORT = process.env.PORT || 5000;
+// Temporarily hardcode port to avoid environment variable conflicts
+const PORT = 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`API available at http://127.0.0.1:${PORT}/api`);
 });
