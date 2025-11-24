@@ -13,9 +13,6 @@ console.log('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID);
 console.log('AWS_REGION:', process.env.AWS_REGION);
 console.log('AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET);
 
-// Force development mode (temporary fix for environment variable issue)
-process.env.NODE_ENV = 'development';
-
 // Debug: Log environment and email configuration
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('Email Configuration Loaded:');
@@ -193,8 +190,8 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Temporarily hardcode port to avoid environment variable conflicts
-const PORT = 5000;
+// Use environment PORT (for Render) or default to 5000
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
