@@ -1,6 +1,8 @@
-/* Calendar Share Links Styles */
+/* Calendar Share Links Styles - Modern with Dark Mode Support */
+
 .calendar-share-links {
-  @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6;
+  @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-6;
+  transition: all 0.3s ease;
 }
 
 .share-header {
@@ -12,28 +14,28 @@
 }
 
 .share-title h3 {
-  @apply text-lg font-semibold text-gray-900;
+  @apply text-lg font-semibold text-gray-900 dark:text-gray-100;
 }
 
 .share-description {
-  @apply text-sm text-gray-600 leading-relaxed;
+  @apply text-sm text-gray-600 dark:text-gray-400 leading-relaxed;
 }
 
 /* Error States */
 .error-banner {
-  @apply flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-lg;
+  @apply flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg;
 }
 
 .error-banner svg {
-  @apply h-5 w-5 text-red-500 flex-shrink-0;
+  @apply h-5 w-5 text-red-500 dark:text-red-400 flex-shrink-0;
 }
 
 .error-banner span {
-  @apply text-sm text-red-700 flex-1 mx-3;
+  @apply text-sm text-red-700 dark:text-red-300 flex-1 mx-3;
 }
 
 .retry-btn {
-  @apply px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 rounded-md transition-colors;
+  @apply px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30 rounded-md transition-colors;
 }
 
 /* Share Options */
@@ -42,7 +44,7 @@
 }
 
 .share-option {
-  @apply border border-gray-200 rounded-lg p-4 space-y-3 hover:border-gray-300 transition-colors;
+  @apply border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3 hover:border-gray-300 dark:hover:border-gray-600 transition-all bg-white dark:bg-gray-800/50;
 }
 
 .share-option-header {
@@ -54,15 +56,20 @@
 }
 
 .share-option-icon {
-  @apply text-2xl flex-shrink-0;
+  @apply flex-shrink-0 flex items-center justify-center;
+  @apply w-10 h-10 rounded-lg;
+  @apply bg-gradient-to-br from-gray-50 to-gray-100;
+  @apply dark:from-gray-700 dark:to-gray-600;
+  @apply border border-gray-200 dark:border-gray-600;
+  transition: all 0.2s ease;
 }
 
 .share-option-name {
-  @apply font-medium text-gray-900 text-base;
+  @apply font-medium text-gray-900 dark:text-gray-100 text-base;
 }
 
 .share-option-description {
-  @apply text-sm text-gray-600 mt-1;
+  @apply text-sm text-gray-600 dark:text-gray-400 mt-1;
 }
 
 .share-option-actions {
@@ -70,11 +77,11 @@
 }
 
 .share-btn {
-  @apply inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-white font-medium text-sm transition-colors no-underline;
+  @apply inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-white font-medium text-sm transition-all no-underline shadow-sm hover:shadow-md;
 }
 
 .share-btn:disabled {
-  @apply opacity-50 cursor-not-allowed;
+  @apply opacity-50 cursor-not-allowed shadow-none;
 }
 
 .share-btn svg {
@@ -82,7 +89,7 @@
 }
 
 .copy-btn {
-  @apply inline-flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium text-sm transition-colors;
+  @apply inline-flex items-center space-x-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium text-sm transition-all;
 }
 
 .copy-btn:disabled {
@@ -99,7 +106,7 @@
 }
 
 .ical-label {
-  @apply text-sm font-medium text-gray-700;
+  @apply text-sm font-medium text-gray-700 dark:text-gray-300;
 }
 
 .ical-url-container {
@@ -107,11 +114,12 @@
 }
 
 .ical-url-input {
-  @apply flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
+  @apply flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-primary-500 dark:focus:border-primary-400;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
 .ical-copy-btn {
-  @apply p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors;
+  @apply p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all;
 }
 
 .ical-copy-btn svg {
@@ -120,28 +128,30 @@
 
 /* Share Info */
 .share-info {
-  @apply space-y-2 p-4 bg-gray-50 rounded-lg;
+  @apply space-y-2 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700;
 }
 
 .info-item {
-  @apply text-sm text-gray-600;
+  @apply text-sm text-gray-600 dark:text-gray-400;
 }
 
 .info-item strong {
-  @apply text-gray-900 font-medium;
+  @apply text-gray-900 dark:text-gray-100 font-medium;
 }
 
 /* Loading States */
 .loading-overlay {
-  @apply absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center space-x-3;
+  @apply absolute inset-0 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 flex items-center justify-center space-x-3;
 }
 
 .loading-spinner {
-  @apply animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600;
+  @apply animate-spin rounded-full h-6 w-6 border-2 border-gray-200 dark:border-gray-700;
+  border-top-color: theme('colors.primary.600');
+  @apply dark:border-t-primary-400;
 }
 
 .loading-overlay span {
-  @apply text-sm text-gray-600;
+  @apply text-sm text-gray-600 dark:text-gray-400;
 }
 
 /* Compact Version Styles */
@@ -150,7 +160,7 @@
 }
 
 .share-toggle-btn {
-  @apply inline-flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors;
+  @apply inline-flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm;
 }
 
 .share-toggle-btn:disabled {
@@ -162,11 +172,11 @@
 }
 
 .share-panel-dropdown {
-  @apply absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 space-y-3;
+  @apply absolute top-full left-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg dark:shadow-2xl z-50 p-4 space-y-3;
 }
 
 .error-message {
-  @apply flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700;
+  @apply flex items-center space-x-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-300;
 }
 
 .error-message svg {
@@ -182,19 +192,19 @@
 }
 
 .share-link-compact {
-  @apply inline-flex items-center space-x-2 px-3 py-2 rounded-md text-white font-medium text-sm transition-colors no-underline flex-1;
+  @apply inline-flex items-center space-x-2 px-3 py-2 rounded-md text-white font-medium text-sm transition-all no-underline flex-1 shadow-sm hover:shadow-md;
 }
 
 .share-link-compact:disabled {
-  @apply opacity-50 cursor-not-allowed;
+  @apply opacity-50 cursor-not-allowed shadow-none;
 }
 
 .share-link-compact .share-icon {
-  @apply text-base;
+  @apply flex items-center justify-center;
 }
 
 .copy-btn-compact {
-  @apply p-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors flex-shrink-0;
+  @apply p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex-shrink-0;
 }
 
 .copy-btn-compact:disabled {
@@ -215,28 +225,28 @@
   .calendar-share-links {
     @apply p-4;
   }
-  
+
   .share-option {
     @apply p-3;
   }
-  
+
   .share-option-actions {
     @apply flex-col items-stretch;
   }
-  
+
   .share-btn,
   .copy-btn {
     @apply w-full justify-center;
   }
-  
+
   .ical-url-container {
     @apply flex-col space-x-0 space-y-2;
   }
-  
+
   .ical-copy-btn {
     @apply w-full justify-center;
   }
-  
+
   .share-panel-dropdown {
     @apply w-72 right-0 left-auto;
   }
@@ -246,44 +256,13 @@
   .share-panel-dropdown {
     @apply fixed top-16 left-4 right-4 w-auto;
   }
-  
+
   .share-option-info {
     @apply flex-col space-x-0 space-y-2;
   }
-  
+
   .share-option-icon {
     @apply self-start;
-  }
-}
-
-/* Dark mode support (if implemented) */
-@media (prefers-color-scheme: dark) {
-  .calendar-share-links {
-    @apply bg-gray-800 border-gray-700;
-  }
-  
-  .share-title h3,
-  .share-option-name,
-  .info-item strong {
-    @apply text-gray-100;
-  }
-  
-  .share-description,
-  .share-option-description,
-  .info-item {
-    @apply text-gray-300;
-  }
-  
-  .share-option {
-    @apply border-gray-700 hover:border-gray-600 bg-gray-800;
-  }
-  
-  .ical-url-input {
-    @apply bg-gray-700 border-gray-600 text-gray-200;
-  }
-  
-  .share-info {
-    @apply bg-gray-700;
   }
 }
 
@@ -292,7 +271,7 @@
 .copy-btn:focus,
 .share-toggle-btn:focus,
 .ical-copy-btn:focus {
-  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  @apply outline-none ring-2 ring-primary-500 dark:ring-primary-400 ring-offset-2 dark:ring-offset-gray-800;
 }
 
 /* Animation */
@@ -311,18 +290,26 @@
   }
 }
 
+/* Hover effects for icons */
+.share-option:hover .share-option-icon {
+  @apply shadow-sm border-primary-200 dark:border-primary-700;
+  @apply bg-gradient-to-br from-primary-50 to-primary-100;
+  @apply dark:from-primary-900/30 dark:to-primary-800/30;
+  transform: scale(1.05);
+}
+
 /* Print styles */
 @media print {
   .calendar-share-links {
-    @apply shadow-none border-gray-400;
+    @apply shadow-none border-gray-300;
   }
-  
+
   .share-btn,
   .copy-btn,
   .share-toggle-btn {
     @apply hidden;
   }
-  
+
   .ical-url-display {
     @apply block;
   }

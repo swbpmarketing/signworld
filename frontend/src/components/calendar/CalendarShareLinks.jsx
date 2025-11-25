@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ShareIcon, 
-  CalendarDaysIcon, 
-  LinkIcon, 
+import {
+  ShareIcon,
+  CalendarDaysIcon,
+  LinkIcon,
   DocumentDuplicateIcon,
   CheckIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  EnvelopeIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import './CalendarShareLinks.css';
 
@@ -93,28 +95,28 @@ const CalendarShareLinks = ({
     {
       name: 'Google Calendar',
       key: 'google',
-      icon: '📅',
+      icon: CalendarDaysIcon,
       color: 'bg-blue-500 hover:bg-blue-600',
       description: 'Subscribe to calendar in Google Calendar'
     },
     {
       name: 'Outlook',
-      key: 'outlook', 
-      icon: '📧',
+      key: 'outlook',
+      icon: EnvelopeIcon,
       color: 'bg-blue-600 hover:bg-blue-700',
       description: 'Subscribe to calendar in Outlook'
     },
     {
       name: 'Apple Calendar',
       key: 'apple',
-      icon: '🍎',
+      icon: CalendarDaysIcon,
       color: 'bg-gray-800 hover:bg-gray-900',
       description: 'Subscribe to calendar in Apple Calendar'
     },
     {
       name: 'iCal Feed',
       key: 'ical',
-      icon: '📋',
+      icon: DocumentTextIcon,
       color: 'bg-green-600 hover:bg-green-700',
       description: 'Direct iCal feed URL for any calendar app'
     }
@@ -151,7 +153,9 @@ const CalendarShareLinks = ({
                     className={`share-link-compact ${option.color}`}
                     disabled={loading || !shareLinks[option.key]}
                   >
-                    <span className="share-icon">{option.icon}</span>
+                    <span className="share-icon">
+                      <option.icon className="h-4 w-4" />
+                    </span>
                     {option.name}
                   </a>
                   <button
@@ -201,7 +205,9 @@ const CalendarShareLinks = ({
           <div key={option.key} className="share-option">
             <div className="share-option-header">
               <div className="share-option-info">
-                <span className="share-option-icon">{option.icon}</span>
+                <span className="share-option-icon">
+                  <option.icon className="h-5 w-5" />
+                </span>
                 <div>
                   <h4 className="share-option-name">{option.name}</h4>
                   <p className="share-option-description">{option.description}</p>

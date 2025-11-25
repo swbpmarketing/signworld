@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ShareIcon, 
-  CalendarDaysIcon, 
-  LinkIcon, 
+import {
+  ShareIcon,
+  CalendarDaysIcon,
+  LinkIcon,
   DocumentDuplicateIcon,
   CheckIcon,
   ExclamationTriangleIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  EnvelopeIcon,
+  DevicePhoneMobileIcon,
+  ArrowPathIcon,
+  LockClosedIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import './CalendarShareSection.css';
 
@@ -98,29 +103,29 @@ const CalendarShareSection = ({
     {
       name: 'Google Calendar',
       key: 'google',
-      icon: '📅',
-      color: 'bg-blue-500 hover:bg-blue-600',
+      icon: CalendarDaysIcon,
+      iconColor: 'text-blue-600 dark:text-blue-400',
       description: 'Subscribe in Google Calendar'
     },
     {
       name: 'Outlook',
-      key: 'outlook', 
-      icon: '📧',
-      color: 'bg-blue-600 hover:bg-blue-700',
+      key: 'outlook',
+      icon: EnvelopeIcon,
+      iconColor: 'text-blue-700 dark:text-blue-500',
       description: 'Subscribe in Outlook'
     },
     {
       name: 'Apple Calendar',
       key: 'apple',
-      icon: '🍎',
-      color: 'bg-gray-800 hover:bg-gray-900',
+      icon: CalendarDaysIcon,
+      iconColor: 'text-gray-700 dark:text-gray-300',
       description: 'Subscribe in Apple Calendar'
     },
     {
       name: 'iCal Feed',
       key: 'ical',
-      icon: '📋',
-      color: 'bg-green-600 hover:bg-green-700',
+      icon: DocumentTextIcon,
+      iconColor: 'text-green-600 dark:text-green-400',
       description: 'Direct iCal feed URL'
     }
   ];
@@ -128,10 +133,13 @@ const CalendarShareSection = ({
   return (
     <div className="calendar-share-section">
       {/* Header with toggle */}
-      <div className="share-section-header">
+      <div
+        className="share-section-header"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
         <div className="share-section-title">
           <div className="share-section-icon">
-            <ShareIcon className="h-6 w-6 text-primary-600" />
+            <ShareIcon className="h-5 w-5" />
           </div>
           <div className="share-section-text">
             <h3 className="share-section-heading">Subscribe to Calendar</h3>
@@ -141,7 +149,6 @@ const CalendarShareSection = ({
           </div>
         </div>
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
           className="share-section-toggle"
           aria-expanded={isExpanded}
           aria-label={isExpanded ? 'Hide calendar sharing options' : 'Show calendar sharing options'}
@@ -169,17 +176,24 @@ const CalendarShareSection = ({
         {/* Quick action buttons */}
         <div className="share-quick-actions">
           {shareOptions.map((option) => (
-            <div key={option.key} className="share-quick-option">
+            <div key={option.key} className="share-quick-card">
               <a
                 href={shareLinks[option.key]}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`share-quick-btn ${option.color}`}
+                className="share-quick-btn"
                 disabled={loading || !shareLinks[option.key]}
                 title={`Subscribe to ${calendarName} in ${option.name}`}
               >
-                <span className="share-quick-icon">{option.icon}</span>
-                <span className="share-quick-name">{option.name}</span>
+                <div className="share-btn-content">
+                  <div className="share-quick-icon">
+                    <option.icon className={`h-5 w-5 ${option.iconColor}`} />
+                  </div>
+                  <div className="share-btn-text">
+                    <span className="share-quick-name">{option.name}</span>
+                    <span className="share-quick-desc">{option.description}</span>
+                  </div>
+                </div>
                 <LinkIcon className="h-4 w-4 share-quick-link-icon" />
               </a>
               <button
@@ -189,7 +203,7 @@ const CalendarShareSection = ({
                 title={`Copy ${option.name} link`}
               >
                 {copiedLink === option.key ? (
-                  <CheckIcon className="h-4 w-4 text-green-600" />
+                  <CheckIcon className="h-4 w-4" />
                 ) : (
                   <DocumentDuplicateIcon className="h-4 w-4" />
                 )}
@@ -219,7 +233,7 @@ const CalendarShareSection = ({
                 title="Copy calendar feed URL"
               >
                 {copiedLink === 'ical-direct' ? (
-                  <CheckIcon className="h-4 w-4 text-green-600" />
+                  <CheckIcon className="h-4 w-4" />
                 ) : (
                   <DocumentDuplicateIcon className="h-4 w-4" />
                 )}
@@ -232,16 +246,31 @@ const CalendarShareSection = ({
         <div className="share-section-info">
           <div className="share-info-grid">
             <div className="share-info-item">
-              <span className="share-info-icon">🔄</span>
-              <strong>Auto-sync:</strong> Events update automatically
+              <div className="share-info-icon-wrapper">
+                <ArrowPathIcon className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+              </div>
+              <div className="share-info-content">
+                <strong>Auto-sync</strong>
+                <span>Events update automatically</span>
+              </div>
             </div>
             <div className="share-info-item">
-              <span className="share-info-icon">🔒</span>
-              <strong>Privacy:</strong> Only public events included
+              <div className="share-info-icon-wrapper">
+                <LockClosedIcon className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+              </div>
+              <div className="share-info-content">
+                <strong>Privacy</strong>
+                <span>Only public events included</span>
+              </div>
             </div>
             <div className="share-info-item">
-              <span className="share-info-icon">📱</span>
-              <strong>Compatible:</strong> Works with all major calendar apps
+              <div className="share-info-icon-wrapper">
+                <DevicePhoneMobileIcon className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+              </div>
+              <div className="share-info-content">
+                <strong>Compatible</strong>
+                <span>Works with all major calendar apps</span>
+              </div>
             </div>
           </div>
         </div>
