@@ -1,8 +1,7 @@
 import { Outlet, Link, useLocation, Navigate } from "react-router-dom";
+import { Suspense } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useDarkMode } from "../context/DarkModeContext";
-import { AnimatePresence } from "framer-motion";
-import { PageTransition } from "./PageTransition";
 import {
   CalendarIcon,
   HomeIcon,
@@ -25,7 +24,7 @@ import {
   SunIcon,
   BuildingOffice2Icon,
 } from "@heroicons/react/24/outline";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import AISearchModal from "./AISearchModal";
 import { NotificationPanel } from "./NotificationPanel";
 import { useEventNotifications } from "../hooks/useEventNotifications";
@@ -47,8 +46,122 @@ const navigation = [
   { name: "FAQs", href: "/faqs", icon: QuestionMarkCircleIcon, roles: ['admin', 'owner', 'vendor'] },
 ];
 
+// Memoized Sidebar component - only re-renders when props change
+const Sidebar = memo(({
+  sidebarOpen,
+  darkMode,
+  userRole,
+  currentPath,
+  onClose
+}: {
+  sidebarOpen: boolean;
+  darkMode: boolean;
+  userRole?: string;
+  currentPath: string;
+  onClose: () => void;
+}) => {
+  const filteredNavigation = navigation.filter(item =>
+    !userRole || item.roles.includes(userRole)
+  );
+
+  return (
+    <aside
+      className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform md:translate-x-0 ${
+        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
+      <div className="flex h-full flex-col bg-white dark:bg-gray-800">
+        {/* Logo */}
+        <div className="flex h-16 items-center justify-center px-6 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <img
+            src="https://storage.googleapis.com/msgsndr/DecfA7BjYEDxFe8pqRZs/media/688c08634a3ff3102330f5bf.png"
+            alt="Sign Company Logo"
+            className="h-10 w-auto object-contain"
+            style={{
+              maxWidth: '180px',
+              filter: darkMode
+                ? 'brightness(0) invert(1)'
+                : 'invert(32%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(65%) contrast(110%)'
+            }}
+          />
+        </div>
+
+        {/* Portal Title */}
+        <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            {userRole === 'admin' ? 'Admin Portal' : userRole === 'vendor' ? 'Partner Portal' : 'Owner Portal'}
+          </p>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+          <div className="space-y-0.5">
+            {filteredNavigation.map((item) => {
+              const isActive = currentPath === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    isActive
+                      ? "bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  }`}
+                  onClick={onClose}
+                >
+                  <item.icon
+                    className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                      isActive
+                        ? "text-primary-600 dark:text-primary-400"
+                        : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+    </aside>
+  );
+});
+
+Sidebar.displayName = 'Sidebar';
+
+// Memoized Breadcrumb component - only re-renders when location changes
+const Breadcrumb = memo(({ pathname }: { pathname: string }) => {
+  const pageName = navigation.find((item) => item.href === pathname)?.name || "Dashboard";
+
+  return (
+    <nav className="flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm min-w-0">
+      <Link to="/dashboard" className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors flex-shrink-0">
+        <HomeIcon className="h-4 w-4" />
+      </Link>
+      <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">&gt;</span>
+      {pathname.startsWith('/forum/') ? (
+        <>
+          <Link to="/forum" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+            Forum
+          </Link>
+          <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">&gt;</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+            Thread
+          </span>
+        </>
+      ) : (
+        <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+          {pageName}
+        </span>
+      )}
+    </nav>
+  );
+});
+
+Breadcrumb.displayName = 'Breadcrumb';
+
 const Layout = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const { darkMode, toggleDarkMode } = useDarkMode();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -66,14 +179,42 @@ const Layout = () => {
     clearAll,
   } = useEventNotifications();
 
-  // Filter navigation based on user role
-  const filteredNavigation = navigation.filter(item =>
-    !user?.role || item.roles.includes(user.role)
-  );
-
   // Set page title for dashboard
   useEffect(() => {
     document.title = 'Sign Company Dashboard';
+  }, []);
+
+  // Memoized handlers to prevent re-renders
+  const handleSidebarToggle = useCallback(() => {
+    setSidebarOpen(prev => !prev);
+  }, []);
+
+  const handleSidebarClose = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
+
+  const handleUserMenuToggle = useCallback(() => {
+    setUserMenuOpen(prev => !prev);
+  }, []);
+
+  const handleSearchModalOpen = useCallback(() => {
+    setSearchModalOpen(true);
+  }, []);
+
+  const handleSearchModalClose = useCallback(() => {
+    setSearchModalOpen(false);
+  }, []);
+
+  const handleNotificationToggle = useCallback(() => {
+    setNotificationPanelOpen(prev => !prev);
+  }, []);
+
+  const handleNotificationClose = useCallback(() => {
+    setNotificationPanelOpen(false);
+  }, []);
+
+  const handleUserMenuClose = useCallback(() => {
+    setUserMenuOpen(false);
   }, []);
 
   // Keyboard shortcut for search (Ctrl+K or Cmd+K)
@@ -89,9 +230,11 @@ const Layout = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  console.log("Layout: Rendering with user:", user);
+  // Don't redirect while loading, and redirect to login if not authenticated
+  if (loading) {
+    return null; // Return nothing while checking auth
+  }
 
-  // Redirect to login if not authenticated
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -102,70 +245,18 @@ const Layout = () => {
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-gray-900 bg-opacity-50 z-40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={handleSidebarClose}
         />
       )}
 
       {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="flex h-full flex-col bg-white dark:bg-gray-800">
-          {/* Logo */}
-          <div className="flex h-16 items-center justify-center px-6 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
-            <img
-              src="https://storage.googleapis.com/msgsndr/DecfA7BjYEDxFe8pqRZs/media/688c08634a3ff3102330f5bf.png"
-              alt="Sign Company Logo"
-              className="h-10 w-auto object-contain"
-              style={{
-                maxWidth: '180px',
-                filter: darkMode
-                  ? 'brightness(0) invert(1)'
-                  : 'invert(32%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(65%) contrast(110%)'
-              }}
-            />
-          </div>
-
-          {/* Portal Title */}
-          <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              {user?.role === 'admin' ? 'Admin Portal' : user?.role === 'vendor' ? 'Partner Portal' : 'Owner Portal'}
-            </p>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 overflow-y-auto">
-            <div className="space-y-0.5">
-              {filteredNavigation.map((item) => {
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                      isActive
-                        ? "bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
-                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                    }`}
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <item.icon
-                      className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                        isActive
-                          ? "text-primary-600 dark:text-primary-400"
-                          : "text-gray-400 dark:text-gray-500"
-                      }`}
-                    />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </nav>
-        </div>
-      </aside>
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        darkMode={darkMode}
+        userRole={user?.role}
+        currentPath={location.pathname}
+        onClose={handleSidebarClose}
+      />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen md:ml-64">
@@ -179,7 +270,7 @@ const Layout = () => {
                 <button
                   type="button"
                   className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none md:hidden transition-colors"
-                  onClick={() => setSidebarOpen(true)}
+                  onClick={handleSidebarToggle}
                 >
                   <span className="sr-only">Open sidebar</span>
                   <svg
@@ -198,16 +289,7 @@ const Layout = () => {
                 </button>
 
                 {/* Breadcrumb Navigation */}
-                <nav className="flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm min-w-0">
-                  <Link to="/dashboard" className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors flex-shrink-0">
-                    <HomeIcon className="h-4 w-4" />
-                  </Link>
-                  <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">/</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                    {filteredNavigation.find((item) => item.href === location.pathname)
-                      ?.name || "Dashboard"}
-                  </span>
-                </nav>
+                <Breadcrumb pathname={location.pathname} />
               </div>
 
               {/* Right side - Search + Actions */}
@@ -217,7 +299,7 @@ const Layout = () => {
                   {/* Search */}
                   <button
                     type="button"
-                    onClick={() => setSearchModalOpen(true)}
+                    onClick={handleSearchModalOpen}
                     className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
                     title="Search (Ctrl+K)"
                   >
@@ -246,7 +328,7 @@ const Layout = () => {
                       type="button"
                       className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
                       title="Notifications"
-                      onClick={() => setNotificationPanelOpen(!notificationPanelOpen)}
+                      onClick={handleNotificationToggle}
                     >
                       <BellIcon className="h-4 w-4" />
                       {unreadCount > 0 && (
@@ -260,7 +342,7 @@ const Layout = () => {
                       notifications={notifications}
                       unreadCount={unreadCount}
                       isOpen={notificationPanelOpen}
-                      onClose={() => setNotificationPanelOpen(false)}
+                      onClose={handleNotificationClose}
                       onMarkAsRead={markAsRead}
                       onMarkAllAsRead={markAllAsRead}
                       onDismiss={dismissNotification}
@@ -272,7 +354,7 @@ const Layout = () => {
                   <button
                     type="button"
                     className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    onClick={handleUserMenuToggle}
                   >
                     <img
                       className="h-7 w-7 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
@@ -287,7 +369,7 @@ const Layout = () => {
                   {/* Search */}
                   <button
                     type="button"
-                    onClick={() => setSearchModalOpen(true)}
+                    onClick={handleSearchModalOpen}
                     className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                   >
                     <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -319,7 +401,7 @@ const Layout = () => {
                       type="button"
                       className="relative p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                       title="Notifications"
-                      onClick={() => setNotificationPanelOpen(!notificationPanelOpen)}
+                      onClick={handleNotificationToggle}
                     >
                       <BellIcon className="h-5 w-5" />
                       {unreadCount > 0 && (
@@ -333,7 +415,7 @@ const Layout = () => {
                       notifications={notifications}
                       unreadCount={unreadCount}
                       isOpen={notificationPanelOpen}
-                      onClose={() => setNotificationPanelOpen(false)}
+                      onClose={handleNotificationClose}
                       onMarkAsRead={markAsRead}
                       onMarkAllAsRead={markAllAsRead}
                       onDismiss={dismissNotification}
@@ -345,7 +427,7 @@ const Layout = () => {
                   <button
                     type="button"
                     className="relative"
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    onClick={handleUserMenuToggle}
                   >
                     <img
                       className="h-8 w-8 rounded-full object-cover"
@@ -374,7 +456,7 @@ const Layout = () => {
                   <Link
                     to="/profile"
                     className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    onClick={() => setUserMenuOpen(false)}
+                    onClick={handleUserMenuClose}
                   >
                     <UserIcon className="mr-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
                     Profile
@@ -382,7 +464,7 @@ const Layout = () => {
                   <Link
                     to="/settings"
                     className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    onClick={() => setUserMenuOpen(false)}
+                    onClick={handleUserMenuClose}
                   >
                     <Cog6ToothIcon className="mr-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
                     Settings
@@ -402,14 +484,12 @@ const Layout = () => {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto scroll-smooth">
           <div className="px-4 py-8 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-7xl">
-              <AnimatePresence mode="wait">
-                <PageTransition key={location.pathname}>
-                  <Outlet />
-                </PageTransition>
-              </AnimatePresence>
+              <Suspense fallback={null}>
+                <Outlet />
+              </Suspense>
             </div>
           </div>
         </main>
@@ -418,7 +498,7 @@ const Layout = () => {
       {/* AI Search Modal */}
       <AISearchModal
         isOpen={searchModalOpen}
-        onClose={() => setSearchModalOpen(false)}
+        onClose={handleSearchModalClose}
         userRole={user?.role}
       />
     </div>

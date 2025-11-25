@@ -64,6 +64,17 @@ const forumThreadSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  recentViewers: [{
+    identifier: String, // userId or IP address
+    viewedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
+  likes: [{
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+  }],
   subscribers: [{
     type: mongoose.Schema.ObjectId,
     ref: 'User',
