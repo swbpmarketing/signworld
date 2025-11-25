@@ -21,8 +21,17 @@ console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
 console.log('EMAIL_USER:', process.env.EMAIL_USER);
 console.log('EMAIL_FROM:', process.env.EMAIL_FROM);
 
-// Connect to database
-connectDB();
+// Track database connection status
+let dbConnected = false;
+
+// Connect to database asynchronously without blocking server startup
+connectDB().then(() => {
+  dbConnected = true;
+  console.log('✅ Database connected successfully');
+}).catch((err) => {
+  console.error('❌ Database connection failed:', err.message);
+  console.warn('⚠️  Server will continue without database');
+});
 
 const app = express();
 
@@ -66,12 +75,15 @@ app.options('*', cors(corsOptions));
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Health check endpoint
+// Health check endpoint - responds immediately for Render health checks
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
+  res.status(200).json({
+    status: 'ok',
+    server: 'running',
+    database: dbConnected ? 'connected' : 'connecting',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
+    port: process.env.PORT || 5000
   });
 });
 
@@ -193,7 +205,21 @@ if (process.env.NODE_ENV === 'production') {
 // Use environment PORT (for Render) or default to 5000
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`API available at http://127.0.0.1:${PORT}/api`);
+// Start server immediately - don't wait for database
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log('='.repeat(50));
+  console.log(`✅ Server successfully started on port ${PORT}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+  console.log(`🌐 API available at: http://localhost:${PORT}/api`);
+  console.log('='.repeat(50));
+});
+
+// Handle server errors
+server.on('error', (err) => {
+  console.error('❌ Server error:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+    process.exit(1);
+  }
 });
