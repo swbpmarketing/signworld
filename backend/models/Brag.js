@@ -83,4 +83,11 @@ bragSchema.pre('save', function(next) {
   next();
 });
 
+// Indexes for better query performance
+bragSchema.index({ isPublished: 1, status: 1, createdAt: -1 });
+bragSchema.index({ author: 1, createdAt: -1 });
+bragSchema.index({ tags: 1 });
+bragSchema.index({ views: -1 });
+bragSchema.index({ title: 'text', content: 'text' }); // Text search index
+
 module.exports = mongoose.model('Brag', bragSchema);

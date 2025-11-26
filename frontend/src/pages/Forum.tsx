@@ -1,29 +1,45 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../hooks/useToast';
-import ToastContainer from '../components/ToastContainer';
 import {
   ChatBubbleLeftRightIcon,
   FireIcon,
-  HashtagIcon,
   ClockIcon,
-  UserGroupIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-  BookmarkIcon,
-  FlagIcon,
   MagnifyingGlassIcon,
   PlusIcon,
-  BellIcon,
-  ChartBarIcon,
-  LockClosedIcon,
   TagIcon,
   EyeIcon,
   ChatBubbleLeftIcon,
   HeartIcon,
+  ArrowPathIcon,
+  XMarkIcon,
+  ExclamationCircleIcon,
+  UserGroupIcon,
+  PaperAirplaneIcon,
+  EllipsisVerticalIcon,
+  PencilIcon,
+  TrashIcon,
+  ArrowUturnLeftIcon,
+  PhotoIcon,
 } from '@heroicons/react/24/outline';
-import { BookmarkIcon as BookmarkSolidIcon, LockClosedIcon as LockSolidIcon, HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
+import {
+  HeartIcon as HeartSolidIcon,
+  LockClosedIcon as LockSolidIcon,
+} from '@heroicons/react/24/solid';
+import toast from 'react-hot-toast';
+
+interface Reply {
+  _id: string;
+  content: string;
+  author: {
+    _id: string;
+    name: string;
+    email: string;
+    role?: string;
+  };
+  parentReplyId?: string | null;
+  createdAt: string;
+  likes?: string[];
+}
 
 interface ForumThread {
   _id: string;
@@ -41,11 +57,13 @@ interface ForumThread {
   content: string;
   views: number;
   replyCount: number;
+  replies?: Reply[];
   likes?: string[];
   isPinned: boolean;
   isLocked: boolean;
   isBookmarked?: boolean;
   tags: string[];
+  images?: string[];
   lastReply?: {
     author: string;
     time: string;
@@ -54,49 +72,25 @@ interface ForumThread {
 }
 
 const forumCategories = [
-  { 
-    name: 'General Discussion', 
-    icon: ChatBubbleLeftRightIcon, 
-    color: 'text-blue-600',
-    bg: 'bg-blue-100',
-    count: 342,
-    subcategories: ['Announcements', 'Introductions', 'General Chat']
-  },
-  { 
-    name: 'Business Growth', 
-    icon: ChartBarIcon, 
-    color: 'text-green-600',
-    bg: 'bg-green-100',
-    count: 256,
-    subcategories: ['Marketing', 'Sales Strategies', 'Client Management']
-  },
-  { 
-    name: 'Technical Support', 
-    icon: HashtagIcon, 
-    color: 'text-purple-600',
-    bg: 'bg-purple-100',
-    count: 189,
-    subcategories: ['Equipment', 'Software', 'Installation']
-  },
-  { 
-    name: 'Training & Resources', 
-    icon: BookmarkIcon, 
-    color: 'text-orange-600',
-    bg: 'bg-orange-100',
-    count: 167,
-    subcategories: ['Tutorials', 'Best Practices', 'Certifications']
-  },
+  { name: 'All Categories', value: 'all' },
+  { name: 'General Discussion', value: 'general' },
+  { name: 'Technical Support', value: 'technical' },
+  { name: 'Marketing & Sales', value: 'marketing' },
+  { name: 'Operations', value: 'operations' },
+  { name: 'Equipment', value: 'equipment' },
+  { name: 'Suppliers', value: 'suppliers' },
+  { name: 'Help & Questions', value: 'help' },
+  { name: 'Announcements', value: 'announcements' },
 ];
 
 const Forum = () => {
   const { user } = useAuth();
-  const toast = useToast();
 
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [threads, setThreads] = useState<ForumThread[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newThread, setNewThread] = useState({
     title: '',
@@ -105,6 +99,8 @@ const Forum = () => {
     tags: [] as string[],
   });
   const [tagInput, setTagInput] = useState('');
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState<'latest' | 'hot' | 'top' | 'unanswered'>('latest');
@@ -112,25 +108,38 @@ const Forum = () => {
     totalThreads: 0,
     todayThreads: 0,
     totalReplies: 0,
+    activeMembers: 0,
     trendingTags: [] as { name: string; count: number }[]
   });
-  const [showReplyModal, setShowReplyModal] = useState(false);
-  const [replyingToThread, setReplyingToThread] = useState<ForumThread | null>(null);
-  const [replyContent, setReplyContent] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // Detail modal state
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedThread, setSelectedThread] = useState<ForumThread | null>(null);
+  const [loadingThread, setLoadingThread] = useState(false);
+  const [newReply, setNewReply] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
 
-  const toggleCategory = (categoryName: string) => {
-    setExpandedCategories(prev =>
-      prev.includes(categoryName)
-        ? prev.filter(name => name !== categoryName)
-        : [...prev, categoryName]
-    );
-  };
+  // Reply menu and editing state
+  const [openReplyMenu, setOpenReplyMenu] = useState<string | null>(null);
+  const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
+  const [editedReplyContent, setEditedReplyContent] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [replyToDelete, setReplyToDelete] = useState<string | null>(null);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyingToAuthor, setReplyingToAuthor] = useState<string | null>(null);
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
 
   // Fetch threads from API
   const fetchThreads = async (pageNum: number = 1, append: boolean = false) => {
     try {
-      setLoading(true);
+      if (!append) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      setError('');
 
       // Map sort options to API sort values
       const sortMap = {
@@ -140,11 +149,15 @@ const Forum = () => {
         unanswered: 'replies'
       };
 
+      // Find the category value from forumCategories
+      const categoryObj = forumCategories.find(c => c.name === selectedCategory);
+      const categoryValue = categoryObj?.value;
+
       const queryParams = new URLSearchParams({
         page: pageNum.toString(),
         limit: '10',
         sort: sortMap[sortBy],
-        ...(selectedCategory !== 'All Categories' && { category: selectedCategory }),
+        ...(categoryValue && categoryValue !== 'all' && { category: categoryValue }),
         ...(searchQuery && { search: searchQuery }),
       });
 
@@ -159,12 +172,37 @@ const Forum = () => {
         }
         setTotalPages(data.pagination.pages);
         setPage(pageNum);
+      } else {
+        setError(data.error || 'Failed to load threads');
       }
-    } catch (error) {
-      console.error('Error fetching threads:', error);
-      toast.error('Failed to load forum threads');
+    } catch (err) {
+      console.error('Error fetching threads:', err);
+      setError('Failed to load forum threads. Please try again.');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  // Fetch single thread details
+  const fetchThreadDetails = async (threadId: string) => {
+    try {
+      setLoadingThread(true);
+      const response = await fetch(`/api/forum/${threadId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setSelectedThread(data.data);
+      } else {
+        toast.error(data.error || 'Failed to load thread');
+        setShowDetailModal(false);
+      }
+    } catch (err) {
+      console.error('Error fetching thread:', err);
+      toast.error('Failed to load thread details');
+      setShowDetailModal(false);
+    } finally {
+      setLoadingThread(false);
     }
   };
 
@@ -179,11 +217,12 @@ const Forum = () => {
           totalThreads: data.data.totalThreads || 0,
           todayThreads: data.data.todayThreads || 0,
           totalReplies: data.data.totalReplies || 0,
+          activeMembers: data.data.activeMembers || 0,
           trendingTags: data.data.trendingTags || []
         });
       }
-    } catch (error) {
-      console.error('Error fetching forum stats:', error);
+    } catch (err) {
+      console.error('Error fetching forum stats:', err);
     }
   };
 
@@ -192,26 +231,105 @@ const Forum = () => {
     setPage(1);
     fetchThreads(1, false);
     fetchStats();
-  }, [selectedCategory, searchQuery, sortBy]);
+  }, [selectedCategory, sortBy]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!loading) {
+        fetchThreads(1, false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Handle open thread detail
+  const handleOpenThread = (thread: ForumThread) => {
+    setSelectedThread(thread);
+    setShowDetailModal(true);
+    fetchThreadDetails(thread._id);
+  };
+
+  // Handle close thread detail
+  const handleCloseDetail = () => {
+    setShowDetailModal(false);
+    setSelectedThread(null);
+    setNewReply('');
+  };
+
+  // Handle image selection
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newFiles = Array.from(files);
+    const totalFiles = selectedImages.length + newFiles.length;
+
+    if (totalFiles > 5) {
+      toast.error('Maximum 5 images allowed');
+      return;
+    }
+
+    // Validate file types and sizes
+    const validFiles = newFiles.filter(file => {
+      if (!file.type.startsWith('image/')) {
+        toast.error(`${file.name} is not an image`);
+        return false;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 10MB)`);
+        return false;
+      }
+      return true;
+    });
+
+    setSelectedImages(prev => [...prev, ...validFiles]);
+
+    // Create previews
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviews(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle remove image
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
 
   // Handle create thread
   const handleCreateThread = async () => {
     if (!newThread.title || !newThread.content) {
-      toast.warning('Please provide both title and content');
+      toast.error('Please provide both title and content');
       return;
     }
 
     try {
-      setLoading(true);
+      setSubmitting(true);
       const token = localStorage.getItem('token');
+
+      // Use FormData to support file uploads
+      const formData = new FormData();
+      formData.append('title', newThread.title);
+      formData.append('content', newThread.content);
+      formData.append('category', newThread.category);
+      formData.append('tags', JSON.stringify(newThread.tags));
+
+      // Append images
+      selectedImages.forEach(image => {
+        formData.append('images', image);
+      });
 
       const response = await fetch('/api/forum', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(newThread),
+        body: formData,
       });
 
       const data = await response.json();
@@ -225,24 +343,28 @@ const Forum = () => {
           category: 'general',
           tags: [],
         });
-        fetchThreads(); // Refresh thread list
+        setTagInput('');
+        setSelectedImages([]);
+        setImagePreviews([]);
+        fetchThreads();
+        fetchStats();
       } else {
         toast.error(data.error || 'Failed to create thread');
       }
-    } catch (error) {
-      console.error('Error creating thread:', error);
+    } catch (err) {
+      console.error('Error creating thread:', err);
       toast.error('Failed to create thread');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   // Handle add tag
   const handleAddTag = () => {
-    if (tagInput.trim() && !newThread.tags.includes(tagInput.trim())) {
+    if (tagInput.trim() && !newThread.tags.includes(tagInput.trim().toLowerCase())) {
       setNewThread({
         ...newThread,
-        tags: [...newThread.tags, tagInput.trim()],
+        tags: [...newThread.tags, tagInput.trim().toLowerCase()],
       });
       setTagInput('');
     }
@@ -256,17 +378,13 @@ const Forum = () => {
     });
   };
 
-  const handleBookmark = (threadId: string) => {
-    // Handle bookmarking logic
-    console.log('Bookmarking thread:', threadId);
-  };
-
   // Handle like/unlike thread
   const handleLikeThread = async (e: React.MouseEvent, threadId: string) => {
-    e.preventDefault(); // Prevent navigation if inside a link
+    e.preventDefault();
+    e.stopPropagation();
 
     if (!user) {
-      toast.warning('Please login to like threads');
+      toast.error('Please login to like threads');
       return;
     }
 
@@ -282,7 +400,6 @@ const Forum = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Update the threads array with the new like status
         setThreads(prevThreads =>
           prevThreads.map(thread =>
             thread._id === threadId
@@ -295,10 +412,21 @@ const Forum = () => {
               : thread
           )
         );
+
+        // Also update selectedThread if viewing in modal
+        if (selectedThread && selectedThread._id === threadId) {
+          setSelectedThread(prev => prev ? {
+            ...prev,
+            likes: data.data.isLiked
+              ? [...(prev.likes || []), user._id]
+              : (prev.likes || []).filter((userId: string) => userId !== user._id)
+          } : null);
+        }
+
         toast.success(data.data.isLiked ? 'Thread liked!' : 'Thread unliked');
       }
-    } catch (error) {
-      console.error('Error liking thread:', error);
+    } catch (err) {
+      console.error('Error liking thread:', err);
       toast.error('Failed to like thread');
     }
   };
@@ -306,16 +434,16 @@ const Forum = () => {
   // Handle post reply
   const handlePostReply = async () => {
     if (!user) {
-      toast.warning('Please login to post a reply');
+      toast.error('Please login to post a reply');
       return;
     }
 
-    if (!replyContent.trim()) {
-      toast.warning('Please enter a reply');
+    if (!newReply.trim()) {
+      toast.error('Please enter a reply');
       return;
     }
 
-    if (!replyingToThread) {
+    if (!selectedThread) {
       toast.error('No thread selected');
       return;
     }
@@ -324,33 +452,224 @@ const Forum = () => {
       setSubmittingReply(true);
       const token = localStorage.getItem('token');
 
-      const response = await fetch(`/api/forum/${replyingToThread._id}/replies`, {
+      const response = await fetch(`/api/forum/${selectedThread._id}/replies`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ content: replyContent }),
+        body: JSON.stringify({
+          content: newReply,
+          parentReplyId: replyingToId || null
+        }),
       });
 
       const data = await response.json();
 
       if (data.success) {
         toast.success('Reply posted successfully!');
-        setReplyContent('');
-        setShowReplyModal(false);
-        setReplyingToThread(null);
-        // Refresh threads to show updated reply count
-        fetchThreads(page);
+        setNewReply('');
+        setReplyingToId(null);
+        setReplyingToAuthor(null);
+        // Refresh thread details to show new reply
+        fetchThreadDetails(selectedThread._id);
+        // Update reply count in threads list
+        setThreads(prev => prev.map(t =>
+          t._id === selectedThread._id
+            ? { ...t, replyCount: (t.replyCount || 0) + 1 }
+            : t
+        ));
       } else {
         toast.error(data.error || 'Failed to post reply');
       }
-    } catch (error) {
-      console.error('Error posting reply:', error);
+    } catch (err) {
+      console.error('Error posting reply:', err);
       toast.error('Failed to post reply');
     } finally {
       setSubmittingReply(false);
     }
+  };
+
+  // Handle start editing reply
+  const handleStartEditReply = (reply: Reply) => {
+    setEditingReplyId(reply._id);
+    setEditedReplyContent(reply.content);
+    setOpenReplyMenu(null);
+  };
+
+  // Handle cancel edit reply
+  const handleCancelEditReply = () => {
+    setEditingReplyId(null);
+    setEditedReplyContent('');
+  };
+
+  // Handle save edited reply
+  const handleSaveEditReply = async (replyId: string) => {
+    if (!editedReplyContent.trim()) {
+      toast.error('Reply content cannot be empty');
+      return;
+    }
+
+    if (!selectedThread) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/forum/${selectedThread._id}/replies/${replyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: editedReplyContent }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Reply updated successfully!');
+        setEditingReplyId(null);
+        setEditedReplyContent('');
+        fetchThreadDetails(selectedThread._id);
+      } else {
+        toast.error(data.error || 'Failed to update reply');
+      }
+    } catch (err) {
+      console.error('Error updating reply:', err);
+      toast.error('Failed to update reply');
+    }
+  };
+
+  // Handle delete reply click
+  const handleDeleteReplyClick = (replyId: string) => {
+    setReplyToDelete(replyId);
+    setShowDeleteModal(true);
+    setOpenReplyMenu(null);
+  };
+
+  // Confirm delete reply
+  const confirmDeleteReply = async () => {
+    if (!replyToDelete || !selectedThread) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/forum/${selectedThread._id}/replies/${replyToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Reply deleted successfully!');
+        fetchThreadDetails(selectedThread._id);
+        // Update reply count in threads list
+        setThreads(prev => prev.map(t =>
+          t._id === selectedThread._id
+            ? { ...t, replyCount: Math.max((t.replyCount || 0) - 1, 0) }
+            : t
+        ));
+      } else {
+        toast.error(data.error || 'Failed to delete reply');
+      }
+    } catch (err) {
+      console.error('Error deleting reply:', err);
+      toast.error('Failed to delete reply');
+    } finally {
+      setShowDeleteModal(false);
+      setReplyToDelete(null);
+    }
+  };
+
+  // Handle like/unlike reply
+  const handleLikeReply = async (replyId: string) => {
+    if (!user) {
+      toast.error('Please login to like replies');
+      return;
+    }
+
+    if (!selectedThread) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/forum/${selectedThread._id}/replies/${replyId}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the reply likes in selectedThread
+        setSelectedThread(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            replies: prev.replies?.map(reply =>
+              reply._id === replyId
+                ? {
+                    ...reply,
+                    likes: data.data.isLiked
+                      ? [...(reply.likes || []), user._id]
+                      : (reply.likes || []).filter(id => id !== user._id)
+                  }
+                : reply
+            )
+          };
+        });
+      } else {
+        toast.error(data.error || 'Failed to like reply');
+      }
+    } catch (err) {
+      console.error('Error liking reply:', err);
+      toast.error('Failed to like reply');
+    }
+  };
+
+  // Handle reply to specific comment
+  // If replying to a nested reply, we flatten it to use the original parent as parentReplyId
+  const handleReplyToComment = (reply: Reply, authorName: string) => {
+    if (!user) {
+      toast.error('Please login to reply');
+      return;
+    }
+    // If this reply already has a parent (it's nested), use that parent instead
+    // This keeps all replies at one level of nesting (like Facebook)
+    const parentId = reply.parentReplyId ? String(reply.parentReplyId) : reply._id;
+
+    // Track which reply we're responding to
+    setReplyingToId(parentId);
+    setReplyingToAuthor(authorName);
+    // Pre-fill reply with @mention
+    setNewReply(`@${authorName} `);
+    // Focus on the reply textarea (scroll to it)
+    const replyTextarea = document.querySelector('textarea[placeholder="Share your thoughts..."]');
+    if (replyTextarea) {
+      (replyTextarea as HTMLTextAreaElement).focus();
+    }
+  };
+
+  // Cancel replying to a specific comment
+  const handleCancelReplyTo = () => {
+    setReplyingToId(null);
+    setReplyingToAuthor(null);
+    setNewReply('');
+  };
+
+  // Toggle expanded replies for a parent
+  const toggleExpandReplies = (replyId: string) => {
+    setExpandedReplies(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(replyId)) {
+        newSet.delete(replyId);
+      } else {
+        newSet.add(replyId);
+      }
+      return newSet;
+    });
   };
 
   // Handle load more threads
@@ -361,21 +680,65 @@ const Forum = () => {
   };
 
   // Handle category selection
-  const handleCategorySelect = (categoryName: string) => {
+  const handleCategoryClick = (categoryName: string) => {
     setSelectedCategory(categoryName);
-    setPage(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Handle sort filter
-  const handleSortChange = (newSort: 'latest' | 'hot' | 'top' | 'unanswered') => {
-    setSortBy(newSort);
-    setPage(1);
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      if (diffHours === 0) {
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        return diffMins <= 1 ? 'just now' : `${diffMins}m ago`;
+      }
+      return `${diffHours}h ago`;
+    }
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Get initials from name
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  // Organize replies into parent-child structure
+  const organizeReplies = (replies: Reply[]) => {
+    const parentReplies: Reply[] = [];
+    const childRepliesMap: { [key: string]: Reply[] } = {};
+
+    replies.forEach(reply => {
+      // Convert parentReplyId to string for proper comparison (MongoDB ObjectIds)
+      const parentId = reply.parentReplyId ? String(reply.parentReplyId) : null;
+      if (!parentId) {
+        parentReplies.push(reply);
+      } else {
+        if (!childRepliesMap[parentId]) {
+          childRepliesMap[parentId] = [];
+        }
+        childRepliesMap[parentId].push(reply);
+      }
+    });
+
+    return { parentReplies, childRepliesMap };
   };
 
   return (
-    <>
-      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
-      <div className="space-y-8">
+    <div className="space-y-8">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
         <div className="px-6 py-8 sm:px-8 sm:py-10">
@@ -400,80 +763,85 @@ const Forum = () => {
         </div>
       </div>
 
-      {/* Forum Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      {/* Stats Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
-          <ChatBubbleLeftIcon className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats.totalThreads.toLocaleString()}</p>
+          <FireIcon className="h-8 w-8 text-orange-500 mx-auto mb-2" />
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            {stats.totalThreads.toLocaleString()}
+          </p>
           <p className="text-sm text-gray-600 dark:text-gray-400">Total Threads</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
-          <ChatBubbleLeftRightIcon className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats.totalReplies.toLocaleString()}</p>
+          <ChatBubbleLeftIcon className="h-8 w-8 text-blue-500 mx-auto mb-2" />
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            {stats.totalReplies.toLocaleString()}
+          </p>
           <p className="text-sm text-gray-600 dark:text-gray-400">Total Replies</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
-          <FireIcon className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats.todayThreads.toLocaleString()}</p>
+          <ClockIcon className="h-8 w-8 text-green-500 mx-auto mb-2" />
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            {stats.todayThreads.toLocaleString()}
+          </p>
           <p className="text-sm text-gray-600 dark:text-gray-400">Today's Threads</p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
+          <UserGroupIcon className="h-8 w-8 text-purple-500 mx-auto mb-2" />
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            {stats.activeMembers.toLocaleString()}
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Active Members</p>
         </div>
       </div>
 
-      {/* Search Bar */}
+      {/* Search and Filter */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search threads, topics, or users..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
-          <button className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200">
-            Search
-          </button>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
+          >
+            <option value="latest">Latest</option>
+            <option value="hot">Most Active</option>
+            <option value="top">Most Liked</option>
+            <option value="unanswered">Unanswered</option>
+          </select>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Sidebar */}
+        {/* Categories Sidebar */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Categories */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
-              <div className="space-y-2">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 sticky top-20">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
+            <nav className="space-y-2">
+              {forumCategories.map((category) => (
                 <button
-                  onClick={() => handleCategorySelect('All Categories')}
-                  className={`w-full p-3 rounded-lg text-left transition-colors ${selectedCategory === 'All Categories' ? 'bg-primary-50 dark:bg-primary-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                  key={category.name}
+                  onClick={() => handleCategoryClick(category.name)}
+                  className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
+                    selectedCategory === category.name
+                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium border-l-4 border-primary-600 dark:border-primary-500'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                  }`}
                 >
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">All Categories</p>
+                  <span>{category.name}</span>
                 </button>
-                {forumCategories.map((category) => (
-                  <div key={category.name} className="space-y-1">
-                    <button
-                      onClick={() => handleCategorySelect(category.name)}
-                      className={`w-full group p-3 rounded-lg transition-colors ${selectedCategory === category.name ? 'bg-primary-50 dark:bg-primary-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center min-w-0">
-                          <div className={`p-2 rounded-lg ${category.bg} dark:bg-opacity-20`}>
-                            <category.icon className={`h-5 w-5 ${category.color}`} />
-                          </div>
-                          <div className="ml-3 text-left min-w-0">
-                            <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{category.name}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+              ))}
+            </nav>
           </div>
 
           {/* Trending Tags */}
@@ -496,94 +864,44 @@ const Forum = () => {
               </div>
             </div>
           )}
-
-          {/* Quick Links */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Links</h3>
-            <div className="space-y-2">
-              <button className="w-full text-left flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                <BellIcon className="h-4 w-4 mr-2 text-gray-400" />
-                My Subscriptions
-              </button>
-              <button className="w-full text-left flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                <BookmarkIcon className="h-4 w-4 mr-2 text-gray-400" />
-                Bookmarked Threads
-              </button>
-              <button className="w-full text-left flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                <ClockIcon className="h-4 w-4 mr-2 text-gray-400" />
-                Recent Activity
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Thread List */}
-        <div className="lg:col-span-3 space-y-4">
-          {/* Sorting Options */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+        <div className="lg:col-span-3 space-y-6">
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-4">
+                <ArrowPathIcon className="h-12 w-12 text-primary-600 dark:text-primary-400 animate-spin" />
+                <p className="text-gray-600 dark:text-gray-400">Loading threads...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 flex items-start space-x-3">
+              <ExclamationCircleIcon className="h-6 w-6 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error loading threads</h3>
+                <p className="mt-1 text-sm text-red-700 dark:text-red-300">{error}</p>
                 <button
-                  onClick={() => handleSortChange('latest')}
-                  className={`text-sm font-medium pb-1 transition-colors ${sortBy === 'latest' ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
+                  onClick={() => fetchThreads()}
+                  className="mt-3 inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
                 >
-                  Latest
-                </button>
-                <button
-                  onClick={() => handleSortChange('hot')}
-                  className={`text-sm font-medium pb-1 transition-colors ${sortBy === 'hot' ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
-                >
-                  Hot
-                </button>
-                <button
-                  onClick={() => handleSortChange('top')}
-                  className={`text-sm font-medium pb-1 transition-colors ${sortBy === 'top' ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
-                >
-                  Top
-                </button>
-                <button
-                  onClick={() => handleSortChange('unanswered')}
-                  className={`text-sm font-medium pb-1 transition-colors ${sortBy === 'unanswered' ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
-                >
-                  Unanswered
+                  <ArrowPathIcon className="h-4 w-4 mr-2" />
+                  Try Again
                 </button>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Threads */}
-          {loading ? (
-            <div className="space-y-4 animate-pulse">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div
-                  key={i}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 bg-gray-200 dark:bg-gray-700 rounded-full flex-shrink-0"></div>
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                        <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                      </div>
-                      <div className="h-6 w-3/4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                      <div className="space-y-2">
-                        <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
-                        <div className="h-3 w-5/6 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                        <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                        <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : threads.length === 0 ? (
-            <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <p className="text-gray-500 dark:text-gray-400 mb-4">No threads found. Be the first to start a discussion!</p>
+          {/* Empty State */}
+          {!loading && !error && threads.length === 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
+              <ChatBubbleLeftRightIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No threads found</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">Be the first to start a discussion!</p>
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
@@ -592,176 +910,272 @@ const Forum = () => {
                 Create First Thread
               </button>
             </div>
-          ) : (
-            threads.map((thread: any) => {
-              const authorName = thread.author?.name || 'Unknown';
-              const authorInitials = authorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-              const formattedDate = new Date(thread.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-              const timeAgo = (() => {
-                const seconds = Math.floor((Date.now() - new Date(thread.createdAt).getTime()) / 1000);
-                if (seconds < 60) return 'just now';
-                if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-                if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-                if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-                return formattedDate;
-              })();
-
-              return (
-                <div
-                  key={thread._id}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-all duration-200"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      {/* Thread Header */}
-                      <div className="flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                          {authorInitials}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1">
-                              <Link to={`/forum/thread/${thread._id}`}>
-                                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 cursor-pointer transition-colors flex items-center gap-2 line-clamp-2">
-                                  {thread.isPinned && <FireIcon className="h-5 w-5 text-orange-500" />}
-                                  {thread.isLocked && <LockSolidIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />}
-                                  {thread.title}
-                                </h3>
-                              </Link>
-                              <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
-                                <span className="font-medium text-gray-700 dark:text-gray-300">{authorName}</span>
-                                <span>{thread.author?.role || 'Member'}</span>
-                                <span>•</span>
-                                <span>{timeAgo}</span>
-                                <span>•</span>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 capitalize">
-                                  {thread.category}
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handleBookmark(thread._id)}
-                              className="ml-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                            >
-                              <BookmarkIcon className="h-5 w-5 text-gray-400" />
-                            </button>
-                          </div>
-
-                          {/* Thread Preview */}
-                          <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">{thread.content}</p>
-
-                          {/* Tags */}
-                          {thread.tags && thread.tags.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-3">
-                              {thread.tags.map((tag: string) => (
-                                <span
-                                  key={tag}
-                                  className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Thread Stats and Last Reply */}
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mt-3">
-                            <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-sm">
-                              <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                                <EyeIcon className="h-4 w-4" />
-                                {thread.views?.toLocaleString() || 0}
-                              </span>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setReplyingToThread(thread);
-                                  setShowReplyModal(true);
-                                }}
-                                className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
-                              >
-                                <ChatBubbleLeftIcon className="h-4 w-4" />
-                                {thread.replyCount || 0}
-                              </button>
-                              <button
-                                onClick={(e) => handleLikeThread(e, thread._id)}
-                                className={`flex items-center gap-1 transition-colors cursor-pointer ${
-                                  user && thread.likes?.includes(user._id)
-                                    ? 'text-red-500 hover:text-red-600'
-                                    : 'text-gray-500 dark:text-gray-400 hover:text-red-500'
-                                }`}
-                              >
-                                {user && thread.likes?.includes(user._id) ? (
-                                  <HeartSolidIcon className="h-4 w-4" />
-                                ) : (
-                                  <HeartIcon className="h-4 w-4" />
-                                )}
-                                {thread.likes?.length || 0}
-                              </button>
-                            </div>
-                            {thread.lastReply && (
-                              <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                                Last reply by <span className="font-medium text-gray-700 dark:text-gray-300">{thread.lastReply.author}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
           )}
 
-          {/* Load More */}
-          {threads.length > 0 && page < totalPages && (
-            <div className="text-center pt-4">
-              <button
-                onClick={handleLoadMore}
-                disabled={loading}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading && (
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                )}
-                {loading ? 'Loading...' : 'Load More Threads'}
-              </button>
-            </div>
+          {/* Threads List */}
+          {!loading && !error && threads.length > 0 && (
+            <>
+              {threads.map((thread) => (
+                <article
+                  key={thread._id}
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  onClick={() => handleOpenThread(thread)}
+                >
+                  <div className="p-6">
+                    {/* Thread Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
+                          {getInitials(thread.author?.name || 'Unknown')}
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {thread.author?.name || 'Unknown'}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {thread.author?.role || 'Member'} • {formatDate(thread.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {thread.isPinned && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400">
+                            <FireIcon className="h-3 w-3 mr-1" />
+                            Pinned
+                          </span>
+                        )}
+                        {thread.isLocked && (
+                          <LockSolidIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                        )}
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 capitalize">
+                          {thread.category}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Thread Content */}
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 hover:text-primary-600 dark:hover:text-primary-400 transition-colors line-clamp-2">
+                      {thread.title}
+                    </h3>
+                    <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
+                      {thread.content}
+                    </p>
+
+                    {/* Tags */}
+                    {thread.tags && thread.tags.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-2 mb-4">
+                        {thread.tags.slice(0, 4).map((tag) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                        {thread.tags.length > 4 && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            +{thread.tags.length - 4} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Facebook-style Image Grid */}
+                    {thread.images && thread.images.length > 0 && (
+                      <div className="mb-4 -mx-6">
+                        {thread.images.length === 1 && (
+                          <img
+                            src={thread.images[0]}
+                            alt={thread.title}
+                            className="w-full h-64 object-cover"
+                          />
+                        )}
+                        {thread.images.length === 2 && (
+                          <div className="grid grid-cols-2 gap-0.5">
+                            {thread.images.map((image, index) => (
+                              <img
+                                key={index}
+                                src={image}
+                                alt={`${thread.title} - ${index + 1}`}
+                                className="w-full h-48 object-cover"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {thread.images.length === 3 && (
+                          <div className="grid grid-cols-2 gap-0.5">
+                            <img
+                              src={thread.images[0]}
+                              alt={`${thread.title} - 1`}
+                              className="w-full h-48 object-cover row-span-2"
+                            />
+                            <img
+                              src={thread.images[1]}
+                              alt={`${thread.title} - 2`}
+                              className="w-full h-24 object-cover"
+                            />
+                            <img
+                              src={thread.images[2]}
+                              alt={`${thread.title} - 3`}
+                              className="w-full h-24 object-cover"
+                            />
+                          </div>
+                        )}
+                        {thread.images.length === 4 && (
+                          <div className="grid grid-cols-2 gap-0.5">
+                            {thread.images.map((image, index) => (
+                              <img
+                                key={index}
+                                src={image}
+                                alt={`${thread.title} - ${index + 1}`}
+                                className="w-full h-32 object-cover"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {thread.images.length >= 5 && (
+                          <div className="flex flex-col gap-0.5">
+                            {/* Top row - 2 large images */}
+                            <div className="grid grid-cols-2 gap-0.5">
+                              {thread.images.slice(0, 2).map((image, index) => (
+                                <img
+                                  key={index}
+                                  src={image}
+                                  alt={`${thread.title} - ${index + 1}`}
+                                  className="w-full h-40 object-cover"
+                                />
+                              ))}
+                            </div>
+                            {/* Bottom row - 3 smaller images */}
+                            <div className="grid grid-cols-3 gap-0.5">
+                              {thread.images.slice(2, 5).map((image, index) => (
+                                <div key={index} className="relative">
+                                  <img
+                                    src={image}
+                                    alt={`${thread.title} - ${index + 3}`}
+                                    className="w-full h-28 object-cover"
+                                  />
+                                  {/* Show +X overlay on the last image if there are more */}
+                                  {index === 2 && thread.images!.length > 5 && (
+                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                      <span className="text-white text-2xl font-semibold">
+                                        +{thread.images!.length - 5}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Thread Stats */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 pt-4 border-t border-gray-100 dark:border-gray-700">
+                      <div className="flex flex-wrap items-center gap-4">
+                        <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-sm">
+                          <EyeIcon className="h-5 w-5" />
+                          {(thread.views || 0).toLocaleString()}
+                        </span>
+                        <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-sm">
+                          <ChatBubbleLeftIcon className="h-5 w-5" />
+                          {thread.replyCount || 0}
+                        </span>
+                        <button
+                          onClick={(e) => handleLikeThread(e, thread._id)}
+                          className={`flex items-center gap-1 transition-colors text-sm ${
+                            user && thread.likes?.includes(user._id)
+                              ? 'text-red-500 hover:text-red-600'
+                              : 'text-gray-500 dark:text-gray-400 hover:text-red-500'
+                          }`}
+                        >
+                          {user && thread.likes?.includes(user._id) ? (
+                            <HeartSolidIcon className="h-5 w-5" />
+                          ) : (
+                            <HeartIcon className="h-5 w-5" />
+                          )}
+                          {thread.likes?.length || 0}
+                        </button>
+                      </div>
+                      {thread.lastReply && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Last reply by <span className="font-medium text-gray-700 dark:text-gray-300">{thread.lastReply.author}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
+
+              {/* Load More */}
+              {page < totalPages && (
+                <div className="text-center">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        Load More Threads
+                        <span className="ml-2 text-sm">
+                          ({threads.length} of {stats.totalThreads})
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
 
       {/* Create Thread Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
-            <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Create New Thread</h3>
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Create New Thread</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
-              {/* Title */}
+            {/* Form */}
+            <div className="p-6 space-y-5">
+              {!user && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">Please log in to create a thread.</p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Thread Title *
+                  Title *
                 </label>
                 <input
                   type="text"
                   value={newThread.title}
                   onChange={(e) => setNewThread({ ...newThread, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="Enter a descriptive title for your thread"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   maxLength={200}
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -769,7 +1183,6 @@ const Forum = () => {
                 </p>
               </div>
 
-              {/* Category */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Category *
@@ -777,7 +1190,7 @@ const Forum = () => {
                 <select
                   value={newThread.category}
                   onChange={(e) => setNewThread({ ...newThread, category: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="general">General Discussion</option>
                   <option value="technical">Technical Support</option>
@@ -790,7 +1203,6 @@ const Forum = () => {
                 </select>
               </div>
 
-              {/* Content */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Content *
@@ -798,13 +1210,12 @@ const Forum = () => {
                 <textarea
                   value={newThread.content}
                   onChange={(e) => setNewThread({ ...newThread, content: e.target.value })}
-                  rows={8}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="Write your thread content here... Be as detailed as possible to get better responses."
+                  rows={8}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
                 />
               </div>
 
-              {/* Tags */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Tags (Optional)
@@ -820,18 +1231,45 @@ const Forum = () => {
                         handleAddTag();
                       }
                     }}
-                    className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="Type a tag and press Enter"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                   <button
+                    type="button"
                     onClick={handleAddTag}
                     className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
                   >
                     Add
                   </button>
                 </div>
+                {/* Suggested tags */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Suggestions:</span>
+                  {['vinyl', 'signage', 'printing', 'installation', 'design', 'led', 'vehicle-wrap', 'banner', 'neon', 'channel-letters'].map((suggestedTag) => (
+                    <button
+                      key={suggestedTag}
+                      type="button"
+                      onClick={() => {
+                        if (!newThread.tags.includes(suggestedTag)) {
+                          setNewThread({
+                            ...newThread,
+                            tags: [...newThread.tags, suggestedTag],
+                          });
+                        }
+                      }}
+                      disabled={newThread.tags.includes(suggestedTag)}
+                      className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+                        newThread.tags.includes(suggestedTag)
+                          ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400'
+                      }`}
+                    >
+                      #{suggestedTag}
+                    </button>
+                  ))}
+                </div>
                 {newThread.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 mt-3">
                     {newThread.tags.map((tag) => (
                       <span
                         key={tag}
@@ -839,6 +1277,7 @@ const Forum = () => {
                       >
                         #{tag}
                         <button
+                          type="button"
                           onClick={() => handleRemoveTag(tag)}
                           className="ml-2 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
                         >
@@ -849,137 +1288,513 @@ const Forum = () => {
                   </div>
                 )}
               </div>
+
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Images (Optional)
+                </label>
+                <div className="space-y-3">
+                  {/* Image previews */}
+                  {imagePreviews.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {imagePreviews.map((preview, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(index)}
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Upload button */}
+                  {selectedImages.length < 5 && (
+                    <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-primary-500 dark:hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <PhotoIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {selectedImages.length === 0 ? 'Add images' : `Add more (${5 - selectedImages.length} remaining)`}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Max 5 images, 10MB each. Supported: JPG, PNG, GIF, WebP
+                  </p>
+                </div>
+              </div>
             </div>
 
+            {/* Footer */}
             <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
               <button
-                onClick={() => setShowCreateModal(false)}
-                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setSelectedImages([]);
+                  setImagePreviews([]);
+                }}
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateThread}
-                disabled={loading || !newThread.title || !newThread.content}
-                className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled={submitting || !newThread.title.trim() || !newThread.content.trim() || !user}
+                className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {loading && (
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                {submitting ? (
+                  <>
+                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <PaperAirplaneIcon className="h-5 w-5" />
+                    Create Thread
+                  </>
                 )}
-                {loading ? 'Creating...' : 'Create Thread'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Reply Modal - Enhanced Threads Style */}
-      {showReplyModal && replyingToThread && (
+      {/* Thread Detail Modal */}
+      {showDetailModal && selectedThread && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
-          onClick={() => {
-            setShowReplyModal(false);
-            setReplyContent('');
-            setReplyingToThread(null);
-          }}
+          onClick={handleCloseDetail}
         >
           <div
-            className="bg-white dark:bg-gray-800 rounded-2xl max-w-xl w-full shadow-2xl"
+            className="bg-white dark:bg-gray-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 z-10">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
+                  {getInitials(selectedThread.author?.name || 'Unknown')}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">{selectedThread.author?.name || 'Unknown'}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(selectedThread.createdAt)}</p>
+                </div>
+              </div>
               <button
-                onClick={() => {
-                  setShowReplyModal(false);
-                  setReplyContent('');
-                  setReplyingToThread(null);
-                }}
-                className="text-[15px] font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                onClick={handleCloseDetail}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                Cancel
-              </button>
-              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Reply</h3>
-              <button
-                onClick={handlePostReply}
-                disabled={!replyContent.trim() || submittingReply}
-                className={`text-[15px] font-bold px-4 py-1.5 rounded-full transition-all ${
-                  replyContent.trim() && !submittingReply
-                    ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-sm'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {submittingReply ? 'Posting...' : 'Post'}
+                <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
 
-            {/* Original Thread with connecting line */}
-            <div className="px-5 py-4">
-              <div className="flex gap-3 relative">
-                {/* Connecting line */}
-                <div className="absolute left-5 top-12 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-
-                <div className="flex-shrink-0 relative z-10">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold ring-4 ring-white dark:ring-gray-800">
-                    {replyingToThread.author?.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0 pb-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-gray-900 dark:text-gray-100 text-[15px]">
-                      {replyingToThread.author?.name || 'Unknown User'}
-                    </span>
-                    <span className="text-gray-400 dark:text-gray-500">·</span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(replyingToThread.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                  </div>
-                  <p className="text-[15px] text-gray-900 dark:text-gray-100 line-clamp-3 mb-2">
-                    {replyingToThread.content}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Replying to <span className="text-primary-600 dark:text-primary-400">
-                      @{(replyingToThread.author?.name || 'unknown').toLowerCase().replace(/\s+/g, '')}
-                    </span>
-                  </p>
-                </div>
+            {loadingThread ? (
+              <div className="flex items-center justify-center py-12">
+                <ArrowPathIcon className="h-8 w-8 text-primary-600 animate-spin" />
               </div>
-
-              {/* Reply Input */}
-              <div className="flex gap-3 pt-2">
-                <div className="flex-shrink-0">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
-                    {user?.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <textarea
-                    value={replyContent}
-                    onChange={(e) => setReplyContent(e.target.value)}
-                    placeholder={`Reply to ${replyingToThread.author?.name || 'Unknown User'}...`}
-                    className="w-full min-h-[120px] max-h-[300px] p-0 mt-2 border-0 focus:ring-0 resize-none bg-transparent text-gray-900 dark:text-gray-100 text-[15px] placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
-                    autoFocus
-                  />
-                  {replyContent.length > 0 && (
-                    <div className="flex items-center justify-end mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                      <span className={`text-xs font-medium ${
-                        replyContent.length > 280 ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'
-                      }`}>
-                        {replyContent.length}
-                      </span>
-                    </div>
+            ) : (
+              <div className="p-6">
+                {/* Category and Status */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 capitalize">
+                    {selectedThread.category}
+                  </span>
+                  {selectedThread.isPinned && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400">
+                      <FireIcon className="h-3 w-3 mr-1" />
+                      Pinned
+                    </span>
+                  )}
+                  {selectedThread.isLocked && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                      <LockSolidIcon className="h-3 w-3 mr-1" />
+                      Locked
+                    </span>
                   )}
                 </div>
+
+                {/* Title */}
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                  {selectedThread.title}
+                </h2>
+
+                {/* Tags */}
+                {selectedThread.tags && selectedThread.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {selectedThread.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Content */}
+                <div className="prose dark:prose-invert max-w-none mb-6">
+                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                    {selectedThread.content}
+                  </p>
+                </div>
+
+                {/* Images */}
+                {selectedThread.images && selectedThread.images.length > 0 && (
+                  <div className="mb-6">
+                    <div className={`grid gap-3 ${selectedThread.images.length === 1 ? 'grid-cols-1' : selectedThread.images.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                      {selectedThread.images.map((image, index) => (
+                        <a
+                          key={index}
+                          href={image}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <img
+                            src={image}
+                            alt={`Thread image ${index + 1}`}
+                            className="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-gray-600 hover:opacity-90 transition-opacity cursor-pointer"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Stats */}
+                <div className="flex items-center gap-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={(e) => handleLikeThread(e, selectedThread._id)}
+                    className={`flex items-center gap-2 transition-colors ${
+                      user && selectedThread.likes?.includes(user._id)
+                        ? 'text-red-500 hover:text-red-600'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-red-500'
+                    }`}
+                  >
+                    {user && selectedThread.likes?.includes(user._id) ? (
+                      <HeartSolidIcon className="h-6 w-6" />
+                    ) : (
+                      <HeartIcon className="h-6 w-6" />
+                    )}
+                    <span className="font-medium">{selectedThread.likes?.length || 0} likes</span>
+                  </button>
+                  <span className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                    <ChatBubbleLeftIcon className="h-6 w-6" />
+                    <span className="font-medium">{selectedThread.replies?.length || selectedThread.replyCount || 0} replies</span>
+                  </span>
+                  <span className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                    <EyeIcon className="h-6 w-6" />
+                    <span className="font-medium">{selectedThread.views || 0} views</span>
+                  </span>
+                </div>
+
+                {/* Replies Section */}
+                {selectedThread.replies && selectedThread.replies.length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                      Replies ({selectedThread.replies.length})
+                    </h4>
+                    <div className="space-y-4">
+                      {(() => {
+                        const { parentReplies, childRepliesMap } = organizeReplies(selectedThread.replies || []);
+
+                        const renderReply = (reply: Reply, isNested: boolean = false, isLast: boolean = false) => (
+                          <div key={reply._id} className="relative">
+                            {/* Curved connector line for nested replies - connects to avatar center */}
+                            {isNested && (
+                              <div className="absolute left-0 top-0 h-4 w-6">
+                                <div className="absolute left-0 top-0 h-full w-4 border-l-2 border-b-2 border-gray-300 dark:border-gray-600 rounded-bl-xl" />
+                              </div>
+                            )}
+                            {/* Vertical continuation line for non-last nested items */}
+                            {isNested && !isLast && (
+                              <div className="absolute left-0 top-4 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-600" />
+                            )}
+                            <div className={`${isNested ? 'ml-6' : ''}`}>
+                              <div className="flex items-start gap-3">
+                                <div className={`${isNested ? 'h-7 w-7 text-xs' : 'h-8 w-8 text-sm'} rounded-full bg-gradient-to-br from-primary-400 to-primary-500 flex items-center justify-center text-white font-semibold flex-shrink-0`}>
+                                  {getInitials(reply.author?.name || 'Unknown')}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                                        {reply.author?.name || 'Unknown'}
+                                      </span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        {formatDate(reply.createdAt)}
+                                      </span>
+                                    </div>
+                                    {/* 3-dot menu - show for reply author or admin */}
+                                    {user && (user._id === reply.author?._id || user.role === 'admin') && (
+                                      <div className="relative">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenReplyMenu(openReplyMenu === reply._id ? null : reply._id);
+                                          }}
+                                          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                                        >
+                                          <EllipsisVerticalIcon className="h-5 w-5" />
+                                        </button>
+                                        {/* Dropdown menu */}
+                                        {openReplyMenu === reply._id && (
+                                          <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleStartEditReply(reply);
+                                              }}
+                                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                            >
+                                              <PencilIcon className="h-4 w-4" />
+                                              Edit
+                                            </button>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteReplyClick(reply._id);
+                                              }}
+                                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                            >
+                                              <TrashIcon className="h-4 w-4" />
+                                              Delete
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {/* Show edit form or content */}
+                                  {editingReplyId === reply._id ? (
+                                    <div className="space-y-2">
+                                      <textarea
+                                        value={editedReplyContent}
+                                        onChange={(e) => setEditedReplyContent(e.target.value)}
+                                        rows={3}
+                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                                      />
+                                      <div className="flex justify-end gap-2">
+                                        <button
+                                          onClick={handleCancelEditReply}
+                                          className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button
+                                          onClick={() => handleSaveEditReply(reply._id)}
+                                          className="px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                                        >
+                                          Save
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <p className="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap">
+                                        {reply.content}
+                                      </p>
+                                      {/* Reply actions - like and reply buttons */}
+                                      <div className="flex items-center gap-4 mt-2 text-xs">
+                                        <span className="text-gray-500 dark:text-gray-400">{formatDate(reply.createdAt)}</span>
+                                        <button
+                                          onClick={() => handleLikeReply(reply._id)}
+                                          className={`font-medium transition-colors ${
+                                            user && reply.likes?.includes(user._id)
+                                              ? 'text-red-500 hover:text-red-600'
+                                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                                          }`}
+                                        >
+                                          Like{reply.likes && reply.likes.length > 0 ? ` (${reply.likes.length})` : ''}
+                                        </button>
+                                        {!selectedThread.isLocked && (
+                                          <button
+                                            onClick={() => handleReplyToComment(reply, reply.author?.name || 'Unknown')}
+                                            className="font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                                          >
+                                            Reply
+                                          </button>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            {/* Show "View X replies" or expanded child replies */}
+                            {!isNested && childRepliesMap[String(reply._id)] && childRepliesMap[String(reply._id)].length > 0 && (
+                              <div className="mt-2 ml-4">
+                                {!expandedReplies.has(reply._id) ? (
+                                  <button
+                                    onClick={() => toggleExpandReplies(reply._id)}
+                                    className="relative flex items-center text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors pl-6"
+                                  >
+                                    {/* Curved connector to button */}
+                                    <div className="absolute left-0 top-0 h-3 w-4 border-l-2 border-b-2 border-gray-300 dark:border-gray-600 rounded-bl-xl" />
+                                    View {childRepliesMap[String(reply._id)].length} {childRepliesMap[String(reply._id)].length === 1 ? 'reply' : 'replies'}
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => toggleExpandReplies(reply._id)}
+                                      className="relative flex items-center text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors mb-3 pl-6"
+                                    >
+                                      {/* Curved connector to button */}
+                                      <div className="absolute left-0 top-0 h-3 w-4 border-l-2 border-b-2 border-gray-300 dark:border-gray-600 rounded-bl-xl" />
+                                      Hide replies
+                                    </button>
+                                    <div className="space-y-2">
+                                      {childRepliesMap[String(reply._id)].map((childReply, index, arr) =>
+                                        renderReply(childReply, true, index === arr.length - 1)
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+
+                        return parentReplies.map(reply => renderReply(reply, false));
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add Reply */}
+                {!selectedThread.isLocked && (
+                  <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Add a Reply</h4>
+                    {/* Show replying indicator */}
+                    {replyingToId && replyingToAuthor && (
+                      <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg">
+                        <ArrowUturnLeftIcon className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+                        <span className="text-sm text-primary-700 dark:text-primary-300">
+                          Replying to <span className="font-medium">{replyingToAuthor}</span>
+                        </span>
+                        <button
+                          onClick={handleCancelReplyTo}
+                          className="ml-auto p-1 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-800/30 rounded transition-colors"
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex gap-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                        {user ? getInitials(user.name) : '?'}
+                      </div>
+                      <div className="flex-1">
+                        <textarea
+                          value={newReply}
+                          onChange={(e) => setNewReply(e.target.value)}
+                          placeholder={user ? "Share your thoughts..." : "Please log in to reply"}
+                          disabled={!user}
+                          rows={3}
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                        <div className="flex justify-end mt-2">
+                          <button
+                            onClick={handlePostReply}
+                            disabled={submittingReply || !newReply.trim() || !user}
+                            className="px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          >
+                            {submittingReply ? (
+                              <>
+                                <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                                Posting...
+                              </>
+                            ) : (
+                              <>
+                                <PaperAirplaneIcon className="h-4 w-4" />
+                                Post Reply
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedThread.isLocked && (
+                  <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 text-center">
+                      <LockSolidIcon className="h-6 w-6 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">This thread is locked. No new replies can be added.</p>
+                    </div>
+                  </div>
+                )}
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Reply Confirmation Modal */}
+      {showDeleteModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          onClick={() => {
+            setShowDeleteModal(false);
+            setReplyToDelete(null);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-6 pb-4">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30">
+                <ExclamationCircleIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center">
+                Delete Reply
+              </h3>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
+                Are you sure you want to delete this reply? This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 p-6 pt-2">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setReplyToDelete(null);
+                }}
+                className="flex-1 py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteReply}
+                className="flex-1 py-2.5 px-4 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
       )}
     </div>
-    </>
   );
 };
 

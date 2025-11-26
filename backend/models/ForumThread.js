@@ -25,6 +25,9 @@ const forumThreadSchema = new mongoose.Schema({
     type: String,
     trim: true,
   }],
+  images: [{
+    type: String, // S3 URLs
+  }],
   isPinned: {
     type: Boolean,
     default: false,
@@ -42,6 +45,10 @@ const forumThreadSchema = new mongoose.Schema({
       type: mongoose.Schema.ObjectId,
       ref: 'User',
       required: true,
+    },
+    parentReplyId: {
+      type: mongoose.Schema.ObjectId,
+      default: null,
     },
     likes: [{
       type: mongoose.Schema.ObjectId,

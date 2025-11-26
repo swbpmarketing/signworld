@@ -235,6 +235,8 @@ const ForumThread = () => {
   const [tagInput, setTagInput] = useState('');
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
   const [editedReplyContent, setEditedReplyContent] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'thread' | 'reply'; id?: string } | null>(null);
 
   // Fetch thread data
   useEffect(() => {
@@ -453,12 +455,14 @@ const ForumThread = () => {
     }
   };
 
-  // Handle delete thread
-  const handleDeleteThread = async () => {
-    if (!confirm('Are you sure you want to delete this thread? This action cannot be undone.')) {
-      return;
-    }
+  // Handle delete thread - show confirmation modal
+  const handleDeleteThread = () => {
+    setDeleteTarget({ type: 'thread' });
+    setShowDeleteModal(true);
+  };
 
+  // Confirm delete thread
+  const confirmDeleteThread = async () => {
     try {
       const token = localStorage.getItem('token');
 
@@ -480,6 +484,9 @@ const ForumThread = () => {
     } catch (error) {
       console.error('Error deleting thread:', error);
       toast.error('Failed to delete thread');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -548,12 +555,14 @@ const ForumThread = () => {
     setEditedReplyContent('');
   };
 
-  // Handle delete reply
-  const handleDeleteReply = async (replyId: string) => {
-    if (!confirm('Are you sure you want to delete this reply? This action cannot be undone.')) {
-      return;
-    }
+  // Handle delete reply - show confirmation modal
+  const handleDeleteReply = (replyId: string) => {
+    setDeleteTarget({ type: 'reply', id: replyId });
+    setShowDeleteModal(true);
+  };
 
+  // Confirm delete reply
+  const confirmDeleteReply = async (replyId: string) => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/forum/${id}/replies/${replyId}`, {
@@ -574,7 +583,27 @@ const ForumThread = () => {
     } catch (error) {
       console.error('Error deleting reply:', error);
       toast.error('Failed to delete reply');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
     }
+  };
+
+  // Handle confirm delete (for both thread and reply)
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+
+    if (deleteTarget.type === 'thread') {
+      confirmDeleteThread();
+    } else if (deleteTarget.type === 'reply' && deleteTarget.id) {
+      confirmDeleteReply(deleteTarget.id);
+    }
+  };
+
+  // Handle cancel delete
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeleteTarget(null);
   };
 
   if (loading && !thread) {
@@ -1191,6 +1220,50 @@ const ForumThread = () => {
                   </svg>
                 )}
                 {loading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          onClick={handleCancelDelete}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-6 pb-4">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30">
+                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center">
+                Delete {deleteTarget?.type === 'thread' ? 'Thread' : 'Reply'}
+              </h3>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
+                Are you sure you want to delete this {deleteTarget?.type}? This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 p-6 pt-2">
+              <button
+                onClick={handleCancelDelete}
+                className="flex-1 py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2.5 px-4 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors"
+              >
+                Delete
               </button>
             </div>
           </div>

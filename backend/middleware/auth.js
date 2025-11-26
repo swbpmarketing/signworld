@@ -42,6 +42,36 @@ exports.protect = async (req, res, next) => {
   }
 };
 
+// Optional protect - sets req.user if token present, but doesn't block unauthenticated requests
+exports.optionalProtect = async (req, res, next) => {
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    // No token, continue without user
+    return next();
+  }
+
+  try {
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Get user from token
+    req.user = await User.findById(decoded.id).select('-password');
+
+    next();
+  } catch (err) {
+    // Invalid token, continue without user
+    next();
+  }
+};
+
 // Grant access to specific roles
 exports.authorize = (...roles) => {
   return (req, res, next) => {

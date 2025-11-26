@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const ForumThread = require('../models/ForumThread');
 const { protect } = require('../middleware/auth');
+const { forumFiles } = require('../middleware/upload');
 
 // @desc    Get all forum threads with pagination and filtering
 // @route   GET /api/forum
@@ -149,7 +150,7 @@ router.get('/:id', async (req, res) => {
 // @desc    Create new thread
 // @route   POST /api/forum
 // @access  Private
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, ...forumFiles, async (req, res) => {
   try {
     const { title, content, category, tags } = req.body;
 
@@ -161,11 +162,25 @@ router.post('/', protect, async (req, res) => {
       });
     }
 
+    // Parse tags if sent as JSON string
+    let parsedTags = tags;
+    if (typeof tags === 'string') {
+      try {
+        parsedTags = JSON.parse(tags);
+      } catch {
+        parsedTags = tags ? [tags] : [];
+      }
+    }
+
+    // Get image URLs from uploaded files
+    const images = req.files?.images?.map(file => file.s3Url || file.location) || [];
+
     const thread = await ForumThread.create({
       title,
       content,
       category: category || 'general',
-      tags: tags || [],
+      tags: parsedTags || [],
+      images,
       author: req.user._id
     });
 
@@ -297,7 +312,7 @@ router.post('/:id/replies', protect, async (req, res) => {
       });
     }
 
-    const { content } = req.body;
+    const { content, parentReplyId } = req.body;
 
     if (!content) {
       return res.status(400).json({
@@ -309,6 +324,7 @@ router.post('/:id/replies', protect, async (req, res) => {
     const reply = {
       content,
       author: req.user._id,
+      parentReplyId: parentReplyId || null,
       createdAt: Date.now()
     };
 

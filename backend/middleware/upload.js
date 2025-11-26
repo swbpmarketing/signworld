@@ -131,5 +131,13 @@ module.exports = {
       { name: 'images', maxCount: 5 }
     ]),
     uploadFilesToS3
+  ],
+
+  // For forum threads with images
+  forumFiles: [
+    upload.fields([
+      { name: 'images', maxCount: 5 }
+    ]),
+    uploadFilesToS3
   ]
 };

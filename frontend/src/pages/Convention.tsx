@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CalendarDaysIcon, MapPinIcon, ClockIcon, TicketIcon, UserGroupIcon, SparklesIcon, MicrophoneIcon, AcademicCapIcon, GlobeAmericasIcon, Cog6ToothIcon, PhotoIcon, DocumentIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CalendarDaysIcon, MapPinIcon, ClockIcon, TicketIcon, UserGroupIcon, SparklesIcon, MicrophoneIcon, AcademicCapIcon, GlobeAmericasIcon, Cog6ToothIcon, PhotoIcon, DocumentIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -66,6 +66,10 @@ const Convention = () => {
     isFeatured: false
   });
 
+  // Gallery lightbox state
+  const [lightboxImage, setLightboxImage] = useState<{ url: string; caption?: string; conventionTitle: string } | null>(null);
+  const [loadingGallery, setLoadingGallery] = useState(false);
+
   // Convention date - August 22, 2025
   const conventionDate = new Date(2025, 7, 22, 9, 0, 0);
 
@@ -90,12 +94,10 @@ const Convention = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Load conventions for admin
+  // Load conventions for gallery (all users) and admin management
   useEffect(() => {
-    if (isAdmin) {
-      fetchConventions();
-    }
-  }, [isAdmin]);
+    fetchConventions();
+  }, []);
 
   const fetchConventions = async () => {
     try {
@@ -243,6 +245,7 @@ const Convention = () => {
     { id: 'overview', label: 'Overview', icon: SparklesIcon },
     { id: 'schedule', label: 'Schedule', icon: CalendarDaysIcon },
     { id: 'speakers', label: 'Speakers', icon: MicrophoneIcon },
+    { id: 'gallery', label: 'Gallery', icon: PhotoIcon },
     { id: 'registration', label: 'Registration', icon: TicketIcon },
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Cog6ToothIcon }] : []),
   ];
@@ -546,6 +549,87 @@ const Convention = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Gallery Tab */}
+          {activeTab === 'gallery' && (
+            <div className="space-y-8">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Convention Gallery</h3>
+                <p className="text-gray-600 dark:text-gray-400">Photos and memories from our Sign Company conventions</p>
+              </div>
+
+              {conventions.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <PhotoIcon className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Gallery Images Yet</h4>
+                  <p className="text-gray-500 dark:text-gray-400">Check back soon for photos from our conventions!</p>
+                </div>
+              ) : (
+                <div className="space-y-10">
+                  {conventions
+                    .filter(conv => conv.gallery && conv.gallery.length > 0)
+                    .map((conv) => (
+                      <div key={conv._id} className="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 overflow-hidden">
+                        {/* Convention Header */}
+                        <div className="bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+                          <h4 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{conv.title}</h4>
+                          <div className="flex items-center gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="flex items-center">
+                              <CalendarDaysIcon className="h-4 w-4 mr-1" />
+                              {new Date(conv.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                            </span>
+                            {conv.location?.city && (
+                              <span className="flex items-center">
+                                <MapPinIcon className="h-4 w-4 mr-1" />
+                                {conv.location.city}, {conv.location.state}
+                              </span>
+                            )}
+                            <span className="text-primary-600 dark:text-primary-400 font-medium">
+                              {conv.gallery.length} {conv.gallery.length === 1 ? 'photo' : 'photos'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Image Grid */}
+                        <div className="p-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                            {conv.gallery.map((image: any, index: number) => (
+                              <div
+                                key={index}
+                                onClick={() => setLightboxImage({ url: image.imageUrl, caption: image.caption, conventionTitle: conv.title })}
+                                className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group"
+                              >
+                                <img
+                                  src={image.imageUrl}
+                                  alt={image.caption || `${conv.title} - Photo ${index + 1}`}
+                                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
+                                  <PhotoIcon className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                </div>
+                                {image.caption && (
+                                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <p className="text-white text-xs truncate">{image.caption}</p>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                  {conventions.filter(conv => conv.gallery && conv.gallery.length > 0).length === 0 && (
+                    <div className="text-center py-12 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <PhotoIcon className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                      <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Photos Uploaded Yet</h4>
+                      <p className="text-gray-500 dark:text-gray-400">Gallery photos will appear here once uploaded by administrators.</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -1064,6 +1148,42 @@ const Convention = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gallery Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-white">
+                <h4 className="text-lg font-semibold">{lightboxImage.conventionTitle}</h4>
+                {lightboxImage.caption && (
+                  <p className="text-sm text-gray-300">{lightboxImage.caption}</p>
+                )}
+              </div>
+              <button
+                onClick={() => setLightboxImage(null)}
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Image */}
+            <div className="flex-1 flex items-center justify-center overflow-hidden">
+              <img
+                src={lightboxImage.url}
+                alt={lightboxImage.caption || 'Convention photo'}
+                className="max-w-full max-h-[calc(90vh-100px)] object-contain rounded-lg"
+                onClick={(e) => e.stopPropagation()}
+              />
             </div>
           </div>
         </div>
