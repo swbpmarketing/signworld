@@ -70,18 +70,24 @@ jobs:
         echo '<script>window.API_BASE_URL = "https://sign-company.onrender.com";</script>' >> dist/index.html
 
     - name: Setup Pages
+      id: pages
       uses: actions/configure-pages@v4
-      with:
-        enablement: true
+      continue-on-error: true
 
     - name: Upload artifact
+      if: steps.pages.outcome == 'success'
       uses: actions/upload-pages-artifact@v3
       with:
         path: ./frontend/dist
 
     - name: Deploy to GitHub Pages
       id: deployment
+      if: steps.pages.outcome == 'success'
       uses: actions/deploy-pages@v4
+
+    - name: Pages deployment skipped
+      if: steps.pages.outcome != 'success'
+      run: echo "GitHub Pages deployment skipped. Please enable Pages in repository settings (Settings > Pages > Source > GitHub Actions)"
 
   deploy-backend-render:
     needs: test
