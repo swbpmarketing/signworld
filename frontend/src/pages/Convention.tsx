@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
 import ToastContainer from '../components/ToastContainer';
+import CustomSelect from '../components/CustomSelect';
 
 const API_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV
@@ -740,20 +741,15 @@ const Convention = () => {
                 {/* Convention Selector */}
                 {conventions.length > 0 && (
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Select Convention
-                    </label>
-                    <select
+                    <CustomSelect
+                      label="Select Convention"
                       value={selectedConvention}
-                      onChange={(e) => setSelectedConvention(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      {conventions.map((conv) => (
-                        <option key={conv._id} value={conv._id}>
-                          {conv.title} - {new Date(conv.startDate).toLocaleDateString()}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setSelectedConvention(value)}
+                      options={conventions.map((conv) => ({
+                        value: conv._id,
+                        label: `${conv.title} - ${new Date(conv.startDate).toLocaleDateString()}`,
+                      }))}
+                    />
                     <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       Files will be uploaded to the selected convention
                     </p>

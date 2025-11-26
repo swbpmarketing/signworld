@@ -26,6 +26,7 @@ import {
   LockClosedIcon as LockSolidIcon,
 } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import CustomSelect from '../components/CustomSelect';
 
 interface Reply {
   _id: string;
@@ -87,9 +88,20 @@ const Forum = () => {
   const { user } = useAuth();
 
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [threads, setThreads] = useState<ForumThread[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setSearchQuery(searchInput);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
   const [error, setError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newThread, setNewThread] = useState({
@@ -797,28 +809,51 @@ const Forum = () => {
 
       {/* Search and Filter */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search threads, topics, or users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 flex gap-2">
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search threads, topics, or users..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+            >
+              <MagnifyingGlassIcon className="h-5 w-5" />
+              <span className="hidden sm:inline">Search</span>
+            </button>
+          </div>
+          <div className="w-40">
+            <CustomSelect
+              value={sortBy}
+              onChange={(value) => setSortBy(value as any)}
+              options={[
+                { value: 'latest', label: 'Latest' },
+                { value: 'hot', label: 'Most Active' },
+                { value: 'top', label: 'Most Liked' },
+                { value: 'unanswered', label: 'Unanswered' },
+              ]}
             />
           </div>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
-          >
-            <option value="latest">Latest</option>
-            <option value="hot">Most Active</option>
-            <option value="top">Most Liked</option>
-            <option value="unanswered">Unanswered</option>
-          </select>
-        </div>
+        </form>
       </div>
 
       {/* Main Content */}
@@ -1184,23 +1219,22 @@ const Forum = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Category *
-                </label>
-                <select
+                <CustomSelect
+                  label="Category"
+                  required
                   value={newThread.category}
-                  onChange={(e) => setNewThread({ ...newThread, category: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="general">General Discussion</option>
-                  <option value="technical">Technical Support</option>
-                  <option value="marketing">Marketing & Sales</option>
-                  <option value="operations">Operations</option>
-                  <option value="equipment">Equipment</option>
-                  <option value="suppliers">Suppliers</option>
-                  <option value="help">Help & Questions</option>
-                  <option value="announcements">Announcements</option>
-                </select>
+                  onChange={(value) => setNewThread({ ...newThread, category: value })}
+                  options={[
+                    { value: 'general', label: 'General Discussion' },
+                    { value: 'technical', label: 'Technical Support' },
+                    { value: 'marketing', label: 'Marketing & Sales' },
+                    { value: 'operations', label: 'Operations' },
+                    { value: 'equipment', label: 'Equipment' },
+                    { value: 'suppliers', label: 'Suppliers' },
+                    { value: 'help', label: 'Help & Questions' },
+                    { value: 'announcements', label: 'Announcements' },
+                  ]}
+                />
               </div>
 
               <div>

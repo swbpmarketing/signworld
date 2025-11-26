@@ -32,8 +32,19 @@ interface Resource {
 
 const Resources = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setSearchQuery(searchInput);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
 
   // Resource categories
   const categories = [
@@ -170,21 +181,42 @@ const Resources = () => {
           <p className="text-lg sm:text-xl text-primary-100">
             Access templates, guides, tools, and training materials to grow your sign business
           </p>
-          <div className="mt-6 flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search resources..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white"
-              />
+          <form onSubmit={handleSearch} className="mt-6 flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 flex gap-2">
+              <div className="flex-1 relative">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search resources..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="w-full pl-10 pr-10 py-3 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="px-5 py-3 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors flex items-center gap-2"
+              >
+                <MagnifyingGlassIcon className="h-5 w-5" />
+                <span className="hidden sm:inline">Search</span>
+              </button>
             </div>
-            <button className="px-6 py-3 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors">
+            <button type="button" className="px-6 py-3 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors">
               Request Resource
             </button>
-          </div>
+          </form>
         </div>
       </div>
 

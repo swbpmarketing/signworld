@@ -8,7 +8,6 @@ import {
   FilmIcon,
   ArrowDownTrayIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
   PlusIcon,
   ViewColumnsIcon,
   Squares2X2Icon,
@@ -18,6 +17,7 @@ import {
   ChevronLeftIcon,
 } from '@heroicons/react/24/outline';
 import { FolderIcon as FolderSolidIcon } from '@heroicons/react/24/solid';
+import CustomSelect from '../components/CustomSelect';
 
 // Type definitions for file library
 interface FileItem {
@@ -89,10 +89,10 @@ const recentFiles = [
 ];
 
 const fileTypeStats = [
-  { type: 'Documents', count: 234, icon: DocumentTextIcon, color: 'text-blue-600', bg: 'bg-blue-100' },
-  { type: 'Images', count: 456, icon: PhotoIcon, color: 'text-green-600', bg: 'bg-green-100' },
-  { type: 'Videos', count: 89, icon: FilmIcon, color: 'text-purple-600', bg: 'bg-purple-100' },
-  { type: 'Other', count: 121, icon: DocumentIcon, color: 'text-gray-600', bg: 'bg-gray-100' },
+  { type: 'Documents', count: 234, icon: DocumentTextIcon, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30' },
+  { type: 'Images', count: 456, icon: PhotoIcon, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30' },
+  { type: 'Videos', count: 89, icon: FilmIcon, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-900/30' },
+  { type: 'Other', count: 121, icon: DocumentIcon, color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-200 dark:bg-gray-600' },
 ];
 
 interface BreadcrumbItem {
@@ -106,9 +106,21 @@ const Library = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPath, setCurrentPath] = useState<string[]>(['root']);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
+  const [sortBy, setSortBy] = useState('name');
+
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setSearchQuery(searchInput);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
   const [currentItems, setCurrentItems] = useState<FileItem[]>([]);
   const [isNavigating, setIsNavigating] = useState(false);
 
@@ -172,10 +184,29 @@ const Library = () => {
     }
   };
 
-  // Filter items based on search
-  const filteredItems = currentItems.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter and sort items based on search
+  const filteredItems = currentItems
+    .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      // Folders always come first
+      if (a.type === 'folder' && b.type !== 'folder') return -1;
+      if (a.type !== 'folder' && b.type === 'folder') return 1;
+
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'date':
+          return new Date(b.modified || b.lastModified || '').getTime() - new Date(a.modified || a.lastModified || '').getTime();
+        case 'date-asc':
+          return new Date(a.modified || a.lastModified || '').getTime() - new Date(b.modified || b.lastModified || '').getTime();
+        case 'size':
+          return (parseInt(b.size || '0') || 0) - (parseInt(a.size || '0') || 0);
+        default:
+          return 0;
+      }
+    });
 
   const folders = filteredItems.filter(item => item.type === 'folder');
   const files = filteredItems.filter(item => item.type === 'file');
@@ -260,7 +291,7 @@ const Library = () => {
         {fileTypeStats.map((stat) => (
           <div key={stat.type} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow duration-200">
             <div className="flex items-center">
-              <div className={`p-3 rounded-lg ${stat.bg} dark:bg-opacity-20`}>
+              <div className={`p-3 rounded-lg ${stat.bg}`}>
                 <stat.icon className={`h-6 w-6 ${stat.color}`} />
               </div>
               <div className="ml-4">
@@ -274,22 +305,52 @@ const Library = () => {
 
       {/* Search and Filter Bar */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search files and folders..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 flex gap-2">
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search files and folders..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+            >
+              <MagnifyingGlassIcon className="h-5 w-5" />
+              <span className="hidden sm:inline">Search</span>
+            </button>
           </div>
           <div className="flex gap-2">
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200">
-              <FunnelIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
-              Filter
-            </button>
+            <div className="w-40">
+              <CustomSelect
+                value={sortBy}
+                onChange={(value) => setSortBy(value)}
+                options={[
+                  { value: 'name', label: 'Name A-Z' },
+                  { value: 'name-desc', label: 'Name Z-A' },
+                  { value: 'date', label: 'Newest' },
+                  { value: 'date-asc', label: 'Oldest' },
+                  { value: 'size', label: 'Size' },
+                ]}
+              />
+            </div>
             <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
               <button
                 onClick={() => setViewMode('grid')}
@@ -305,7 +366,7 @@ const Library = () => {
               </button>
             </div>
           </div>
-        </div>
+        </form>
       </div>
 
       {/* Main Content Grid */}

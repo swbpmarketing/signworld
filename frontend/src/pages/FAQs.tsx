@@ -156,9 +156,25 @@ const popularSearches = [
 
 const FAQs = () => {
   const [selectedCategory, setSelectedCategory] = useState('All Topics');
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFAQs, setExpandedFAQs] = useState<number[]>([]);
   const [helpfulVotes, setHelpfulVotes] = useState<{ [key: number]: 'helpful' | 'not-helpful' | null }>({});
+
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setSearchQuery(searchInput);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
+
+  const handlePopularSearch = (search: string) => {
+    setSearchInput(search);
+    setSearchQuery(search);
+  };
 
   const toggleFAQ = (faqId: number) => {
     setExpandedFAQs(prev =>
@@ -206,27 +222,68 @@ const FAQs = () => {
       </div>
 
       {/* Search Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400 dark:text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search for answers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 text-lg border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
+      <div className="relative bg-gradient-to-br from-gray-50 via-white to-primary-50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-750 rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-600/50 p-8 overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-100/30 dark:bg-primary-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-100/30 dark:bg-blue-900/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+
+        <div className="relative max-w-3xl mx-auto">
+          {/* Search header */}
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">How can we help you?</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Search our knowledge base or browse popular topics below</p>
           </div>
-          <div className="mt-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Popular searches:</p>
+
+          {/* Search input */}
+          <form onSubmit={handleSearch} className="relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary-500 to-blue-500 rounded-2xl opacity-0 group-hover:opacity-20 group-focus-within:opacity-30 blur transition-all duration-300"></div>
+            <div className="relative flex items-center gap-3">
+              <div className="relative flex-1">
+                <MagnifyingGlassIcon className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-400 dark:text-gray-500 group-focus-within:text-primary-500 transition-colors duration-200" />
+                <input
+                  type="text"
+                  placeholder="Search for answers..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="w-full pl-14 pr-12 py-4 text-lg border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700/80 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-0 focus:border-primary-500 dark:focus:border-primary-400 shadow-sm hover:shadow-md focus:shadow-md transition-all duration-200"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="px-6 py-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
+              >
+                <MagnifyingGlassIcon className="h-5 w-5" />
+                <span className="hidden sm:inline">Search</span>
+              </button>
+            </div>
+          </form>
+
+          {/* Popular searches */}
+          <div className="mt-6">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 flex items-center gap-2">
+              <LightBulbIcon className="h-4 w-4 text-amber-500" />
+              Popular searches
+            </p>
             <div className="flex flex-wrap gap-2">
               {popularSearches.map((search) => (
                 <button
                   key={search}
-                  onClick={() => setSearchQuery(search)}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  onClick={() => handlePopularSearch(search)}
+                  className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-primary-300 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm hover:shadow transition-all duration-200"
                 >
+                  <MagnifyingGlassIcon className="h-3.5 w-3.5 mr-1.5 opacity-50" />
                   {search}
                 </button>
               ))}

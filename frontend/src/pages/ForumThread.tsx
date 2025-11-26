@@ -1121,23 +1121,22 @@ const ForumThread = () => {
 
               {/* Category */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Category *
-                </label>
-                <select
+                <CustomSelect
+                  label="Category"
+                  required
                   value={editedThread.category}
-                  onChange={(e) => setEditedThread({ ...editedThread, category: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="general">General Discussion</option>
-                  <option value="technical">Technical Support</option>
-                  <option value="marketing">Marketing & Sales</option>
-                  <option value="operations">Operations</option>
-                  <option value="equipment">Equipment</option>
-                  <option value="suppliers">Suppliers</option>
-                  <option value="help">Help & Questions</option>
-                  <option value="announcements">Announcements</option>
-                </select>
+                  onChange={(value) => setEditedThread({ ...editedThread, category: value })}
+                  options={[
+                    { value: 'general', label: 'General Discussion' },
+                    { value: 'technical', label: 'Technical Support' },
+                    { value: 'marketing', label: 'Marketing & Sales' },
+                    { value: 'operations', label: 'Operations' },
+                    { value: 'equipment', label: 'Equipment' },
+                    { value: 'suppliers', label: 'Suppliers' },
+                    { value: 'help', label: 'Help & Questions' },
+                    { value: 'announcements', label: 'Announcements' },
+                  ]}
+                />
               </div>
 
               {/* Content */}

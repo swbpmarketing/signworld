@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getOwners } from '../services/ownerService';
 import type { Owner } from '../services/ownerService';
@@ -161,13 +161,29 @@ const specialtyFilters = [
 
 const OwnersRoster = () => {
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTerritory, setSelectedTerritory] = useState('All Territories');
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setSearchQuery(searchInput);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const handleOpenMessage = (owner: OwnerDisplay) => {
+    navigate(`/chat?contact=${owner.id}`);
+  };
 
   // Fetch owners from API
   const { data, isLoading, error, refetch } = useQuery({
@@ -348,16 +364,37 @@ const OwnersRoster = () => {
       {/* Search and Filter Bar */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by name, company, or location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
-              />
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 flex gap-2">
+              <div className="flex-1 relative">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name, company, or location..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+              >
+                <MagnifyingGlassIcon className="h-5 w-5" />
+                <span className="hidden sm:inline">Search</span>
+              </button>
             </div>
             <div className="flex gap-2">
               <button
@@ -387,7 +424,7 @@ const OwnersRoster = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </form>
 
           {/* Expandable Filters */}
           {showFilters && (
@@ -539,7 +576,7 @@ const OwnersRoster = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      // Handle message action
+                      handleOpenMessage(owner);
                     }}
                     className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-primary-600 text-xs sm:text-sm font-medium rounded-lg text-white hover:bg-primary-700 transition-colors">
                     <ChatBubbleLeftIcon className="h-4 w-4 mr-1.5" />
@@ -628,8 +665,11 @@ const OwnersRoster = () => {
                         <Link to={`/owners/${owner.id}`} className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 text-xs sm:text-sm">
                           View Profile
                         </Link>
-                        <button className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-xs sm:text-sm">
-                          Contact
+                        <button
+                          onClick={() => handleOpenMessage(owner)}
+                          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-xs sm:text-sm"
+                        >
+                          Message
                         </button>
                       </div>
                     </td>

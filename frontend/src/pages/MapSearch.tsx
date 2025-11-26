@@ -168,9 +168,20 @@ const serviceFilters = [
 ];
 
 const MapSearch = () => {
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [showList, setShowList] = useState(true);
+
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setSearchQuery(searchInput);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(locations[0]);
   const [mapExpanded, setMapExpanded] = useState(false);
   const [radius, setRadius] = useState('10');
@@ -209,16 +220,37 @@ const MapSearch = () => {
       {/* Search Bar */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row lg:flex-row gap-4">
-            <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search by city, state, or ZIP code..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row lg:flex-row gap-4">
+            <div className="flex-1 flex gap-2">
+              <div className="flex-1 relative">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Search by city, state, or ZIP code..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+              >
+                <MagnifyingGlassIcon className="h-5 w-5" />
+                <span className="hidden sm:inline">Search</span>
+              </button>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -237,11 +269,11 @@ const MapSearch = () => {
                   />
                 </div>
               </div>
-              <button className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200">
+              <button type="submit" className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200">
                 Search
               </button>
             </div>
-          </div>
+          </form>
 
           {/* Service Filters */}
           <div className="border-t dark:border-gray-700 pt-4">

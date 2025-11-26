@@ -31,6 +31,7 @@ const UserProfile = lazy(() => import('./pages/UserProfile'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Billing = lazy(() => import('./pages/Billing'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
+const Chat = lazy(() => import('./pages/Chat'));
 
 // Loading component for Suspense fallback
 const LoadingFallback = () => (
@@ -79,6 +80,7 @@ function App() {
                   <Route path="brags" element={<Brags />} />
                   <Route path="forum" element={<Forum />} />
                   <Route path="forum/thread/:id" element={<ForumThread />} />
+                  <Route path="chat" element={<Chat />} />
                   <Route path="library" element={<Library />} />
                   <Route path="library/*" element={<Library />} />
                   <Route path="resources" element={<Resources />} />

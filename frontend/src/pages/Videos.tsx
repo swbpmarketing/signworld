@@ -9,7 +9,6 @@ import {
   WrenchScrewdriverIcon,
   LightBulbIcon,
   BookmarkIcon,
-  FunnelIcon,
   MagnifyingGlassIcon,
   ChevronRightIcon,
   StarIcon,
@@ -18,6 +17,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolidIcon, PlayIcon as PlaySolidIcon, StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
+import CustomSelect from '../components/CustomSelect';
 
 interface Video {
   id: number;
@@ -175,9 +175,21 @@ const playlists = [
 
 const Videos = () => {
   const [selectedCategory, setSelectedCategory] = useState('All Videos');
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [videoList, setVideoList] = useState(videos);
+  const [sortBy, setSortBy] = useState('newest');
+
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setSearchQuery(searchInput);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
   const [isLoading, setIsLoading] = useState(false);
 
   const toggleBookmark = (videoId: number) => {
@@ -200,12 +212,29 @@ const Videos = () => {
     setSelectedVideo(null);
   };
 
-  const filteredVideos = videoList.filter(video => {
-    if (selectedCategory !== 'All Videos' && video.category !== selectedCategory) return false;
-    if (searchQuery && !video.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !video.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  const filteredVideos = videoList
+    .filter(video => {
+      if (selectedCategory !== 'All Videos' && video.category !== selectedCategory) return false;
+      if (searchQuery && !video.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !video.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
+        case 'oldest':
+          return new Date(a.uploadDate).getTime() - new Date(b.uploadDate).getTime();
+        case 'popular':
+          return b.views - a.views;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'duration':
+          return parseInt(b.duration) - parseInt(a.duration);
+        default:
+          return 0;
+      }
+    });
 
   return (
     <div className="space-y-8">
@@ -256,22 +285,52 @@ const Videos = () => {
 
       {/* Search Bar */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search videos by title, topic, or instructor..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 flex gap-2">
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search videos by title, topic, or instructor..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+            >
+              <MagnifyingGlassIcon className="h-5 w-5" />
+              <span className="hidden sm:inline">Search</span>
+            </button>
+          </div>
+          <div className="w-40">
+            <CustomSelect
+              value={sortBy}
+              onChange={(value) => setSortBy(value)}
+              options={[
+                { value: 'newest', label: 'Newest' },
+                { value: 'oldest', label: 'Oldest' },
+                { value: 'popular', label: 'Most Viewed' },
+                { value: 'rating', label: 'Top Rated' },
+                { value: 'duration', label: 'Longest' },
+              ]}
             />
           </div>
-          <button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200">
-            <FunnelIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
-            Filter
-          </button>
-        </div>
+        </form>
       </div>
 
       {/* Main Content */}

@@ -12,7 +12,6 @@ import {
   CpuChipIcon,
   SwatchIcon,
   WrenchScrewdriverIcon,
-  FunnelIcon,
   MagnifyingGlassIcon,
   ChevronRightIcon,
   CheckBadgeIcon,
@@ -20,6 +19,7 @@ import {
   MapPinIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon, CheckBadgeIcon as CheckBadgeSolidIcon } from '@heroicons/react/24/solid';
+import CustomSelect from '../components/CustomSelect';
 
 interface Partner {
   id: number;
@@ -165,16 +165,43 @@ const categories = [
 
 const Partners = () => {
   const [selectedCategory, setSelectedCategory] = useState('All Partners');
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
+  const [sortBy, setSortBy] = useState('featured');
 
-  const filteredPartners = partners.filter(partner => {
-    if (selectedCategory !== 'All Partners' && partner.category !== selectedCategory) return false;
-    if (showFeaturedOnly && !partner.isFeatured) return false;
-    if (searchQuery && !partner.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !partner.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setSearchQuery(searchInput);
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
+
+  const filteredPartners = partners
+    .filter(partner => {
+      if (selectedCategory !== 'All Partners' && partner.category !== selectedCategory) return false;
+      if (showFeaturedOnly && !partner.isFeatured) return false;
+      if (searchQuery && !partner.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !partner.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'featured':
+          return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+        case 'rating':
+          return b.rating - a.rating;
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        default:
+          return 0;
+      }
+    });
 
   return (
     <div className="space-y-8">
@@ -225,33 +252,70 @@ const Partners = () => {
 
       {/* Search and Filter */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search partners by name or service..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
-            />
-          </div>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 flex gap-2">
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
-                type="checkbox"
-                checked={showFeaturedOnly}
-                onChange={(e) => setShowFeaturedOnly(e.target.checked)}
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
+                type="text"
+                placeholder="Search partners by name or service..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
               />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Featured Only</span>
-            </label>
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 dark:text-gray-300">
-              <FunnelIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
-              Filter
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+            >
+              <MagnifyingGlassIcon className="h-5 w-5" />
+              <span className="hidden sm:inline">Search</span>
             </button>
           </div>
-        </div>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setShowFeaturedOnly(!showFeaturedOnly)}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                showFeaturedOnly
+                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-2 border-amber-300 dark:border-amber-600 shadow-sm'
+                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-600 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/10'
+              }`}
+            >
+              <StarSolidIcon className={`h-4 w-4 ${showFeaturedOnly ? 'text-amber-500' : 'text-gray-400 dark:text-gray-500'}`} />
+              Featured Only
+              {showFeaturedOnly && (
+                <span className="ml-1 flex items-center justify-center w-5 h-5 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300 text-xs font-bold">
+                  ✓
+                </span>
+              )}
+            </button>
+            <div className="w-40">
+              <CustomSelect
+                value={sortBy}
+                onChange={(value) => setSortBy(value)}
+                options={[
+                  { value: 'featured', label: 'Featured' },
+                  { value: 'rating', label: 'Top Rated' },
+                  { value: 'name', label: 'Name A-Z' },
+                  { value: 'name-desc', label: 'Name Z-A' },
+                ]}
+              />
+            </div>
+          </div>
+        </form>
       </div>
 
       {/* Main Content */}
