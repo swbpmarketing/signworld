@@ -6,6 +6,11 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
 import ToastContainer from '../components/ToastContainer';
 
+const API_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV
+    ? 'http://localhost:5000/api'
+    : 'https://sign-company.onrender.com/api');
+
 interface Speaker {
   id: string;
   name: string;
@@ -101,7 +106,7 @@ const Convention = () => {
 
   const fetchConventions = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/conventions');
+      const response = await fetch(`${API_URL}/conventions`);
       const data = await response.json();
       if (data.success) {
         setConventions(data.data);
@@ -118,7 +123,7 @@ const Convention = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://127.0.0.1:5000/api/conventions', {
+      const response = await fetch(`${API_URL}/conventions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -273,7 +278,7 @@ const Convention = () => {
       }
 
       const endpoint = uploadType === 'gallery' ? 'gallery' : 'documents';
-      const response = await fetch(`http://127.0.0.1:5000/api/conventions/${selectedConvention}/${endpoint}`, {
+      const response = await fetch(`${API_URL}/conventions/${selectedConvention}/${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
