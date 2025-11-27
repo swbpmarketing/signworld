@@ -242,7 +242,7 @@ const Layout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex overflow-x-hidden">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -261,7 +261,7 @@ const Layout = () => {
       />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen md:ml-64">
+      <div className="flex-1 flex flex-col min-h-screen md:ml-64 min-w-0 overflow-hidden">
         {/* Top bar */}
         <header className="sticky top-0 z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md">
           <div className="px-6">
@@ -486,9 +486,9 @@ const Layout = () => {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto scroll-smooth">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth min-w-0">
           <div className="px-4 py-8 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-7xl w-full">
               <Suspense fallback={null}>
                 <Outlet />
               </Suspense>
