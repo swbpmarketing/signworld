@@ -153,3 +153,32 @@ export const deleteMessage = async (messageId: string): Promise<void> => {
     throw new Error(error.response?.data?.error || 'Failed to delete message');
   }
 };
+
+// Send a message with file attachment
+export const sendMessageWithFile = async (
+  conversationId: string,
+  file: File,
+  content?: string
+): Promise<Message> => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (content) {
+      formData.append('content', content);
+    }
+
+    const response = await api.post(
+      `/chat/conversations/${conversationId}/messages/upload`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data.data;
+  } catch (error: any) {
+    console.error('Error sending message with file:', error);
+    throw new Error(error.response?.data?.error || 'Failed to send file');
+  }
+};

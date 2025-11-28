@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 
 // Import leaflet CSS
@@ -21,7 +21,7 @@ L.Icon.Default.mergeOptions({
 });
 
 interface Location {
-  id: number;
+  id: string | number;
   name: string;
   owner: string;
   address: string;
@@ -32,7 +32,7 @@ interface Location {
   email: string;
   rating: number;
   reviews: number;
-  distance: number;
+  distance: number | null;
   services: string[];
   hours: {
     open: string;
@@ -50,20 +50,38 @@ interface MapViewProps {
   selectedLocation: Location | null;
   onLocationSelect: (location: Location) => void;
   className?: string;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
 // Component to handle map updates when selected location changes
-const MapUpdater = ({ selectedLocation }: { selectedLocation: Location | null }) => {
+const MapUpdater = ({
+  selectedLocation,
+  userLocation,
+  locations
+}: {
+  selectedLocation: Location | null;
+  userLocation?: { lat: number; lng: number } | null;
+  locations: Location[];
+}) => {
   const map = useMap();
 
   useEffect(() => {
-    if (selectedLocation) {
+    if (selectedLocation && selectedLocation.coordinates.lat !== 0) {
       map.setView([selectedLocation.coordinates.lat, selectedLocation.coordinates.lng], 14, {
         animate: true,
         duration: 0.5
       });
+    } else if (userLocation) {
+      // Fit bounds to include user location and all markers
+      const bounds = L.latLngBounds([[userLocation.lat, userLocation.lng]]);
+      locations.forEach(loc => {
+        if (loc.coordinates.lat !== 0 && loc.coordinates.lng !== 0) {
+          bounds.extend([loc.coordinates.lat, loc.coordinates.lng]);
+        }
+      });
+      map.fitBounds(bounds, { padding: [50, 50] });
     }
-  }, [selectedLocation, map]);
+  }, [selectedLocation, userLocation, locations, map]);
 
   return null;
 };
@@ -98,16 +116,32 @@ const selectedIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-const MapView = ({ locations, selectedLocation, onLocationSelect, className = '' }: MapViewProps) => {
+// Custom marker icon for user location
+const userIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const MapView = ({ locations, selectedLocation, onLocationSelect, className = '', userLocation }: MapViewProps) => {
   const mapRef = useRef<L.Map | null>(null);
 
-  // Calculate center point from all locations
+  // Calculate center point from user location or all locations
   const calculateCenter = () => {
-    if (locations.length === 0) return { lat: 33.4484, lng: -112.0740 }; // Default to Phoenix, AZ
-    
-    const avgLat = locations.reduce((sum, loc) => sum + loc.coordinates.lat, 0) / locations.length;
-    const avgLng = locations.reduce((sum, loc) => sum + loc.coordinates.lng, 0) / locations.length;
-    
+    if (userLocation) {
+      return { lat: userLocation.lat, lng: userLocation.lng };
+    }
+
+    const validLocations = locations.filter(loc => loc.coordinates.lat !== 0 && loc.coordinates.lng !== 0);
+
+    if (validLocations.length === 0) return { lat: 33.4484, lng: -112.0740 }; // Default to Phoenix, AZ
+
+    const avgLat = validLocations.reduce((sum, loc) => sum + loc.coordinates.lat, 0) / validLocations.length;
+    const avgLng = validLocations.reduce((sum, loc) => sum + loc.coordinates.lng, 0) / validLocations.length;
+
     return { lat: avgLat, lng: avgLng };
   };
 
@@ -119,11 +153,16 @@ const MapView = ({ locations, selectedLocation, onLocationSelect, className = ''
     return closedIcon;
   };
 
+  // Filter out locations with invalid coordinates
+  const validLocations = locations.filter(loc =>
+    loc.coordinates.lat !== 0 && loc.coordinates.lng !== 0
+  );
+
   return (
     <div className={`relative ${className}`}>
       <MapContainer
         center={[center.lat, center.lng]}
-        zoom={11}
+        zoom={userLocation ? 10 : 11}
         ref={mapRef}
         className="h-full w-full"
         style={{ minHeight: '600px' }}
@@ -132,10 +171,41 @@ const MapView = ({ locations, selectedLocation, onLocationSelect, className = ''
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        
-        <MapUpdater selectedLocation={selectedLocation} />
-        
-        {locations.map((location) => (
+
+        <MapUpdater
+          selectedLocation={selectedLocation}
+          userLocation={userLocation}
+          locations={validLocations}
+        />
+
+        {/* User Location Marker */}
+        {userLocation && (
+          <>
+            <Marker
+              position={[userLocation.lat, userLocation.lng]}
+              icon={userIcon}
+            >
+              <Popup>
+                <div className="p-2">
+                  <h4 className="font-semibold text-gray-900 mb-1">Your Location</h4>
+                  <p className="text-sm text-gray-600">You are here</p>
+                </div>
+              </Popup>
+            </Marker>
+            {/* Circle to show approximate search area */}
+            <Circle
+              center={[userLocation.lat, userLocation.lng]}
+              radius={500} // Small radius to show user position
+              pathOptions={{
+                color: '#8b5cf6',
+                fillColor: '#8b5cf6',
+                fillOpacity: 0.1,
+              }}
+            />
+          </>
+        )}
+
+        {validLocations.map((location) => (
           <Marker
             key={location.id}
             position={[location.coordinates.lat, location.coordinates.lng]}
@@ -158,7 +228,14 @@ const MapView = ({ locations, selectedLocation, onLocationSelect, className = ''
                   }`}>
                     {location.isOpen ? 'Open' : 'Closed'}
                   </span>
-                  <span className="text-sm font-medium text-primary-600">{location.distance} mi</span>
+                  {location.distance !== null && (
+                    <span className="text-sm font-medium text-primary-600">{location.distance} mi</span>
+                  )}
+                </div>
+                <div className="flex items-center mb-2">
+                  <span className="text-yellow-400 mr-1">&#9733;</span>
+                  <span className="text-sm font-medium">{location.rating.toFixed(1)}</span>
+                  <span className="text-xs text-gray-500 ml-1">({location.reviews} reviews)</span>
                 </div>
                 <button
                   onClick={() => onLocationSelect(location)}

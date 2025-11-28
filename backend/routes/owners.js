@@ -9,11 +9,15 @@ const {
   createOwner,
   updateOwner,
   deleteOwner,
-  getOwnerStats
+  getOwnerStats,
+  getMapOwners,
+  getNearbyOwners
 } = require('../controllers/ownerController');
 
 // Public routes
 router.get('/', getOwners);
+router.get('/map', getMapOwners);
+router.get('/nearby', getNearbyOwners);
 router.get('/:id', getOwner);
 router.get('/:id/reviews', getOwnerReviews);
 router.get('/:id/stats', getOwnerStats);

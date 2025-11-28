@@ -46,6 +46,28 @@ const userSchema = new mongoose.Schema({
       default: 'USA',
     },
   },
+  // GeoJSON location for geospatial queries
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point',
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      index: '2dsphere',
+    },
+  },
+  // Business hours
+  businessHours: {
+    monday: { open: String, close: String, closed: { type: Boolean, default: false } },
+    tuesday: { open: String, close: String, closed: { type: Boolean, default: false } },
+    wednesday: { open: String, close: String, closed: { type: Boolean, default: false } },
+    thursday: { open: String, close: String, closed: { type: Boolean, default: false } },
+    friday: { open: String, close: String, closed: { type: Boolean, default: false } },
+    saturday: { open: String, close: String, closed: { type: Boolean, default: true } },
+    sunday: { open: String, close: String, closed: { type: Boolean, default: true } },
+  },
   openDate: Date,
   specialties: [{
     type: String,

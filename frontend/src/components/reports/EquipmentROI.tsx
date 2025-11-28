@@ -1,6 +1,9 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { WrenchScrewdriverIcon, TruckIcon, CurrencyDollarIcon, ClockIcon } from '@heroicons/react/24/solid';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadialBarChart, RadialBar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getEquipmentAnalytics } from '../../services/dashboardService';
+import type { EquipmentAnalyticsData } from '../../services/dashboardService';
 
 interface EquipmentROIProps {
   dateRange: string;
@@ -8,62 +11,40 @@ interface EquipmentROIProps {
   onFiltersChange: (filters: Record<string, any>) => void;
 }
 
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  WrenchScrewdriverIcon,
+  ClockIcon,
+  CurrencyDollarIcon,
+  TruckIcon,
+};
+
 const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFiltersChange }) => {
-  // Mock data
-  const equipmentUtilization = [
-    { name: 'Vinyl Plotter', utilization: 85, revenue: 45000, maintenance: 2500 },
-    { name: 'Large Format Printer', utilization: 92, revenue: 78000, maintenance: 4200 },
-    { name: 'CNC Router', utilization: 68, revenue: 52000, maintenance: 3800 },
-    { name: 'Welding Equipment', utilization: 45, revenue: 28000, maintenance: 1500 },
-    { name: 'Bucket Truck', utilization: 72, revenue: 38000, maintenance: 5500 },
-  ];
+  const { data, isLoading, error } = useQuery<EquipmentAnalyticsData>({
+    queryKey: ['equipmentAnalytics', dateRange],
+    queryFn: getEquipmentAnalytics,
+  });
 
-  const roiTrendData = [
-    { month: 'Jan', roi: 185, utilization: 68 },
-    { month: 'Feb', roi: 210, utilization: 72 },
-    { month: 'Mar', roi: 195, utilization: 70 },
-    { month: 'Apr', roi: 225, utilization: 78 },
-    { month: 'May', roi: 245, utilization: 82 },
-    { month: 'Jun', roi: 238, utilization: 80 },
-  ];
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
-  const maintenanceSchedule = [
-    { equipment: 'Large Format Printer', lastService: '2024-01-05', nextService: '2024-02-05', status: 'Due Soon' },
-    { equipment: 'CNC Router', lastService: '2024-01-10', nextService: '2024-02-10', status: 'Scheduled' },
-    { equipment: 'Vinyl Plotter', lastService: '2024-01-15', nextService: '2024-02-15', status: 'Good' },
-    { equipment: 'Bucket Truck', lastService: '2023-12-20', nextService: '2024-01-20', status: 'Overdue' },
-  ];
+  if (error || !data) {
+    return (
+      <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
+        Failed to load resource analytics data. Please try again later.
+      </div>
+    );
+  }
 
-  const stats = [
-    { 
-      label: 'Total Equipment Value', 
-      value: '$425,000', 
-      icon: WrenchScrewdriverIcon,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
-    },
-    { 
-      label: 'Avg. Utilization', 
-      value: '72.4%', 
-      icon: ClockIcon,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
-    },
-    { 
-      label: 'Monthly Revenue', 
-      value: '$48,200', 
-      icon: CurrencyDollarIcon,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100'
-    },
-    { 
-      label: 'Maintenance Cost', 
-      value: '$3,400/mo', 
-      icon: TruckIcon,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100'
-    },
-  ];
+  // Map stats with icons
+  const stats = data.stats.map((stat, index) => {
+    const IconComponent = iconMap[stat.icon] || WrenchScrewdriverIcon;
+    return { ...stat, icon: IconComponent };
+  });
 
   return (
     <div className="space-y-6">
@@ -84,16 +65,16 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
         ))}
       </div>
 
-      {/* Equipment Utilization and Revenue */}
+      {/* Resource Utilization */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Equipment Performance</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Resource Performance</h3>
         <div className="space-y-4">
-          {equipmentUtilization.map((equipment, index) => (
+          {data.equipmentUtilization.map((equipment, index) => (
             <div key={index} className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-0">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">{equipment.name}</h4>
                 <span className="text-sm font-semibold text-green-600 dark:text-green-400">
-                  ${((equipment.revenue - equipment.maintenance) / 1000).toFixed(1)}k net
+                  {equipment.revenue > 0 ? `${equipment.revenue} views/downloads` : 'No activity'}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-4 text-sm">
@@ -103,32 +84,35 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
                     <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
                       <div
                         className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full"
-                        style={{ width: `${equipment.utilization}%` }}
+                        style={{ width: `${Math.min(equipment.utilization, 100)}%` }}
                       />
                     </div>
                     <span className="font-medium text-gray-900 dark:text-gray-100">{equipment.utilization}%</span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">Revenue</p>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">${(equipment.revenue / 1000).toFixed(0)}k</p>
+                  <p className="text-gray-500 dark:text-gray-400">Engagement</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{equipment.revenue}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">Maintenance</p>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">${(equipment.maintenance / 1000).toFixed(1)}k</p>
+                  <p className="text-gray-500 dark:text-gray-400">Items</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{equipment.maintenance}</p>
                 </div>
               </div>
             </div>
           ))}
+          {data.equipmentUtilization.length === 0 && (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-4">No resource data available</p>
+          )}
         </div>
       </div>
 
       {/* ROI Trend */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">ROI & Utilization Trend</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Content Growth & Utilization Trend</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={roiTrendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <LineChart data={data.roiTrendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
               <XAxis dataKey="month" className="text-gray-600 dark:text-gray-400" />
               <YAxis yAxisId="left" className="text-gray-600 dark:text-gray-400" />
@@ -148,7 +132,7 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
                 dataKey="roi"
                 stroke="#3b82f6"
                 strokeWidth={3}
-                name="ROI %"
+                name="Growth Score"
                 dot={{ fill: '#3b82f6' }}
               />
               <Line
@@ -165,21 +149,21 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
         </div>
       </div>
 
-      {/* Maintenance Schedule */}
+      {/* Recent Content */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Maintenance Schedule</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Recent Content</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead>
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Equipment
+                  Resource
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Last Service
+                  Created
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Next Service
+                  Review Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
@@ -187,7 +171,7 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {maintenanceSchedule.map((item, index) => (
+              {data.maintenanceSchedule.map((item, index) => (
                 <tr key={index}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                     {item.equipment}
@@ -210,6 +194,13 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
                   </td>
                 </tr>
               ))}
+              {data.maintenanceSchedule.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    No recent content available
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

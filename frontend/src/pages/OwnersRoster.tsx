@@ -5,6 +5,7 @@ import { getOwners } from '../services/ownerService';
 import type { Owner } from '../services/ownerService';
 import { useAuth } from '../context/AuthContext';
 import AddOwnerModal from '../components/AddOwnerModal';
+import toast from 'react-hot-toast';
 import {
   UserGroupIcon,
   MagnifyingGlassIcon,
@@ -185,6 +186,75 @@ const OwnersRoster = () => {
     navigate(`/chat?contact=${owner.id}`);
   };
 
+  // Export owners directory to CSV
+  const handleExportDirectory = async () => {
+    try {
+      toast.loading('Preparing export...', { id: 'export' });
+
+      // Fetch all owners for export (without pagination limit)
+      const allOwnersData = await getOwners({ page: 1, limit: 1000 });
+      const allOwners = allOwnersData.data || [];
+
+      if (allOwners.length === 0) {
+        toast.error('No owners to export', { id: 'export' });
+        return;
+      }
+
+      // Define CSV headers
+      const headers = [
+        'Name',
+        'Company',
+        'Email',
+        'Phone',
+        'City',
+        'State',
+        'Zip Code',
+        'Years in Business',
+        'Specialties',
+        'Rating',
+        'Join Date'
+      ];
+
+      // Convert owners to CSV rows
+      const rows = allOwners.map((owner: Owner) => [
+        owner.name || '',
+        owner.company || '',
+        owner.email || '',
+        owner.phone || '',
+        owner.address?.city || '',
+        owner.address?.state || '',
+        owner.address?.zipCode || '',
+        owner.yearsInBusiness?.toString() || '',
+        (owner.specialties || []).join('; '),
+        owner.rating?.averageRating?.toString() || owner.stats?.averageRating?.toString() || '0',
+        owner.openDate ? new Date(owner.openDate).toLocaleDateString() : ''
+      ]);
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `owners-directory-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported ${allOwners.length} owners to CSV`, { id: 'export' });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export directory', { id: 'export' });
+    }
+  };
+
   // Fetch owners from API
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['owners', page, searchQuery, selectedTerritory, selectedSpecialties],
@@ -319,10 +389,13 @@ const OwnersRoster = () => {
                   Add Owner
                 </button>
               )}
-              <button className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200">
-                <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-                Export Directory
-              </button>
+              <button
+                  onClick={handleExportDirectory}
+                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+                >
+                  <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+                  Export Directory
+                </button>
             </div>
           </div>
         </div>

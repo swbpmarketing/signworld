@@ -1,6 +1,12 @@
 import React from 'react';
-import { CheckCircleIcon, ClockIcon, ExclamationCircleIcon } from '@heroicons/react/24/solid';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
+import { CheckCircleIcon, ClockIcon, ExclamationCircleIcon, ArrowDownTrayIcon } from '@heroicons/react/24/solid';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getProjectAnalytics } from '../../services/dashboardService';
+import type { ProjectAnalyticsData } from '../../services/dashboardService';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface ProjectAnalyticsProps {
   dateRange: string;
@@ -8,85 +14,209 @@ interface ProjectAnalyticsProps {
   onFiltersChange: (filters: Record<string, any>) => void;
 }
 
-const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ dateRange, filters, onFiltersChange }) => {
-  // Mock data
-  const projectStatusData = [
-    { status: 'Completed', count: 45, percentage: 56 },
-    { status: 'In Progress', count: 28, percentage: 35 },
-    { status: 'Pending', count: 7, percentage: 9 },
-  ];
+const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ dateRange }) => {
+  const { data, isLoading, error } = useQuery<ProjectAnalyticsData>({
+    queryKey: ['projectAnalytics', dateRange],
+    queryFn: getProjectAnalytics,
+  });
 
-  const completionTrendData = [
-    { week: 'W1', completed: 8, started: 12 },
-    { week: 'W2', completed: 10, started: 15 },
-    { week: 'W3', completed: 12, started: 11 },
-    { week: 'W4', completed: 9, started: 14 },
-    { week: 'W5', completed: 15, started: 10 },
-    { week: 'W6', completed: 11, started: 13 },
-  ];
+  const getStatIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'ClockIcon':
+        return ClockIcon;
+      case 'CheckCircleIcon':
+        return CheckCircleIcon;
+      case 'ExclamationCircleIcon':
+        return ExclamationCircleIcon;
+      default:
+        return ClockIcon;
+    }
+  };
 
-  const projectTypeData = [
-    { type: 'New Installation', avgDays: 7, count: 32 },
-    { type: 'Maintenance', avgDays: 2, count: 25 },
-    { type: 'Repair', avgDays: 3, count: 18 },
-    { type: 'Removal', avgDays: 1, count: 5 },
-  ];
+  const exportToPDF = () => {
+    if (!data) return;
 
-  const stats = [
-    { 
-      label: 'Active Projects', 
-      value: '28', 
-      icon: ClockIcon,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
-    },
-    { 
-      label: 'Completed This Month', 
-      value: '45', 
-      icon: CheckCircleIcon,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
-    },
-    { 
-      label: 'Overdue', 
-      value: '3', 
-      icon: ExclamationCircleIcon,
-      color: 'text-red-600',
-      bgColor: 'bg-red-100'
-    },
-    { 
-      label: 'Avg. Completion Time', 
-      value: '4.5 days', 
-      icon: ClockIcon,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100'
-    },
-  ];
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Title
+    doc.setFontSize(20);
+    doc.text('Project Analytics Report', pageWidth / 2, 20, { align: 'center' });
+
+    // Date
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 28, { align: 'center' });
+
+    // Summary Stats
+    doc.setFontSize(14);
+    doc.text('Summary Statistics', 14, 40);
+
+    const statsData = data.stats.map(stat => [stat.label, stat.value]);
+    autoTable(doc, {
+      startY: 45,
+      head: [['Metric', 'Value']],
+      body: statsData,
+      theme: 'striped',
+    });
+
+    // Project Status
+    const finalY1 = (doc as any).lastAutoTable.finalY || 70;
+    doc.setFontSize(14);
+    doc.text('Project Status Overview', 14, finalY1 + 15);
+
+    const statusData = data.projectStatusData.map(item => [
+      item.status,
+      item.count.toString(),
+      `${item.percentage}%`,
+    ]);
+    autoTable(doc, {
+      startY: finalY1 + 20,
+      head: [['Status', 'Count', 'Percentage']],
+      body: statusData,
+      theme: 'striped',
+    });
+
+    // Completion Trend
+    const finalY2 = (doc as any).lastAutoTable.finalY || 120;
+    doc.setFontSize(14);
+    doc.text('Weekly Completion Trend', 14, finalY2 + 15);
+
+    const trendData = data.completionTrendData.map(item => [
+      item.week,
+      item.completed.toString(),
+      item.started.toString(),
+    ]);
+    autoTable(doc, {
+      startY: finalY2 + 20,
+      head: [['Week', 'Completed', 'Started']],
+      body: trendData,
+      theme: 'striped',
+    });
+
+    // Project Types
+    const finalY3 = (doc as any).lastAutoTable.finalY || 170;
+    doc.setFontSize(14);
+    doc.text('Project Duration by Type', 14, finalY3 + 15);
+
+    const typeData = data.projectTypeData.map(item => [
+      item.type,
+      `${item.avgDays} days`,
+      item.count.toString(),
+    ]);
+    autoTable(doc, {
+      startY: finalY3 + 20,
+      head: [['Type', 'Avg. Duration', 'Count']],
+      body: typeData,
+      theme: 'striped',
+    });
+
+    doc.save('project-analytics-report.pdf');
+  };
+
+  const exportToExcel = () => {
+    if (!data) return;
+
+    const wb = XLSX.utils.book_new();
+
+    // Summary sheet
+    const summaryData = data.stats.map(stat => ({
+      Metric: stat.label,
+      Value: stat.value,
+    }));
+    const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+
+    // Status sheet
+    const statusSheetData = data.projectStatusData.map(item => ({
+      Status: item.status,
+      Count: item.count,
+      Percentage: `${item.percentage}%`,
+    }));
+    const statusWs = XLSX.utils.json_to_sheet(statusSheetData);
+    XLSX.utils.book_append_sheet(wb, statusWs, 'Project Status');
+
+    // Completion Trend sheet
+    const trendSheetData = data.completionTrendData.map(item => ({
+      Week: item.week,
+      Completed: item.completed,
+      Started: item.started,
+    }));
+    const trendWs = XLSX.utils.json_to_sheet(trendSheetData);
+    XLSX.utils.book_append_sheet(wb, trendWs, 'Completion Trend');
+
+    // Project Types sheet
+    const typeSheetData = data.projectTypeData.map(item => ({
+      Type: item.type,
+      'Avg. Duration (days)': item.avgDays,
+      Count: item.count,
+    }));
+    const typeWs = XLSX.utils.json_to_sheet(typeSheetData);
+    XLSX.utils.book_append_sheet(wb, typeWs, 'By Type');
+
+    XLSX.writeFile(wb, 'project-analytics-report.xlsx');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
+        Failed to load project analytics data. Please try again later.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Export Buttons */}
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={exportToPDF}
+          className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+          Export PDF
+        </button>
+        <button
+          onClick={exportToExcel}
+          className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+          Export Excel
+        </button>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <div className="flex items-center">
-              <div className={`p-3 rounded-lg ${stat.bgColor} dark:bg-opacity-20`}>
-                <stat.icon className={`h-6 w-6 ${stat.color} dark:opacity-90`} />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</p>
-                <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
+        {data.stats.map((stat, index) => {
+          const IconComponent = getStatIcon(stat.icon);
+          return (
+            <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+              <div className="flex items-center">
+                <div className={`p-3 rounded-lg bg-opacity-20 dark:bg-opacity-20`} style={{ backgroundColor: `${stat.color}20` }}>
+                  <IconComponent className="h-6 w-6" style={{ color: stat.color }} />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Project Status Overview */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Project Status Overview</h3>
         <div className="space-y-4">
-          {projectStatusData.map((status, index) => (
+          {data.projectStatusData.map((status, index) => (
             <div key={index}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{status.status}</span>
@@ -112,7 +242,7 @@ const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ dateRange, filters,
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Project Completion Trend</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={completionTrendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <BarChart data={data.completionTrendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
               <XAxis dataKey="week" className="text-gray-600 dark:text-gray-400" />
               <YAxis className="text-gray-600 dark:text-gray-400" />
@@ -136,7 +266,7 @@ const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ dateRange, filters,
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Average Project Duration by Type</h3>
         <div className="space-y-4">
-          {projectTypeData.map((type, index) => (
+          {data.projectTypeData.map((type, index) => (
             <div key={index} className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{type.type}</p>

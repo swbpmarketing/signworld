@@ -1,27 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   MapIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
   MapPinIcon,
   PhoneIcon,
   EnvelopeIcon,
   ClockIcon,
-  StarIcon,
-  AdjustmentsHorizontalIcon,
   ListBulletIcon,
-  ChevronRightIcon,
-  BuildingOfficeIcon,
   UserIcon,
   ArrowsPointingOutIcon,
   ArrowsPointingInIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import MapView from '../components/MapView';
 import CustomSelect from '../components/CustomSelect';
+import { getNearbyOwners, getMapOwners, isBusinessOpen, formatAddress } from '../services/ownerService';
+import type { MapOwner, BusinessHours } from '../services/ownerService';
 
+// Map owner data to Location interface for MapView compatibility
 interface Location {
-  id: number;
+  id: string;
   name: string;
   owner: string;
   address: string;
@@ -32,7 +32,7 @@ interface Location {
   email: string;
   rating: number;
   reviews: number;
-  distance: number;
+  distance: number | null;
   services: string[];
   hours: {
     open: string;
@@ -45,116 +45,49 @@ interface Location {
   };
 }
 
-const locations: Location[] = [
-  {
-    id: 1,
-    name: "Arizona Signs & Graphics",
-    owner: "Sarah Johnson",
-    address: "1234 E Camelback Rd",
-    city: "Phoenix",
-    state: "AZ",
-    zipCode: "85014",
-    phone: "(602) 555-0123",
-    email: "phoenix@signworld.com",
-    rating: 4.9,
-    reviews: 127,
-    distance: 2.3,
-    services: ["Vehicle Wraps", "LED Signs", "Monument Signs", "Channel Letters"],
-    hours: { open: "8:00 AM", close: "6:00 PM" },
-    isOpen: true,
-    coordinates: { lat: 33.5093, lng: -112.0746 }
-  },
-  {
-    id: 2,
-    name: "Desert View Signage",
-    owner: "Mark Thompson",
-    address: "5678 N Scottsdale Rd",
-    city: "Scottsdale",
-    state: "AZ",
-    zipCode: "85250",
-    phone: "(480) 555-0456",
-    email: "scottsdale@signworld.com",
-    rating: 4.8,
-    reviews: 89,
-    distance: 5.7,
-    services: ["Digital Displays", "Wayfinding", "Window Graphics"],
-    hours: { open: "9:00 AM", close: "5:00 PM" },
-    isOpen: true,
-    coordinates: { lat: 33.4942, lng: -111.9261 }
-  },
-  {
-    id: 3,
-    name: "Valley Signs Express",
-    owner: "Lisa Chen",
-    address: "9012 W Bell Rd",
-    city: "Glendale",
-    state: "AZ",
-    zipCode: "85308",
-    phone: "(623) 555-0789",
-    email: "glendale@signworld.com",
-    rating: 4.7,
-    reviews: 56,
-    distance: 8.2,
-    services: ["Banners", "Trade Show Displays", "Vehicle Graphics"],
-    hours: { open: "8:30 AM", close: "5:30 PM" },
-    isOpen: false,
-    coordinates: { lat: 33.6403, lng: -112.0738 }
-  },
-  {
-    id: 4,
-    name: "Mesa Creative Signs",
-    owner: "Robert Martinez",
-    address: "3456 S Power Rd",
-    city: "Mesa",
-    state: "AZ",
-    zipCode: "85212",
-    phone: "(480) 555-0234",
-    email: "mesa@signworld.com",
-    rating: 4.9,
-    reviews: 112,
-    distance: 12.1,
-    services: ["LED Signs", "Channel Letters", "Digital Displays", "Monument Signs"],
-    hours: { open: "8:00 AM", close: "6:00 PM" },
-    isOpen: true,
-    coordinates: { lat: 33.3528, lng: -111.6890 }
-  },
-  {
-    id: 5,
-    name: "Tempe Sign Solutions",
-    owner: "Jennifer Davis",
-    address: "789 W University Dr",
-    city: "Tempe",
-    state: "AZ",
-    zipCode: "85281",
-    phone: "(480) 555-0567",
-    email: "tempe@signworld.com",
-    rating: 4.6,
-    reviews: 78,
-    distance: 7.3,
-    services: ["Window Graphics", "Vehicle Wraps", "Banners", "Wayfinding"],
-    hours: { open: "9:00 AM", close: "5:30 PM" },
-    isOpen: true,
-    coordinates: { lat: 33.4242, lng: -111.9281 }
-  },
-  {
-    id: 6,
-    name: "Chandler Sign Works",
-    owner: "Michael Brown",
-    address: "2345 N Arizona Ave",
-    city: "Chandler",
-    state: "AZ",
-    zipCode: "85225",
-    phone: "(480) 555-0890",
-    email: "chandler@signworld.com",
-    rating: 4.8,
-    reviews: 95,
-    distance: 15.4,
-    services: ["Trade Show Displays", "LED Signs", "Vehicle Graphics", "Monument Signs"],
-    hours: { open: "8:30 AM", close: "5:00 PM" },
-    isOpen: false,
-    coordinates: { lat: 33.3362, lng: -111.8413 }
+// Convert MapOwner to Location format
+const mapOwnerToLocation = (owner: MapOwner): Location => {
+  const todayHours = getTodayHours(owner.businessHours);
+  return {
+    id: owner._id || owner.id,
+    name: owner.company || owner.name,
+    owner: owner.name,
+    address: owner.address?.street || '',
+    city: owner.address?.city || '',
+    state: owner.address?.state || '',
+    zipCode: owner.address?.zipCode || '',
+    phone: owner.phone || '',
+    email: owner.email || '',
+    rating: owner.rating?.averageRating || 0,
+    reviews: owner.rating?.totalRatings || 0,
+    distance: owner.distance ?? null,
+    services: owner.specialties || [],
+    hours: todayHours,
+    isOpen: isBusinessOpen(owner.businessHours),
+    coordinates: {
+      lat: owner.location?.coordinates?.[1] || 0,
+      lng: owner.location?.coordinates?.[0] || 0,
+    },
+  };
+};
+
+// Get today's business hours
+const getTodayHours = (businessHours?: BusinessHours): { open: string; close: string } => {
+  if (!businessHours) return { open: '9:00 AM', close: '5:00 PM' };
+
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const today = days[new Date().getDay()] as keyof BusinessHours;
+  const todayHours = businessHours[today];
+
+  if (!todayHours || todayHours.closed) {
+    return { open: 'Closed', close: 'Closed' };
   }
-];
+
+  return {
+    open: todayHours.open || '9:00 AM',
+    close: todayHours.close || '5:00 PM',
+  };
+};
 
 const serviceFilters = [
   "Vehicle Wraps",
@@ -164,7 +97,9 @@ const serviceFilters = [
   "Channel Letters",
   "Wayfinding",
   "Window Graphics",
-  "Banners"
+  "Banners",
+  "Trade Show",
+  "ADA Signs"
 ];
 
 const MapSearch = () => {
@@ -172,6 +107,106 @@ const MapSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [showList, setShowList] = useState(true);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [mapExpanded, setMapExpanded] = useState(false);
+  const [radius, setRadius] = useState('50');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  // Fetch owners based on user location or all map owners
+  const { data: nearbyData, isLoading: isLoadingNearby, error: nearbyError, refetch: refetchNearby } = useQuery({
+    queryKey: ['nearbyOwners', userLocation?.lat, userLocation?.lng, radius, selectedServices[0]],
+    queryFn: () => getNearbyOwners({
+      lat: userLocation!.lat,
+      lng: userLocation!.lng,
+      radius: parseInt(radius),
+      specialty: selectedServices.length > 0 ? selectedServices[0] : undefined,
+      limit: 50,
+    }),
+    enabled: !!userLocation,
+  });
+
+  // Fallback: fetch all map owners if no user location
+  const { data: allOwnersData, isLoading: isLoadingAll, error: allError } = useQuery({
+    queryKey: ['mapOwners'],
+    queryFn: getMapOwners,
+    enabled: !userLocation,
+  });
+
+  // Convert owners to Location format
+  const locations: Location[] = userLocation
+    ? (nearbyData?.data || []).map(mapOwnerToLocation)
+    : (allOwnersData?.data || []).map(mapOwnerToLocation);
+
+  // Filter by selected services (client-side filtering for multiple services)
+  const filteredLocations = selectedServices.length > 0
+    ? locations.filter(loc =>
+        selectedServices.some(service =>
+          loc.services.some(s => s.toLowerCase().includes(service.toLowerCase()))
+        )
+      )
+    : locations;
+
+  // Filter by search query
+  const searchedLocations = searchQuery
+    ? filteredLocations.filter(loc =>
+        loc.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        loc.state.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        loc.zipCode.includes(searchQuery) ||
+        loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        loc.owner.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : filteredLocations;
+
+  // Select first location when data loads
+  useEffect(() => {
+    if (searchedLocations.length > 0 && !selectedLocation) {
+      setSelectedLocation(searchedLocations[0]);
+    }
+  }, [searchedLocations, selectedLocation]);
+
+  // Get user's current location
+  const getUserLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setIsGettingLocation(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setIsGettingLocation(false);
+      },
+      (error) => {
+        setIsGettingLocation(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setLocationError('Location permission denied. Please enable location access.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setLocationError('Location information is unavailable.');
+            break;
+          case error.TIMEOUT:
+            setLocationError('Location request timed out.');
+            break;
+          default:
+            setLocationError('An unknown error occurred.');
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  }, []);
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -182,9 +217,6 @@ const MapSearch = () => {
     setSearchInput('');
     setSearchQuery('');
   };
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(locations[0]);
-  const [mapExpanded, setMapExpanded] = useState(false);
-  const [radius, setRadius] = useState('10');
 
   const toggleService = (service: string) => {
     setSelectedServices(prev =>
@@ -193,6 +225,20 @@ const MapSearch = () => {
         : [...prev, service]
     );
   };
+
+  const handleGetDirections = (location: Location) => {
+    const destination = encodeURIComponent(`${location.address}, ${location.city}, ${location.state} ${location.zipCode}`);
+    const origin = userLocation
+      ? `${userLocation.lat},${userLocation.lng}`
+      : '';
+    const url = origin
+      ? `https://www.google.com/maps/dir/${origin}/${destination}`
+      : `https://www.google.com/maps/search/?api=1&query=${destination}`;
+    window.open(url, '_blank');
+  };
+
+  const isLoading = userLocation ? isLoadingNearby : isLoadingAll;
+  const error = userLocation ? nearbyError : allError;
 
   return (
     <div className="space-y-8">
@@ -209,11 +255,36 @@ const MapSearch = () => {
                 Find Sign Company locations and franchise owners near you
               </p>
             </div>
-            <button className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200">
-              <UserIcon className="h-5 w-5 mr-2" />
-              View My Location
+            <button
+              onClick={getUserLocation}
+              disabled={isGettingLocation}
+              className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200 disabled:opacity-50"
+            >
+              {isGettingLocation ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600 mr-2"></div>
+                  Getting Location...
+                </>
+              ) : (
+                <>
+                  <UserIcon className="h-5 w-5 mr-2" />
+                  {userLocation ? 'Update Location' : 'Use My Location'}
+                </>
+              )}
             </button>
           </div>
+          {locationError && (
+            <div className="mt-4 flex items-center text-red-200 bg-red-500/20 rounded-lg px-4 py-2">
+              <ExclamationCircleIcon className="h-5 w-5 mr-2" />
+              {locationError}
+            </div>
+          )}
+          {userLocation && (
+            <div className="mt-4 flex items-center text-primary-100">
+              <MapPinIcon className="h-5 w-5 mr-2" />
+              Showing locations within {radius} miles of your location
+            </div>
+          )}
         </div>
       </div>
 
@@ -258,7 +329,12 @@ const MapSearch = () => {
                 <div className="w-36">
                   <CustomSelect
                     value={radius}
-                    onChange={setRadius}
+                    onChange={(value) => {
+                      setRadius(value);
+                      if (userLocation) {
+                        refetchNearby();
+                      }
+                    }}
                     options={[
                       { value: '5', label: '5 miles' },
                       { value: '10', label: '10 miles' },
@@ -269,9 +345,6 @@ const MapSearch = () => {
                   />
                 </div>
               </div>
-              <button type="submit" className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200">
-                Search
-              </button>
             </div>
           </form>
 
@@ -305,154 +378,209 @@ const MapSearch = () => {
         </div>
       </div>
 
-      {/* Map and List View */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Map Container */}
-        <div className={`${mapExpanded ? 'lg:col-span-3' : 'lg:col-span-2'} relative`}>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-            <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Map View</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowList(!showList)}
-                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  <ListBulletIcon className="h-4 w-4 mr-1.5" />
-                  {showList ? 'Hide' : 'Show'} List
-                </button>
-                <button
-                  onClick={() => setMapExpanded(!mapExpanded)}
-                  className="p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  {mapExpanded ? (
-                    <ArrowsPointingInIcon className="h-5 w-5" />
-                  ) : (
-                    <ArrowsPointingOutIcon className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-            
-            {/* Interactive Map */}
-            <MapView
-              locations={locations}
-              selectedLocation={selectedLocation}
-              onLocationSelect={setSelectedLocation}
-              className="h-[600px]"
-            />
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading locations...</p>
+          </div>
+        </div>
+      )}
 
-            {/* Map Legend */}
-            <div className="p-4 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center">
-                    <div className="h-3 w-3 bg-green-500 rounded-full mr-2"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Open Now</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="h-3 w-3 bg-red-500 rounded-full mr-2"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Closed</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="h-3 w-3 bg-primary-600 rounded-full mr-2"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Selected</span>
-                  </div>
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
+          <div className="flex items-center">
+            <ExclamationCircleIcon className="h-5 w-5 mr-2" />
+            Failed to load locations. Please try again later.
+          </div>
+        </div>
+      )}
+
+      {/* No Results */}
+      {!isLoading && !error && searchedLocations.length === 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center">
+          <MapPinIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No locations found</h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            {userLocation
+              ? `No franchise owners found within ${radius} miles of your location.`
+              : 'Click "Use My Location" to find nearby franchise owners.'}
+          </p>
+          {!userLocation && (
+            <button
+              onClick={getUserLocation}
+              className="mt-4 inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              <MapPinIcon className="h-5 w-5 mr-2" />
+              Use My Location
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Map and List View */}
+      {!isLoading && !error && searchedLocations.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Map Container */}
+          <div className={`${mapExpanded ? 'lg:col-span-3' : 'lg:col-span-2'} relative`}>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Map View</h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowList(!showList)}
+                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    <ListBulletIcon className="h-4 w-4 mr-1.5" />
+                    {showList ? 'Hide' : 'Show'} List
+                  </button>
+                  <button
+                    onClick={() => setMapExpanded(!mapExpanded)}
+                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    {mapExpanded ? (
+                      <ArrowsPointingInIcon className="h-5 w-5" />
+                    ) : (
+                      <ArrowsPointingOutIcon className="h-5 w-5" />
+                    )}
+                  </button>
                 </div>
-                <span className="text-gray-500 dark:text-gray-400">{locations.length} locations found</span>
+              </div>
+
+              {/* Interactive Map */}
+              <MapView
+                locations={searchedLocations}
+                selectedLocation={selectedLocation}
+                onLocationSelect={setSelectedLocation}
+                className="h-[600px]"
+                userLocation={userLocation}
+              />
+
+              {/* Map Legend */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center">
+                      <div className="h-3 w-3 bg-green-500 rounded-full mr-2"></div>
+                      <span className="text-gray-600 dark:text-gray-400">Open Now</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="h-3 w-3 bg-red-500 rounded-full mr-2"></div>
+                      <span className="text-gray-600 dark:text-gray-400">Closed</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="h-3 w-3 bg-primary-600 rounded-full mr-2"></div>
+                      <span className="text-gray-600 dark:text-gray-400">Selected</span>
+                    </div>
+                  </div>
+                  <span className="text-gray-500 dark:text-gray-400">{searchedLocations.length} locations found</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Location List */}
-        {showList && !mapExpanded && (
-          <div className="lg:col-span-1 space-y-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-              <div className="p-4 border-b border-gray-100 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Nearby Locations</h3>
-              </div>
-              <div className="max-h-[600px] overflow-y-auto">
-                {locations.map((location) => (
-                  <div
-                    key={location.id}
-                    onClick={() => setSelectedLocation(location)}
-                    className={`p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors ${
-                      selectedLocation?.id === location.id ? 'bg-primary-50 dark:bg-primary-900/30' : ''
-                    }`}
-                  >
-                    <div className="space-y-3">
-                      {/* Location Header */}
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 line-clamp-2">{location.name}</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{location.owner}</p>
+          {/* Location List */}
+          {showList && !mapExpanded && (
+            <div className="lg:col-span-1 space-y-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {userLocation ? 'Nearby Locations' : 'All Locations'}
+                  </h3>
+                </div>
+                <div className="max-h-[600px] overflow-y-auto">
+                  {searchedLocations.map((location) => (
+                    <div
+                      key={location.id}
+                      onClick={() => setSelectedLocation(location)}
+                      className={`p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors ${
+                        selectedLocation?.id === location.id ? 'bg-primary-50 dark:bg-primary-900/30' : ''
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        {/* Location Header */}
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 line-clamp-2">{location.name}</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{location.owner}</p>
+                          </div>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            location.isOpen ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
+                          }`}>
+                            {location.isOpen ? 'Open' : 'Closed'}
+                          </span>
                         </div>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          location.isOpen ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
-                        }`}>
-                          {location.isOpen ? 'Open' : 'Closed'}
-                        </span>
-                      </div>
 
-                      {/* Address and Distance */}
-                      <div className="flex flex-col sm:flex-row items-start justify-between gap-2 sm:gap-0">
-                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                          <p>{location.address}</p>
-                          <p>{location.city}, {location.state} {location.zipCode}</p>
-                        </div>
-                        <div className="text-right sm:text-left">
-                          <p className="text-base sm:text-lg font-semibold text-primary-600 dark:text-primary-400">{location.distance} mi</p>
-                          <div className="flex items-center mt-1">
-                            <StarSolidIcon className="h-4 w-4 text-yellow-400" />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 ml-1">{location.rating}</span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({location.reviews})</span>
+                        {/* Address and Distance */}
+                        <div className="flex flex-col sm:flex-row items-start justify-between gap-2 sm:gap-0">
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            <p>{location.address}</p>
+                            <p>{location.city}, {location.state} {location.zipCode}</p>
+                          </div>
+                          <div className="text-right sm:text-left">
+                            {location.distance !== null && (
+                              <p className="text-base sm:text-lg font-semibold text-primary-600 dark:text-primary-400">{location.distance} mi</p>
+                            )}
+                            <div className="flex items-center mt-1">
+                              <StarSolidIcon className="h-4 w-4 text-yellow-400" />
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 ml-1">{location.rating.toFixed(1)}</span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">({location.reviews})</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Contact Info */}
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm">
-                        <button className="flex items-center text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
-                          <PhoneIcon className="h-4 w-4 mr-1" />
-                          Call
-                        </button>
-                        <button className="flex items-center text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
-                          <EnvelopeIcon className="h-4 w-4 mr-1" />
-                          Email
-                        </button>
-                        <button className="flex items-center text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
-                          <ClockIcon className="h-4 w-4 mr-1" />
-                          Hours
-                        </button>
-                      </div>
+                        {/* Contact Info */}
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm">
+                          {location.phone && (
+                            <a href={`tel:${location.phone}`} className="flex items-center text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                              <PhoneIcon className="h-4 w-4 mr-1" />
+                              Call
+                            </a>
+                          )}
+                          {location.email && (
+                            <a href={`mailto:${location.email}`} className="flex items-center text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                              <EnvelopeIcon className="h-4 w-4 mr-1" />
+                              Email
+                            </a>
+                          )}
+                          <span className="flex items-center text-gray-600 dark:text-gray-400">
+                            <ClockIcon className="h-4 w-4 mr-1" />
+                            {location.hours.open === 'Closed' ? 'Closed Today' : `${location.hours.open} - ${location.hours.close}`}
+                          </span>
+                        </div>
 
-                      {/* Services Preview */}
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {location.services.slice(0, 3).map((service) => (
-                          <span
-                            key={service}
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                          >
-                            {service}
-                          </span>
-                        ))}
-                        {location.services.length > 3 && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-gray-500 dark:text-gray-400">
-                            +{location.services.length - 3} more
-                          </span>
+                        {/* Services Preview */}
+                        {location.services.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {location.services.slice(0, 3).map((service) => (
+                              <span
+                                key={service}
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                              >
+                                {service}
+                              </span>
+                            ))}
+                            {location.services.length > 3 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-gray-500 dark:text-gray-400">
+                                +{location.services.length - 3} more
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Selected Location Details */}
-      {selectedLocation && (
+      {selectedLocation && !isLoading && (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Location Info */}
@@ -473,25 +601,26 @@ const MapSearch = () => {
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Hours</h4>
                   <p className="text-gray-600 dark:text-gray-400">
-                    Monday - Friday: {selectedLocation.hours.open} - {selectedLocation.hours.close}<br />
-                    Saturday - Sunday: Closed
+                    Today: {selectedLocation.hours.open === 'Closed' ? 'Closed' : `${selectedLocation.hours.open} - ${selectedLocation.hours.close}`}
                   </p>
                 </div>
               </div>
 
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Services Offered</h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedLocation.services.map((service) => (
-                    <span
-                      key={service}
-                      className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
-                    >
-                      {service}
-                    </span>
-                  ))}
+              {selectedLocation.services.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Services Offered</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedLocation.services.map((service) => (
+                      <span
+                        key={service}
+                        className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
+                      >
+                        {service}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Contact Actions */}
@@ -500,20 +629,33 @@ const MapSearch = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
                     <StarSolidIcon className="h-5 w-5 text-yellow-400" />
-                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100 ml-1">{selectedLocation.rating}</span>
+                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100 ml-1">{selectedLocation.rating.toFixed(1)}</span>
                   </div>
                   <span className="text-sm text-gray-500 dark:text-gray-400">{selectedLocation.reviews} reviews</span>
                 </div>
                 <div className="space-y-2">
-                  <button className="w-full flex items-center justify-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base">
-                    <PhoneIcon className="h-5 w-5 mr-2" />
-                    {selectedLocation.phone}
-                  </button>
-                  <button className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base">
-                    <EnvelopeIcon className="h-5 w-5 mr-2" />
-                    Send Email
-                  </button>
-                  <button className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base">
+                  {selectedLocation.phone && (
+                    <a
+                      href={`tel:${selectedLocation.phone}`}
+                      className="w-full flex items-center justify-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base"
+                    >
+                      <PhoneIcon className="h-5 w-5 mr-2" />
+                      {selectedLocation.phone}
+                    </a>
+                  )}
+                  {selectedLocation.email && (
+                    <a
+                      href={`mailto:${selectedLocation.email}`}
+                      className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"
+                    >
+                      <EnvelopeIcon className="h-5 w-5 mr-2" />
+                      Send Email
+                    </a>
+                  )}
+                  <button
+                    onClick={() => handleGetDirections(selectedLocation)}
+                    className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"
+                  >
                     <MapPinIcon className="h-5 w-5 mr-2" />
                     Get Directions
                   </button>

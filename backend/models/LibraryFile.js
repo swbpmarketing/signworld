@@ -58,6 +58,10 @@ const libraryFileSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
   metadata: {
     width: Number,
     height: Number,

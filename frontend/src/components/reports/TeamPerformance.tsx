@@ -1,71 +1,50 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { UsersIcon, TrophyIcon, ClockIcon, ChartBarIcon } from '@heroicons/react/24/solid';
 import { BarChart, Bar, LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getTeamAnalytics } from '../../services/dashboardService';
+import type { TeamAnalyticsData } from '../../services/dashboardService';
 
 interface TeamPerformanceProps {
   dateRange: string;
-  filters: Record<string, any>;
-  onFiltersChange: (filters: Record<string, any>) => void;
+  filters: Record<string, unknown>;
+  onFiltersChange: (filters: Record<string, unknown>) => void;
 }
 
-const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange, filters, onFiltersChange }) => {
-  // Mock data
-  const teamProductivity = [
-    { name: 'John Smith', projects: 12, revenue: 45000, efficiency: 92, satisfaction: 4.8 },
-    { name: 'Sarah Johnson', projects: 15, revenue: 52000, efficiency: 88, satisfaction: 4.6 },
-    { name: 'Mike Davis', projects: 10, revenue: 38000, efficiency: 95, satisfaction: 4.9 },
-    { name: 'Emily Brown', projects: 14, revenue: 48000, efficiency: 90, satisfaction: 4.7 },
-    { name: 'Tom Wilson', projects: 11, revenue: 41000, efficiency: 87, satisfaction: 4.5 },
-  ];
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  UsersIcon,
+  ChartBarIcon,
+  ClockIcon,
+  TrophyIcon,
+};
 
-  const performanceTrend = [
-    { week: 'W1', completed: 18, efficiency: 85 },
-    { week: 'W2', completed: 22, efficiency: 88 },
-    { week: 'W3', completed: 20, efficiency: 87 },
-    { week: 'W4', completed: 25, efficiency: 91 },
-    { week: 'W5', completed: 23, efficiency: 89 },
-    { week: 'W6', completed: 26, efficiency: 92 },
-  ];
+const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange }) => {
+  const { data, isLoading, error } = useQuery<TeamAnalyticsData>({
+    queryKey: ['teamAnalytics', dateRange],
+    queryFn: getTeamAnalytics,
+  });
 
-  const skillsData = [
-    { skill: 'Installation', A: 95, B: 85, fullMark: 100 },
-    { skill: 'Design', A: 80, B: 90, fullMark: 100 },
-    { skill: 'Customer Service', A: 92, B: 88, fullMark: 100 },
-    { skill: 'Technical', A: 88, B: 95, fullMark: 100 },
-    { skill: 'Time Management', A: 85, B: 82, fullMark: 100 },
-    { skill: 'Safety', A: 98, B: 96, fullMark: 100 },
-  ];
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
-  const stats = [
-    { 
-      label: 'Team Members', 
-      value: '12', 
-      icon: UsersIcon,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
-    },
-    { 
-      label: 'Avg. Efficiency', 
-      value: '90.4%', 
-      icon: ChartBarIcon,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
-    },
-    { 
-      label: 'Projects/Week', 
-      value: '23.5', 
-      icon: ClockIcon,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100'
-    },
-    { 
-      label: 'Team Rating', 
-      value: '4.7/5', 
-      icon: TrophyIcon,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100'
-    },
-  ];
+  if (error || !data) {
+    return (
+      <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
+        Failed to load community performance data. Please try again later.
+      </div>
+    );
+  }
+
+  // Map stats with icons
+  const stats = data.stats.map((stat) => {
+    const IconComponent = iconMap[stat.icon] || UsersIcon;
+    return { ...stat, icon: IconComponent };
+  });
 
   return (
     <div className="space-y-6">
@@ -86,24 +65,24 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange, filters, o
         ))}
       </div>
 
-      {/* Team Leaderboard */}
+      {/* Community Leaderboard */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Team Performance Leaderboard</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Top Community Contributors</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead>
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Team Member
+                  Member
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Projects
+                  Discussions
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Revenue
+                  Engagement
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Efficiency
+                  Activity
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Rating
@@ -111,7 +90,7 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange, filters, o
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {teamProductivity.map((member, index) => (
+              {data.teamProductivity.map((member, index) => (
                 <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -129,7 +108,7 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange, filters, o
                     {member.projects}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                    ${(member.revenue / 1000).toFixed(0)}k
+                    {member.revenue} pts
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -152,6 +131,13 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange, filters, o
                   </td>
                 </tr>
               ))}
+              {data.teamProductivity.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    No contributor data available
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -159,10 +145,10 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange, filters, o
 
       {/* Performance Trend */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Weekly Performance Trend</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Weekly Activity Trend</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={performanceTrend} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <LineChart data={data.performanceTrend} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
               <XAxis dataKey="week" className="text-gray-600 dark:text-gray-400" />
               <YAxis yAxisId="left" className="text-gray-600 dark:text-gray-400" />
@@ -176,14 +162,14 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange, filters, o
                 }}
               />
               <Legend />
-              <Bar yAxisId="left" dataKey="completed" fill="#3b82f6" name="Projects Completed" />
+              <Bar yAxisId="left" dataKey="completed" fill="#3b82f6" name="Discussions Started" />
               <Line
                 yAxisId="right"
                 type="monotone"
                 dataKey="efficiency"
                 stroke="#10b981"
                 strokeWidth={3}
-                name="Team Efficiency %"
+                name="Engagement %"
                 dot={{ fill: '#10b981' }}
               />
             </LineChart>
@@ -191,17 +177,17 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange, filters, o
         </div>
       </div>
 
-      {/* Skills Radar */}
+      {/* Category Distribution */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Team Skills Assessment</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Discussion Categories</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={skillsData}>
+            <RadarChart data={data.skillsData}>
               <PolarGrid className="stroke-gray-300 dark:stroke-gray-600" />
               <PolarAngleAxis dataKey="skill" className="text-gray-600 dark:text-gray-400" />
               <PolarRadiusAxis angle={90} domain={[0, 100]} className="text-gray-600 dark:text-gray-400" />
-              <Radar name="Team Average" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
-              <Radar name="Top Performer" dataKey="B" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
+              <Radar name="Community Average" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+              <Radar name="Top Performers" dataKey="B" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
               <Legend />
               <Tooltip
                 contentStyle={{

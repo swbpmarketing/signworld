@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   FolderIcon,
@@ -14,6 +15,11 @@ import {
   ClockIcon,
   HomeIcon,
   XMarkIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  EllipsisVerticalIcon,
+  ArchiveBoxIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { FolderIcon as FolderSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
@@ -93,6 +99,12 @@ const Library = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState('-createdAt');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalFiles, setTotalFiles] = useState(0);
+  const ITEMS_PER_PAGE = 12;
+
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -106,15 +118,22 @@ const Library = () => {
   const [previewFile, setPreviewFile] = useState<LibraryFile | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
+  // Dropdown menu state
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<LibraryFile | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Fetch library files
-  const fetchFiles = useCallback(async () => {
+  const fetchFiles = useCallback(async (page: number = 1) => {
     try {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (selectedCategory !== 'all') params.append('category', selectedCategory);
       if (searchQuery) params.append('search', searchQuery);
       params.append('sort', sortBy);
-      params.append('limit', '50');
+      params.append('page', page.toString());
+      params.append('limit', ITEMS_PER_PAGE.toString());
 
       const response = await fetch(`${API_URL}/library?${params}`, {
         headers: {
@@ -125,6 +144,9 @@ const Library = () => {
       const data = await response.json();
       if (data.success) {
         setFiles(data.data);
+        setTotalFiles(data.totalFiles || 0);
+        setTotalPages(data.totalPages || 1);
+        setCurrentPage(data.currentPage || 1);
       } else {
         setError(data.error || 'Failed to fetch files');
       }
@@ -182,10 +204,21 @@ const Library = () => {
     loadData();
   }, []);
 
-  // Refetch when filters change
+  // Refetch when filters change - reset to page 1
   useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
+    setCurrentPage(1);
+    fetchFiles(1);
+  }, [selectedCategory, searchQuery, sortBy]);
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      fetchFiles(newPage);
+      // Scroll to top of files section
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   // Handle search
   const handleSearch = (e?: React.FormEvent) => {
@@ -196,6 +229,92 @@ const Library = () => {
   const handleClearSearch = () => {
     setSearchInput('');
     setSearchQuery('');
+  };
+
+  // Toggle dropdown menu
+  const toggleMenu = (e: React.MouseEvent, fileId: string) => {
+    e.stopPropagation();
+    setOpenMenuId(openMenuId === fileId ? null : fileId);
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setOpenMenuId(null);
+    if (openMenuId) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [openMenuId]);
+
+  // Handle archive file
+  const handleArchive = async (e: React.MouseEvent, file: LibraryFile) => {
+    e.stopPropagation();
+    setOpenMenuId(null);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/library/${file._id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ isActive: false })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`"${file.title}" has been archived`);
+        fetchFiles(currentPage);
+        fetchStats();
+        fetchCategories();
+      } else {
+        toast.error(data.error || 'Failed to archive file');
+      }
+    } catch (err) {
+      console.error('Error archiving file:', err);
+      toast.error('Failed to archive file');
+    }
+  };
+
+  // Open delete confirmation modal
+  const openDeleteConfirmation = (e: React.MouseEvent, file: LibraryFile) => {
+    e.stopPropagation();
+    setOpenMenuId(null);
+    setFileToDelete(file);
+    setShowDeleteModal(true);
+  };
+
+  // Handle delete file
+  const handleDelete = async () => {
+    if (!fileToDelete) return;
+
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/library/${fileToDelete._id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`"${fileToDelete.title}" has been deleted`);
+        setShowDeleteModal(false);
+        setFileToDelete(null);
+        fetchFiles(currentPage);
+        fetchStats();
+        fetchCategories();
+      } else {
+        toast.error(data.error || 'Failed to delete file');
+      }
+    } catch (err) {
+      console.error('Error deleting file:', err);
+      toast.error('Failed to delete file');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Handle file preview
@@ -548,66 +667,245 @@ const Library = () => {
                   )}
                 </div>
               ) : viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {files.map((file) => (
-                    <div
-                      key={file._id}
-                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-md transition-all duration-200 cursor-pointer group"
-                      onClick={() => handlePreview(file)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center">
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {files.map((file) => (
+                      <div
+                        key={file._id}
+                        className="relative border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-md transition-all duration-200 cursor-pointer group"
+                        onClick={() => handlePreview(file)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center flex-1 min-w-0">
+                            {getFileIcon(file.fileType)}
+                            <div className="ml-3 min-w-0">
+                              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 line-clamp-2">
+                                {file.title}
+                              </h4>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(file.fileSize)}</p>
+                            </div>
+                          </div>
+                          {isAdmin && (
+                            <div className="relative">
+                              <button
+                                onClick={(e) => toggleMenu(e, file._id)}
+                                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                              >
+                                <EllipsisVerticalIcon className="h-5 w-5" />
+                              </button>
+                              {openMenuId === file._id && (
+                                <div className="absolute right-0 top-8 z-20 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
+                                  <button
+                                    onClick={(e) => handleArchive(e, file)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  >
+                                    <ArchiveBoxIcon className="h-4 w-4" />
+                                    Archive
+                                  </button>
+                                  <button
+                                    onClick={(e) => openDeleteConfirmation(e, file)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  >
+                                    <TrashIcon className="h-4 w-4" />
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                          <span className={`px-2 py-1 rounded-full ${getCategoryColor(file.category)}`}>
+                            {categoryMeta[file.category]?.name || file.category}
+                          </span>
+                          <ArrowDownTrayIcon className="h-5 w-5 text-gray-400 group-hover:text-primary-600 transition-colors" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Pagination for Grid View */}
+                  {totalPages > 1 && (
+                    <div className="mt-6 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, totalFiles)} of {totalFiles} files
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            currentPage === 1
+                              ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+                          }`}
+                        >
+                          <ChevronLeftIcon className="h-4 w-4 mr-1" />
+                          Prev
+                        </button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => handlePageChange(pageNum)}
+                                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                  currentPage === pageNum
+                                    ? 'bg-primary-600 text-white'
+                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            currentPage === totalPages
+                              ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+                          }`}
+                        >
+                          Next
+                          <ChevronRightIcon className="h-4 w-4 ml-1" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {files.map((file) => (
+                      <div
+                        key={file._id}
+                        className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer group"
+                        onClick={() => handlePreview(file)}
+                      >
+                        <div className="flex items-center flex-1 min-w-0">
                           {getFileIcon(file.fileType)}
-                          <div className="ml-3">
-                            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 line-clamp-2">
+                          <div className="ml-3 flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 truncate">
                               {file.title}
                             </h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(file.fileSize)}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              <span>{formatFileSize(file.fileSize)}</span>
+                              <span>•</span>
+                              <span>{formatDate(file.createdAt)}</span>
+                            </div>
                           </div>
                         </div>
-                        <ArrowDownTrayIcon className="h-5 w-5 text-gray-400 group-hover:text-primary-600 transition-colors" />
-                      </div>
-                      <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                        <span className={`px-2 py-1 rounded-full ${getCategoryColor(file.category)}`}>
-                          {categoryMeta[file.category]?.name || file.category}
-                        </span>
-                        <span>{file.downloadCount} downloads</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {files.map((file) => (
-                    <div
-                      key={file._id}
-                      className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer group"
-                      onClick={() => handlePreview(file)}
-                    >
-                      <div className="flex items-center flex-1 min-w-0">
-                        {getFileIcon(file.fileType)}
-                        <div className="ml-3 flex-1 min-w-0">
-                          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 truncate">
-                            {file.title}
-                          </h4>
-                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            <span>{formatFileSize(file.fileSize)}</span>
-                            <span>•</span>
-                            <span>{formatDate(file.createdAt)}</span>
-                            <span>•</span>
-                            <span>{file.downloadCount} downloads</span>
-                          </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <span className={`px-2 py-1 rounded-full text-xs ${getCategoryColor(file.category)}`}>
+                            {categoryMeta[file.category]?.name || file.category}
+                          </span>
+                          <ArrowDownTrayIcon className="h-5 w-5 text-gray-400 group-hover:text-primary-600 transition-colors" />
+                          {isAdmin && (
+                            <div className="relative">
+                              <button
+                                onClick={(e) => toggleMenu(e, file._id)}
+                                className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                              >
+                                <EllipsisVerticalIcon className="h-5 w-5" />
+                              </button>
+                              {openMenuId === file._id && (
+                                <div className="absolute right-0 top-8 z-20 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
+                                  <button
+                                    onClick={(e) => handleArchive(e, file)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  >
+                                    <ArchiveBoxIcon className="h-4 w-4" />
+                                    Archive
+                                  </button>
+                                  <button
+                                    onClick={(e) => openDeleteConfirmation(e, file)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  >
+                                    <TrashIcon className="h-4 w-4" />
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className={`px-2 py-1 rounded-full text-xs ${getCategoryColor(file.category)}`}>
-                          {categoryMeta[file.category]?.name || file.category}
-                        </span>
-                        <ArrowDownTrayIcon className="h-5 w-5 text-gray-400 group-hover:text-primary-600 transition-colors" />
+                    ))}
+                  </div>
+                  {/* Pagination for List View */}
+                  {totalPages > 1 && (
+                    <div className="mt-6 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, totalFiles)} of {totalFiles} files
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            currentPage === 1
+                              ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+                          }`}
+                        >
+                          <ChevronLeftIcon className="h-4 w-4 mr-1" />
+                          Prev
+                        </button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => handlePageChange(pageNum)}
+                                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                  currentPage === pageNum
+                                    ? 'bg-primary-600 text-white'
+                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            currentPage === totalPages
+                              ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
+                          }`}
+                        >
+                          Next
+                          <ChevronRightIcon className="h-4 w-4 ml-1" />
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -668,6 +966,26 @@ const Library = () => {
               </div>
             </div>
           </div>
+
+          {/* Archive & Recently Deleted Links */}
+          {isAdmin && (
+            <div className="space-y-2">
+              <Link
+                to="/archive"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 text-amber-700 dark:text-amber-400 rounded-xl transition-colors duration-200"
+              >
+                <ArchiveBoxIcon className="h-5 w-5" />
+                <span className="font-medium">View Archive</span>
+              </Link>
+              <Link
+                to="/recently-deleted"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40 text-red-700 dark:text-red-400 rounded-xl transition-colors duration-200"
+              >
+                <TrashIcon className="h-5 w-5" />
+                <span className="font-medium">Recently Deleted</span>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -763,6 +1081,41 @@ const Library = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && fileToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                <TrashIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete File</h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Are you sure you want to delete <span className="font-medium text-gray-900 dark:text-gray-100">"{fileToDelete.title}"</span>? Deleted files will be stored in Recently Deleted for 30 days.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setFileToDelete(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}

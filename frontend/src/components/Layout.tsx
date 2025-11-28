@@ -135,13 +135,11 @@ Sidebar.displayName = 'Sidebar';
 const Breadcrumb = memo(({ pathname }: { pathname: string }) => {
   const pageName = navigation.find((item) => item.href === pathname)?.name || "Dashboard";
 
-  return (
-    <nav className="flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm min-w-0">
-      <Link to="/dashboard" className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors flex-shrink-0">
-        <HomeIcon className="h-4 w-4" />
-      </Link>
-      <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">&gt;</span>
-      {pathname.startsWith('/forum/') ? (
+  // Helper to render nested breadcrumbs
+  const renderBreadcrumbContent = () => {
+    // Forum thread pages
+    if (pathname.startsWith('/forum/')) {
+      return (
         <>
           <Link to="/forum" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
             Forum
@@ -151,11 +149,54 @@ const Breadcrumb = memo(({ pathname }: { pathname: string }) => {
             Thread
           </span>
         </>
-      ) : (
-        <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
-          {pageName}
-        </span>
-      )}
+      );
+    }
+
+    // Recently Deleted page (sub-page of Library)
+    if (pathname === '/recently-deleted') {
+      return (
+        <>
+          <Link to="/library" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+            Library
+          </Link>
+          <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">&gt;</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+            Recently Deleted
+          </span>
+        </>
+      );
+    }
+
+    // Archive page (sub-page of Library)
+    if (pathname === '/archive') {
+      return (
+        <>
+          <Link to="/library" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+            Library
+          </Link>
+          <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">&gt;</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+            Archive
+          </span>
+        </>
+      );
+    }
+
+    // Default page name
+    return (
+      <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+        {pageName}
+      </span>
+    );
+  };
+
+  return (
+    <nav className="flex items-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm min-w-0">
+      <Link to="/dashboard" className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors flex-shrink-0">
+        <HomeIcon className="h-4 w-4" />
+      </Link>
+      <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">&gt;</span>
+      {renderBreadcrumbContent()}
     </nav>
   );
 });

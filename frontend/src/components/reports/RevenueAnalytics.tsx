@@ -1,6 +1,12 @@
 import React from 'react';
-import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowUpIcon, ArrowDownIcon, ArrowDownTrayIcon } from '@heroicons/react/24/solid';
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getRevenueAnalytics } from '../../services/dashboardService';
+import type { RevenueAnalyticsData } from '../../services/dashboardService';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface RevenueAnalyticsProps {
   dateRange: string;
@@ -9,38 +15,150 @@ interface RevenueAnalyticsProps {
 }
 
 const RevenueAnalytics: React.FC<RevenueAnalyticsProps> = ({ dateRange, filters, onFiltersChange }) => {
-  // Mock data
-  const revenueData = [
-    { month: 'Jan', revenue: 45000, lastYear: 38000 },
-    { month: 'Feb', revenue: 52000, lastYear: 42000 },
-    { month: 'Mar', revenue: 48000, lastYear: 45000 },
-    { month: 'Apr', revenue: 61000, lastYear: 50000 },
-    { month: 'May', revenue: 55000, lastYear: 48000 },
-    { month: 'Jun', revenue: 67000, lastYear: 52000 },
-  ];
-
-  const categoryData = [
-    { name: 'Channel Letters', value: 35, revenue: 125000 },
-    { name: 'Monument Signs', value: 25, revenue: 89000 },
-    { name: 'Digital Displays', value: 20, revenue: 71000 },
-    { name: 'Vehicle Wraps', value: 15, revenue: 53000 },
-    { name: 'Other', value: 5, revenue: 18000 },
-  ];
+  const { data, isLoading, error } = useQuery<RevenueAnalyticsData>({
+    queryKey: ['revenueAnalytics', dateRange],
+    queryFn: () => getRevenueAnalytics(dateRange),
+  });
 
   const COLORS = ['#1890ff', '#096dd9', '#0050b3', '#003a8c', '#002766'];
 
-  const stats = [
-    { label: 'Total Revenue', value: '$356,000', change: '+12.5%', positive: true },
-    { label: 'Avg. Order Value', value: '$4,250', change: '+8.3%', positive: true },
-    { label: 'Revenue/Employee', value: '$28,500', change: '-2.1%', positive: false },
-    { label: 'YoY Growth', value: '18.5%', change: '+3.2%', positive: true },
-  ];
+  const exportToPDF = () => {
+    if (!data) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Title
+    doc.setFontSize(20);
+    doc.text('Revenue Analytics Report', pageWidth / 2, 20, { align: 'center' });
+
+    // Date
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 28, { align: 'center' });
+
+    // Summary Stats
+    doc.setFontSize(14);
+    doc.text('Summary Statistics', 14, 40);
+
+    const statsData = data.stats.map(stat => [stat.label, stat.value, stat.change]);
+    autoTable(doc, {
+      startY: 45,
+      head: [['Metric', 'Value', 'Change']],
+      body: statsData,
+      theme: 'striped',
+    });
+
+    // Revenue Trend
+    const finalY1 = (doc as any).lastAutoTable.finalY || 70;
+    doc.setFontSize(14);
+    doc.text('Monthly Revenue Trend', 14, finalY1 + 15);
+
+    const revenueTableData = data.revenueData.map(item => [
+      item.month,
+      `$${item.revenue.toLocaleString()}`,
+      `$${item.lastYear.toLocaleString()}`,
+    ]);
+    autoTable(doc, {
+      startY: finalY1 + 20,
+      head: [['Month', 'This Year', 'Last Year']],
+      body: revenueTableData,
+      theme: 'striped',
+    });
+
+    // Category Breakdown
+    const finalY2 = (doc as any).lastAutoTable.finalY || 120;
+    doc.setFontSize(14);
+    doc.text('Revenue by Category', 14, finalY2 + 15);
+
+    const categoryTableData = data.categoryData.map(item => [
+      item.name,
+      `${item.value}%`,
+      `$${item.revenue.toLocaleString()}`,
+    ]);
+    autoTable(doc, {
+      startY: finalY2 + 20,
+      head: [['Category', 'Percentage', 'Revenue']],
+      body: categoryTableData,
+      theme: 'striped',
+    });
+
+    doc.save('revenue-analytics-report.pdf');
+  };
+
+  const exportToExcel = () => {
+    if (!data) return;
+
+    const wb = XLSX.utils.book_new();
+
+    // Summary sheet
+    const summaryData = data.stats.map(stat => ({
+      Metric: stat.label,
+      Value: stat.value,
+      Change: stat.change,
+    }));
+    const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+
+    // Revenue Trend sheet
+    const trendData = data.revenueData.map(item => ({
+      Month: item.month,
+      'This Year Revenue': item.revenue,
+      'Last Year Revenue': item.lastYear,
+    }));
+    const trendWs = XLSX.utils.json_to_sheet(trendData);
+    XLSX.utils.book_append_sheet(wb, trendWs, 'Revenue Trend');
+
+    // Category sheet
+    const categorySheetData = data.categoryData.map(item => ({
+      Category: item.name,
+      Percentage: `${item.value}%`,
+      Revenue: item.revenue,
+    }));
+    const categoryWs = XLSX.utils.json_to_sheet(categorySheetData);
+    XLSX.utils.book_append_sheet(wb, categoryWs, 'By Category');
+
+    XLSX.writeFile(wb, 'revenue-analytics-report.xlsx');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
+        Failed to load revenue analytics data. Please try again later.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Export Buttons */}
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={exportToPDF}
+          className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+          Export PDF
+        </button>
+        <button
+          onClick={exportToExcel}
+          className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+          Export Excel
+        </button>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
+        {data.stats.map((stat, index) => (
           <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <p className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</p>
             <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
@@ -64,7 +182,7 @@ const RevenueAnalytics: React.FC<RevenueAnalyticsProps> = ({ dateRange, filters,
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Revenue Trend</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={revenueData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <LineChart data={data.revenueData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
               <XAxis dataKey="month" className="text-gray-600 dark:text-gray-400" />
               <YAxis className="text-gray-600 dark:text-gray-400" />
@@ -106,7 +224,7 @@ const RevenueAnalytics: React.FC<RevenueAnalyticsProps> = ({ dateRange, filters,
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={categoryData}
+                  data={data.categoryData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -115,7 +233,7 @@ const RevenueAnalytics: React.FC<RevenueAnalyticsProps> = ({ dateRange, filters,
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {categoryData.map((entry, index) => (
+                  {data.categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -135,7 +253,7 @@ const RevenueAnalytics: React.FC<RevenueAnalyticsProps> = ({ dateRange, filters,
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Top Revenue Categories</h3>
           <div className="space-y-4">
-            {categoryData.map((category, index) => (
+            {data.categoryData.map((category, index) => (
               <div key={index} className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div

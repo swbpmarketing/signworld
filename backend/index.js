@@ -24,10 +24,55 @@ console.log('EMAIL_FROM:', process.env.EMAIL_FROM);
 // Track database connection status
 let dbConnected = false;
 
+// Auto-cleanup function for deleted files older than 30 days
+const cleanupDeletedFiles = async () => {
+  try {
+    const LibraryFile = require('./models/LibraryFile');
+    const { deleteFromS3 } = require('./utils/s3');
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Find files deleted more than 30 days ago
+    const expiredFiles = await LibraryFile.find({
+      deletedAt: { $ne: null, $lt: thirtyDaysAgo }
+    });
+
+    if (expiredFiles.length > 0) {
+      console.log(`🗑️  Found ${expiredFiles.length} files to permanently delete (older than 30 days)`);
+
+      for (const file of expiredFiles) {
+        try {
+          // Delete from S3 if URL exists
+          if (file.fileUrl) {
+            await deleteFromS3(file.fileUrl);
+          }
+          // Delete from database
+          await LibraryFile.findByIdAndDelete(file._id);
+          console.log(`   ✓ Permanently deleted: ${file.title}`);
+        } catch (err) {
+          console.error(`   ✗ Failed to delete ${file.title}:`, err.message);
+        }
+      }
+
+      console.log('🗑️  Cleanup completed');
+    }
+  } catch (err) {
+    console.error('❌ Error during cleanup:', err.message);
+  }
+};
+
 // Connect to database asynchronously without blocking server startup
 connectDB().then(() => {
   dbConnected = true;
   console.log('✅ Database connected successfully');
+
+  // Run cleanup on startup
+  cleanupDeletedFiles();
+
+  // Schedule cleanup to run every 24 hours
+  setInterval(cleanupDeletedFiles, 24 * 60 * 60 * 1000);
+  console.log('🕐 Scheduled auto-cleanup for deleted files (runs every 24 hours)');
 }).catch((err) => {
   console.error('❌ Database connection failed:', err.message);
   console.warn('⚠️  Server will continue without database');

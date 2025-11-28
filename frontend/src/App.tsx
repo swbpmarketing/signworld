@@ -18,6 +18,8 @@ const Brags = lazy(() => import('./pages/Brags'));
 const Forum = lazy(() => import('./pages/Forum'));
 const ForumThread = lazy(() => import('./pages/ForumThread'));
 const Library = lazy(() => import('./pages/Library'));
+const Archive = lazy(() => import('./pages/Archive'));
+const RecentlyDeleted = lazy(() => import('./pages/RecentlyDeleted'));
 const Resources = lazy(() => import('./pages/Resources'));
 const OwnersRoster = lazy(() => import('./pages/OwnersRoster'));
 const OwnerProfileEnhanced = lazy(() => import('./pages/OwnerProfileEnhanced'));
@@ -83,6 +85,8 @@ function App() {
                   <Route path="chat" element={<Chat />} />
                   <Route path="library" element={<Library />} />
                   <Route path="library/*" element={<Library />} />
+                  <Route path="archive" element={<Archive />} />
+                  <Route path="recently-deleted" element={<RecentlyDeleted />} />
                   <Route path="resources" element={<Resources />} />
                   <Route path="owners" element={<OwnersRoster />} />
                   <Route path="owners/:id" element={<OwnerProfileEnhanced />} />

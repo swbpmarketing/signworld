@@ -20,6 +20,7 @@ import {
   getConversations,
   getMessages,
   sendMessage,
+  sendMessageWithFile,
   markAsRead,
   getOrCreateConversation,
   getChatUsers,
@@ -55,7 +56,11 @@ const Chat = () => {
   const [newChatSearch, setNewChatSearch] = useState('');
   const [availableUsers, setAvailableUsers] = useState<ChatUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{ url: string; filename: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const currentUserId = user?._id || user?.id || '';
 
   // Fetch conversations on mount
@@ -231,6 +236,89 @@ const Chat = () => {
     } finally {
       setSendingMessage(false);
     }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size must be less than 10MB');
+        return;
+      }
+      setSelectedFile(file);
+    }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Handle file upload and send
+  const handleSendWithFile = async () => {
+    if (!selectedFile || !selectedContact?.conversationId || uploadingFile) return;
+
+    setUploadingFile(true);
+    const file = selectedFile;
+    const content = messageInput.trim();
+    setSelectedFile(null);
+    setMessageInput('');
+
+    try {
+      toast.loading('Uploading file...', { id: 'file-upload' });
+      const newMessage = await sendMessageWithFile(
+        selectedContact.conversationId,
+        file,
+        content || undefined
+      );
+      toast.success('File sent!', { id: 'file-upload' });
+      setMessages(prev => [...prev, newMessage]);
+
+      // Update last message in contacts list
+      setContacts(prev =>
+        prev.map(c =>
+          c.conversationId === selectedContact.conversationId
+            ? { ...c, lastMessage: `Sent a file: ${file.name}`, lastMessageTime: new Date() }
+            : c
+        )
+      );
+    } catch (error) {
+      console.error('Failed to send file:', error);
+      toast.error('Failed to send file', { id: 'file-upload' });
+      setSelectedFile(file); // Restore file on failure
+      setMessageInput(content);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  // Clear selected file
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  // Get file icon based on type
+  const getFileIcon = (fileType: string): string => {
+    if (fileType.startsWith('image/')) return '🖼️';
+    if (fileType === 'application/pdf') return '📄';
+    if (fileType.includes('word') || fileType.includes('document')) return '📝';
+    if (fileType.includes('excel') || fileType.includes('spreadsheet')) return '📊';
+    if (fileType === 'text/plain') return '📃';
+    if (fileType.includes('zip')) return '📦';
+    return '📎';
   };
 
   const handleNewChat = async (targetUser: ChatUser) => {
@@ -520,7 +608,55 @@ const Chat = () => {
                                   : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-md shadow-sm border border-gray-100 dark:border-gray-600'
                               }`}
                             >
-                              <p className="text-sm leading-relaxed break-words">{message.content}</p>
+                              {/* File Attachments */}
+                              {message.attachments && message.attachments.length > 0 && (
+                                <div className="mb-2 space-y-2">
+                                  {message.attachments.map((attachment, idx) => (
+                                    attachment.fileType.startsWith('image/') ? (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => setPreviewImage({ url: attachment.url, filename: attachment.filename })}
+                                        className={`block p-2 rounded-lg transition-colors cursor-pointer ${
+                                          isOwn
+                                            ? 'bg-primary-500/50 hover:bg-primary-500/70'
+                                            : 'bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500'
+                                        }`}
+                                      >
+                                        <img
+                                          src={attachment.url}
+                                          alt={attachment.filename}
+                                          className="max-w-[200px] max-h-[150px] rounded object-cover"
+                                        />
+                                      </button>
+                                    ) : (
+                                      <a
+                                        key={idx}
+                                        href={attachment.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
+                                          isOwn
+                                            ? 'bg-primary-500/50 hover:bg-primary-500/70'
+                                            : 'bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500'
+                                        }`}
+                                      >
+                                        <span className="text-xl">{getFileIcon(attachment.fileType)}</span>
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-sm font-medium truncate">{attachment.filename}</p>
+                                          <p className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                                            {formatFileSize(attachment.fileSize)}
+                                          </p>
+                                        </div>
+                                      </a>
+                                    )
+                                  ))}
+                                </div>
+                              )}
+                              {/* Message Content */}
+                              {message.content && !message.content.startsWith('Sent a file:') && (
+                                <p className="text-sm leading-relaxed break-words">{message.content}</p>
+                              )}
                               <div className={`flex items-center justify-end gap-1 mt-1 ${
                                 isOwn ? 'text-primary-200' : 'text-gray-400 dark:text-gray-500'
                               }`}>
@@ -552,11 +688,42 @@ const Chat = () => {
             </main>
 
             {/* Input Area */}
-            <form onSubmit={handleSendMessage} className="flex-shrink-0 px-3 py-3 lg:px-4 lg:py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <form onSubmit={selectedFile ? (e) => { e.preventDefault(); handleSendWithFile(); } : handleSendMessage} className="flex-shrink-0 px-3 py-3 lg:px-4 lg:py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              {/* Selected File Preview */}
+              {selectedFile && (
+                <div className="mb-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center gap-3">
+                  <span className="text-2xl">{getFileIcon(selectedFile.type)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                      {selectedFile.name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatFileSize(selectedFile.size)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearSelectedFile}
+                    className="p-1 rounded-full text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-2 lg:gap-3">
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                />
                 <button
                   type="button"
+                  onClick={() => fileInputRef.current?.click()}
                   className="p-2 rounded-full text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Attach file"
                 >
                   <PaperClipIcon className="h-5 w-5" />
                 </button>
@@ -565,7 +732,7 @@ const Chat = () => {
                     type="text"
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
-                    placeholder="Message..."
+                    placeholder={selectedFile ? "Add a message (optional)..." : "Message..."}
                     className="w-full px-4 py-2.5 lg:py-3 pr-10 lg:pr-12 bg-gray-100 dark:bg-gray-700 border-0 rounded-full text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                   <button
@@ -577,7 +744,7 @@ const Chat = () => {
                 </div>
                 <button
                   type="submit"
-                  disabled={!messageInput.trim() || sendingMessage}
+                  disabled={(!messageInput.trim() && !selectedFile) || sendingMessage || uploadingFile}
                   className="p-2.5 lg:p-3 rounded-full bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg hover:shadow-xl"
                 >
                   <PaperAirplaneIcon className="h-5 w-5" />
@@ -677,6 +844,49 @@ const Chat = () => {
                   ))
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 bg-black/80 z-[110] flex items-center justify-center p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] w-full flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute -top-12 right-0 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+              title="Close"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
+
+            {/* Image */}
+            <img
+              src={previewImage.url}
+              alt={previewImage.filename}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+            />
+
+            {/* Footer with filename and download button */}
+            <div className="mt-4 flex items-center gap-4">
+              <span className="text-white/80 text-sm truncate max-w-xs">
+                {previewImage.filename}
+              </span>
+              <a
+                href={previewImage.url}
+                download={previewImage.filename}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+              >
+                Download
+              </a>
             </div>
           </div>
         </div>

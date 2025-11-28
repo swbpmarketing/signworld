@@ -1,6 +1,21 @@
 // Owner Service for API calls
 import api from '../config/axios';
 
+export interface BusinessHours {
+  monday?: { open: string; close: string; closed?: boolean };
+  tuesday?: { open: string; close: string; closed?: boolean };
+  wednesday?: { open: string; close: string; closed?: boolean };
+  thursday?: { open: string; close: string; closed?: boolean };
+  friday?: { open: string; close: string; closed?: boolean };
+  saturday?: { open: string; close: string; closed?: boolean };
+  sunday?: { open: string; close: string; closed?: boolean };
+}
+
+export interface GeoLocation {
+  type: 'Point';
+  coordinates: [number, number]; // [longitude, latitude]
+}
+
 export interface Owner {
   _id: string;
   id: string; // We'll map _id to id in the component
@@ -16,6 +31,8 @@ export interface Owner {
     zipCode: string;
     country: string;
   };
+  location?: GeoLocation;
+  businessHours?: BusinessHours;
   openDate: string;
   yearsInBusiness: number;
   specialties: string[];
@@ -40,6 +57,10 @@ export interface Owner {
     averageRating: number;
     totalRatings: number;
   };
+}
+
+export interface MapOwner extends Owner {
+  distance?: number; // Distance in miles from search center
 }
 
 export interface Review {
@@ -248,4 +269,84 @@ export const deleteOwner = async (ownerId: string): Promise<void> => {
     const errorMessage = error.response?.data?.error || error.message || 'Failed to delete owner';
     throw new Error(errorMessage);
   }
+};
+
+// Get all owners with map coordinates
+export const getMapOwners = async (): Promise<{
+  data: MapOwner[];
+  count: number;
+}> => {
+  try {
+    const response = await api.get('/owners/map');
+    // Map _id to id for each owner
+    if (response.data.data && Array.isArray(response.data.data)) {
+      response.data.data = response.data.data.map((owner: any) => ({
+        ...owner,
+        id: owner._id || owner.id
+      }));
+    }
+    return response.data;
+  } catch (error: any) {
+    console.error('Error fetching map owners:', error);
+    throw new Error(error.response?.data?.error || 'Failed to fetch map data');
+  }
+};
+
+// Get nearby owners within radius
+export const getNearbyOwners = async (params: {
+  lat: number;
+  lng: number;
+  radius?: number; // in miles
+  specialty?: string;
+  limit?: number;
+}): Promise<{
+  data: MapOwner[];
+  count: number;
+  center: { lat: number; lng: number };
+  radius: number;
+}> => {
+  try {
+    const response = await api.get('/owners/nearby', { params });
+    // Map _id to id for each owner
+    if (response.data.data && Array.isArray(response.data.data)) {
+      response.data.data = response.data.data.map((owner: any) => ({
+        ...owner,
+        id: owner._id || owner.id
+      }));
+    }
+    return response.data;
+  } catch (error: any) {
+    console.error('Error fetching nearby owners:', error);
+    throw new Error(error.response?.data?.error || 'Failed to fetch nearby owners');
+  }
+};
+
+// Helper function to check if business is currently open
+export const isBusinessOpen = (businessHours?: BusinessHours): boolean => {
+  if (!businessHours) return false;
+
+  const now = new Date();
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const currentDay = days[now.getDay()] as keyof BusinessHours;
+  const dayHours = businessHours[currentDay];
+
+  if (!dayHours || dayHours.closed) return false;
+
+  const currentTime = now.getHours() * 100 + now.getMinutes();
+  const openTime = parseInt(dayHours.open?.replace(':', '') || '0');
+  const closeTime = parseInt(dayHours.close?.replace(':', '') || '0');
+
+  return currentTime >= openTime && currentTime <= closeTime;
+};
+
+// Helper function to format address string
+export const formatAddress = (address?: Owner['address']): string => {
+  if (!address) return '';
+  const parts = [
+    address.street,
+    address.city,
+    address.state,
+    address.zipCode
+  ].filter(Boolean);
+  return parts.join(', ');
 };

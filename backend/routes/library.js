@@ -20,8 +20,8 @@ router.get('/', protect, async (req, res) => {
       tags
     } = req.query;
 
-    // Build query
-    const query = { isActive: true };
+    // Build query - exclude soft deleted files
+    const query = { isActive: true, deletedAt: null };
 
     // Filter by category
     if (category && category !== 'all') {
@@ -62,6 +62,10 @@ router.get('/', protect, async (req, res) => {
     res.json({
       success: true,
       data: files,
+      files,
+      totalFiles: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -78,13 +82,206 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
+// @desc    Get archived library files with pagination, filters, search
+// @route   GET /api/library/archived
+// @access  Private (Admin only)
+router.get('/archived', protect, authorize('admin'), async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sort = '-updatedAt'
+    } = req.query;
+
+    // Build query for archived files - exclude soft deleted files
+    const query = { isActive: false, deletedAt: null };
+
+    // Search by title, description, or tags
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } },
+        { fileName: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Execute query with pagination
+    const files = await LibraryFile.find(query)
+      .populate('uploadedBy', 'firstName lastName email')
+      .sort(sort)
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    // Get total count for pagination
+    const total = await LibraryFile.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: files,
+      files,
+      totalFiles: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching archived files:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error fetching archived files'
+    });
+  }
+});
+
+// @desc    Get recently deleted files with pagination, search
+// @route   GET /api/library/deleted
+// @access  Private (Admin only)
+router.get('/deleted', protect, authorize('admin'), async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sort = '-deletedAt'
+    } = req.query;
+
+    // Build query for deleted files
+    const query = { deletedAt: { $ne: null } };
+
+    // Search by title, description, or tags
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } },
+        { fileName: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Execute query with pagination
+    const files = await LibraryFile.find(query)
+      .populate('uploadedBy', 'firstName lastName email')
+      .sort(sort)
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    // Get total count for pagination
+    const total = await LibraryFile.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: files,
+      files,
+      totalFiles: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching deleted files:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error fetching deleted files'
+    });
+  }
+});
+
+// @desc    Restore a deleted file
+// @route   POST /api/library/:id/restore
+// @access  Private (Admin only)
+router.post('/:id/restore', protect, authorize('admin'), async (req, res) => {
+  try {
+    const file = await LibraryFile.findById(req.params.id);
+
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        error: 'File not found'
+      });
+    }
+
+    if (!file.deletedAt) {
+      return res.status(400).json({
+        success: false,
+        error: 'File is not deleted'
+      });
+    }
+
+    // Restore the file
+    file.deletedAt = null;
+    await file.save();
+
+    res.json({
+      success: true,
+      data: file
+    });
+  } catch (error) {
+    console.error('Error restoring file:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error restoring file'
+    });
+  }
+});
+
+// @desc    Permanently delete a file
+// @route   DELETE /api/library/:id/permanent
+// @access  Private (Admin only)
+router.delete('/:id/permanent', protect, authorize('admin'), async (req, res) => {
+  try {
+    const file = await LibraryFile.findById(req.params.id);
+
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        error: 'File not found'
+      });
+    }
+
+    // Delete from S3 if URL exists
+    if (file.fileUrl) {
+      try {
+        await deleteFromS3(file.fileUrl);
+      } catch (s3Error) {
+        console.error('Error deleting from S3:', s3Error);
+        // Continue with database deletion even if S3 fails
+      }
+    }
+
+    await LibraryFile.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      data: {}
+    });
+  } catch (error) {
+    console.error('Error permanently deleting file:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error permanently deleting file'
+    });
+  }
+});
+
 // @desc    Get library statistics
 // @route   GET /api/library/stats
 // @access  Private (all authenticated users)
 router.get('/stats', protect, async (req, res) => {
   try {
     const stats = await LibraryFile.aggregate([
-      { $match: { isActive: true } },
+      { $match: { isActive: true, deletedAt: null } },
       {
         $group: {
           _id: null,
@@ -323,7 +520,7 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
   }
 });
 
-// @desc    Delete file
+// @desc    Soft delete file (move to recently deleted)
 // @route   DELETE /api/library/:id
 // @access  Private (Admin only)
 router.delete('/:id', protect, authorize('admin'), async (req, res) => {
@@ -337,17 +534,9 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
       });
     }
 
-    // Delete from S3 if URL exists
-    if (file.fileUrl) {
-      try {
-        await deleteFromS3(file.fileUrl);
-      } catch (s3Error) {
-        console.error('Error deleting from S3:', s3Error);
-        // Continue with database deletion even if S3 fails
-      }
-    }
-
-    await LibraryFile.findByIdAndDelete(req.params.id);
+    // Soft delete - set deletedAt timestamp
+    file.deletedAt = new Date();
+    await file.save();
 
     res.json({
       success: true,

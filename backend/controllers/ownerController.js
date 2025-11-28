@@ -355,9 +355,9 @@ exports.updateOwner = async (req, res) => {
 
     // Fields that can be updated
     const allowedFields = [
-      'name', 'phone', 'company', 'address', 'specialties', 
+      'name', 'phone', 'company', 'address', 'specialties',
       'equipment', 'yearsInBusiness', 'profileImage', 'socialLinks',
-      'mentoring'
+      'mentoring', 'location', 'businessHours'
     ];
 
     const updateData = {};
@@ -531,6 +531,146 @@ exports.deleteOwner = async (req, res) => {
     });
   }
 };
+
+// @desc    Get owners for map display
+// @route   GET /api/owners/map
+// @access  Public
+exports.getMapOwners = async (req, res) => {
+  try {
+    // Get all active owners with location data
+    const owners = await User.find({
+      role: 'owner',
+      isActive: true,
+      'location.coordinates': { $exists: true, $ne: [] }
+    })
+    .select('name company address location specialties phone email profileImage businessHours yearsInBusiness')
+    .lean();
+
+    // Get rating statistics for each owner
+    const ownersWithRatings = await Promise.all(
+      owners.map(async (owner) => {
+        const ratingStats = await Rating.getAverageRating(owner._id);
+        return {
+          ...owner,
+          rating: ratingStats
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      count: ownersWithRatings.length,
+      data: ownersWithRatings,
+    });
+  } catch (error) {
+    console.error('Get map owners error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error - Unable to fetch map data',
+    });
+  }
+};
+
+// @desc    Get nearby owners within radius
+// @route   GET /api/owners/nearby
+// @access  Public
+exports.getNearbyOwners = async (req, res) => {
+  try {
+    const { lat, lng, radius = 50, specialty, limit = 50 } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide latitude and longitude',
+      });
+    }
+
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+    const maxDistance = parseFloat(radius) * 1609.34; // Convert miles to meters
+
+    // Build the query
+    const query = {
+      role: 'owner',
+      isActive: true,
+      'location.coordinates': {
+        $nearSphere: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [longitude, latitude]
+          },
+          $maxDistance: maxDistance
+        }
+      }
+    };
+
+    // Add specialty filter if provided
+    if (specialty) {
+      query.specialties = { $in: [new RegExp(specialty, 'i')] };
+    }
+
+    const owners = await User.find(query)
+      .select('name company address location specialties phone email profileImage businessHours yearsInBusiness')
+      .limit(parseInt(limit))
+      .lean();
+
+    // Calculate distance for each owner and add ratings
+    const ownersWithDetails = await Promise.all(
+      owners.map(async (owner) => {
+        const ratingStats = await Rating.getAverageRating(owner._id);
+
+        // Calculate distance using Haversine formula
+        const ownerLat = owner.location?.coordinates?.[1];
+        const ownerLng = owner.location?.coordinates?.[0];
+        let distance = null;
+
+        if (ownerLat && ownerLng) {
+          distance = calculateDistance(latitude, longitude, ownerLat, ownerLng);
+        }
+
+        return {
+          ...owner,
+          rating: ratingStats,
+          distance: distance !== null ? parseFloat(distance.toFixed(1)) : null
+        };
+      })
+    );
+
+    // Sort by distance
+    ownersWithDetails.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+
+    res.status(200).json({
+      success: true,
+      count: ownersWithDetails.length,
+      center: { lat: latitude, lng: longitude },
+      radius: parseFloat(radius),
+      data: ownersWithDetails,
+    });
+  } catch (error) {
+    console.error('Get nearby owners error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server Error - Unable to fetch nearby owners',
+    });
+  }
+};
+
+// Helper function to calculate distance between two points using Haversine formula
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 3959; // Earth's radius in miles
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function toRad(deg) {
+  return deg * (Math.PI / 180);
+}
 
 // @desc    Get owner statistics
 // @route   GET /api/owners/:id/stats

@@ -1,9 +1,38 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
+const { uploadToS3 } = require('../utils/s3');
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow common file types
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'application/zip',
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed'), false);
+    }
+  },
+});
 
 // @desc    Get all conversations for current user
 // @route   GET /api/chat/conversations
@@ -208,6 +237,86 @@ router.post('/conversations/:id/messages', protect, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to send message',
+    });
+  }
+});
+
+// @desc    Send a message with file attachment
+// @route   POST /api/chat/conversations/:id/messages/upload
+// @access  Private
+router.post('/conversations/:id/messages/upload', protect, upload.single('file'), async (req, res) => {
+  try {
+    const { content } = req.body;
+    const file = req.file;
+
+    if (!file && (!content || !content.trim())) {
+      return res.status(400).json({
+        success: false,
+        error: 'Message content or file is required',
+      });
+    }
+
+    // Verify user is a participant
+    const conversation = await Conversation.findOne({
+      _id: req.params.id,
+      participants: req.user._id,
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        error: 'Conversation not found',
+      });
+    }
+
+    let attachments = [];
+
+    // Upload file to S3 if present
+    if (file) {
+      const timestamp = Date.now();
+      const sanitizedFilename = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fileName = `${timestamp}-${sanitizedFilename}`;
+
+      const fileUrl = await uploadToS3(
+        file.buffer,
+        fileName,
+        file.mimetype,
+        'chat-attachments'
+      );
+
+      attachments.push({
+        url: fileUrl,
+        filename: file.originalname,
+        fileType: file.mimetype,
+        fileSize: file.size,
+      });
+    }
+
+    // Create message
+    const messageContent = content?.trim() || (file ? `Sent a file: ${file.originalname}` : '');
+    const message = await Message.create({
+      conversation: req.params.id,
+      sender: req.user._id,
+      content: messageContent,
+      attachments,
+      readBy: [{ user: req.user._id, readAt: new Date() }],
+    });
+
+    // Update conversation's last message
+    await conversation.updateLastMessage(message);
+
+    // Populate sender info
+    await message.populate('sender', 'name email role avatar');
+
+    res.status(201).json({
+      success: true,
+      data: message,
+    });
+  } catch (error) {
+    console.error('Error sending message with attachment:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to send message',
     });
   }
 });

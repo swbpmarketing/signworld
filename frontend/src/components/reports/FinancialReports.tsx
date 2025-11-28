@@ -1,84 +1,54 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { BanknotesIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, DocumentTextIcon } from '@heroicons/react/24/solid';
-import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getFinancialAnalytics } from '../../services/dashboardService';
+import type { FinancialAnalyticsData } from '../../services/dashboardService';
 
 interface FinancialReportsProps {
   dateRange: string;
-  filters: Record<string, any>;
-  onFiltersChange: (filters: Record<string, any>) => void;
+  filters: Record<string, unknown>;
+  onFiltersChange: (filters: Record<string, unknown>) => void;
 }
 
-const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange, filters, onFiltersChange }) => {
-  // Mock data
-  const cashFlowData = [
-    { month: 'Jan', income: 85000, expenses: 62000, netCash: 23000 },
-    { month: 'Feb', income: 92000, expenses: 68000, netCash: 24000 },
-    { month: 'Mar', income: 88000, expenses: 71000, netCash: 17000 },
-    { month: 'Apr', income: 95000, expenses: 69000, netCash: 26000 },
-    { month: 'May', income: 91000, expenses: 73000, netCash: 18000 },
-    { month: 'Jun', income: 98000, expenses: 72000, netCash: 26000 },
-  ];
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  BanknotesIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+  DocumentTextIcon,
+};
 
-  const expenseBreakdown = [
-    { category: 'Labor', amount: 125000, percentage: 35 },
-    { category: 'Materials', amount: 89000, percentage: 25 },
-    { category: 'Equipment', amount: 71000, percentage: 20 },
-    { category: 'Operations', amount: 53000, percentage: 15 },
-    { category: 'Marketing', amount: 18000, percentage: 5 },
-  ];
+const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
+  const { data, isLoading, error } = useQuery<FinancialAnalyticsData>({
+    queryKey: ['financialAnalytics', dateRange],
+    queryFn: getFinancialAnalytics,
+  });
 
-  const profitMargins = [
-    { month: 'Jan', gross: 42, operating: 28, net: 18 },
-    { month: 'Feb', gross: 45, operating: 31, net: 21 },
-    { month: 'Mar', gross: 41, operating: 27, net: 17 },
-    { month: 'Apr', gross: 48, operating: 34, net: 24 },
-    { month: 'May', gross: 44, operating: 30, net: 20 },
-    { month: 'Jun', gross: 47, operating: 33, net: 23 },
-  ];
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
-  const financialSummary = {
-    totalRevenue: 549000,
-    totalExpenses: 413000,
-    grossProfit: 136000,
-    netIncome: 98500,
-    ebitda: 125000,
-    currentRatio: 2.3,
-  };
+  if (error || !data) {
+    return (
+      <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
+        Failed to load engagement analytics data. Please try again later.
+      </div>
+    );
+  }
 
-  const stats = [
-    { 
-      label: 'Total Revenue', 
-      value: `$${(financialSummary.totalRevenue / 1000).toFixed(0)}k`,
-      change: '+15.2%',
-      positive: true,
-      icon: BanknotesIcon,
-    },
-    { 
-      label: 'Net Income', 
-      value: `$${(financialSummary.netIncome / 1000).toFixed(1)}k`,
-      change: '+18.5%',
-      positive: true,
-      icon: ArrowTrendingUpIcon,
-    },
-    { 
-      label: 'Gross Margin', 
-      value: '44.7%',
-      change: '+2.3%',
-      positive: true,
-      icon: ArrowTrendingUpIcon,
-    },
-    { 
-      label: 'Current Ratio', 
-      value: '2.3',
-      change: '+0.4',
-      positive: true,
-      icon: DocumentTextIcon,
-    },
-  ];
+  // Map stats with icons
+  const stats = data.stats.map((stat) => {
+    const IconComponent = iconMap[stat.icon] || BanknotesIcon;
+    return { ...stat, icon: IconComponent };
+  });
 
   return (
     <div className="space-y-6">
-      {/* Financial Stats */}
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
           <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
@@ -94,12 +64,12 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange, filters,
         ))}
       </div>
 
-      {/* Cash Flow Analysis */}
+      {/* Engagement Flow Analysis */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Cash Flow Analysis</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Engagement Flow Analysis</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={cashFlowData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <AreaChart data={data.cashFlowData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
               <XAxis dataKey="month" className="text-gray-600 dark:text-gray-400" />
               <YAxis className="text-gray-600 dark:text-gray-400" />
@@ -112,52 +82,52 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange, filters,
                 }}
               />
               <Legend />
-              <Area type="monotone" dataKey="income" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Income" />
-              <Area type="monotone" dataKey="expenses" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Expenses" />
-              <Line type="monotone" dataKey="netCash" stroke="#3b82f6" strokeWidth={3} name="Net Cash Flow" />
+              <Area type="monotone" dataKey="income" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="New Activity" />
+              <Area type="monotone" dataKey="expenses" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Baseline" />
+              <Line type="monotone" dataKey="netCash" stroke="#3b82f6" strokeWidth={3} name="Net Growth" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Expense Breakdown */}
+        {/* Engagement Breakdown */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Expense Breakdown</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Engagement Breakdown</h3>
           <div className="space-y-4">
-            {expenseBreakdown.map((expense, index) => (
+            {data.expenseBreakdown.map((item, index) => (
               <div key={index}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{expense.category}</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.category}</span>
                   <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    ${(expense.amount / 1000).toFixed(0)}k ({expense.percentage}%)
+                    {item.amount.toLocaleString()} ({item.percentage}%)
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full"
-                    style={{ width: `${expense.percentage}%` }}
+                    style={{ width: `${Math.min(item.percentage, 100)}%` }}
                   />
                 </div>
               </div>
             ))}
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Expenses</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Engagement</span>
                 <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                  ${(expenseBreakdown.reduce((sum, exp) => sum + exp.amount, 0) / 1000).toFixed(0)}k
+                  {data.expenseBreakdown.reduce((sum, exp) => sum + exp.amount, 0).toLocaleString()}
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Profit Margins Trend */}
+        {/* Growth Margins Trend */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Profit Margins Trend</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Growth Margins Trend</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={profitMargins} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <LineChart data={data.profitMargins} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                 <XAxis dataKey="month" className="text-gray-600 dark:text-gray-400" />
                 <YAxis className="text-gray-600 dark:text-gray-400" />
@@ -170,41 +140,37 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange, filters,
                   }}
                 />
                 <Legend />
-                <Line type="monotone" dataKey="gross" stroke="#10b981" strokeWidth={2} name="Gross Margin %" />
-                <Line type="monotone" dataKey="operating" stroke="#3b82f6" strokeWidth={2} name="Operating Margin %" />
-                <Line type="monotone" dataKey="net" stroke="#8b5cf6" strokeWidth={2} name="Net Margin %" />
+                <Line type="monotone" dataKey="gross" stroke="#10b981" strokeWidth={2} name="Gross Growth %" />
+                <Line type="monotone" dataKey="operating" stroke="#3b82f6" strokeWidth={2} name="Operating Growth %" />
+                <Line type="monotone" dataKey="net" stroke="#8b5cf6" strokeWidth={2} name="Net Growth %" />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      {/* Financial Summary */}
+      {/* Summary */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Financial Summary</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Engagement Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Income Statement</h4>
+            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Activity Summary</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Revenue</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">${(financialSummary.totalRevenue / 1000).toFixed(0)}k</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Total Engagement</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.financialSummary.totalRevenue.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Cost of Goods Sold</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">-${((financialSummary.totalRevenue - financialSummary.grossProfit) / 1000).toFixed(0)}k</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Baseline Activity</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">-{data.financialSummary.totalExpenses.toLocaleString()}</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Gross Profit</span>
-                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">${(financialSummary.grossProfit / 1000).toFixed(0)}k</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Operating Expenses</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">-${((financialSummary.grossProfit - financialSummary.netIncome) / 1000).toFixed(0)}k</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Net Growth</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{data.financialSummary.grossProfit.toLocaleString()}</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Net Income</span>
-                <span className="text-sm font-bold text-green-600 dark:text-green-400">${(financialSummary.netIncome / 1000).toFixed(1)}k</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Engagement</span>
+                <span className="text-sm font-bold text-green-600 dark:text-green-400">{data.financialSummary.netIncome.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -213,24 +179,28 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange, filters,
             <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Key Metrics</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">EBITDA</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">${(financialSummary.ebitda / 1000).toFixed(0)}k</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Total Score</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.financialSummary.ebitda.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Current Ratio</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{financialSummary.currentRatio}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Member Ratio</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.financialSummary.currentRatio}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Debt to Equity</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">0.45</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Growth Rate</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {data.financialSummary.totalRevenue > 0
+                    ? `${((data.financialSummary.netIncome / data.financialSummary.totalRevenue) * 100).toFixed(1)}%`
+                    : '0%'}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">ROE</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">22.5%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">ROA</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">15.8%</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Efficiency</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {data.financialSummary.totalRevenue > 0
+                    ? `${((data.financialSummary.grossProfit / data.financialSummary.totalRevenue) * 100).toFixed(1)}%`
+                    : '0%'}
+                </span>
               </div>
             </div>
           </div>
@@ -239,16 +209,16 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange, filters,
             <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Quick Actions</h4>
             <div className="space-y-2">
               <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
-                Download P&L Statement
+                Download Engagement Report
               </button>
               <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
-                Export Balance Sheet
+                Export Activity Summary
               </button>
               <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
-                Generate Tax Report
+                Generate Growth Report
               </button>
               <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
-                View Audit Trail
+                View Activity History
               </button>
             </div>
           </div>

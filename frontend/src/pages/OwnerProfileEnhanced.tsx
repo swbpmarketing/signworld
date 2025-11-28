@@ -245,9 +245,9 @@ const OwnerProfileEnhanced = () => {
                   <EnvelopeIcon className="h-5 w-5 mr-2" />
                   Email
                 </a>
-                <button 
+                <button
                   className="contact-button inline-flex items-center px-4 py-2 bg-primary-800 text-white rounded-lg font-medium hover:bg-primary-900 transition-colors duration-200"
-                  onClick={() => alert('Message feature coming soon!')}
+                  onClick={() => navigate(`/chat?contact=${owner._id || owner.id}`)}
                 >
                   <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
                   Message
