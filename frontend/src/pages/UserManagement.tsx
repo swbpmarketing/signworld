@@ -8,6 +8,9 @@ import {
   XMarkIcon,
   PencilIcon,
   TrashIcon,
+  CheckCircleIcon,
+  NoSymbolIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import api from '../config/axios';
 import CustomSelect from '../components/CustomSelect';
@@ -150,6 +153,74 @@ const UserManagement = () => {
     }
   });
 
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (userIds: string[]) => {
+      await Promise.all(userIds.map(id => api.delete(`/users/${id}`)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success(`${selectedUsers.length} user(s) deleted successfully`);
+      setSelectedUsers([]);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to delete users');
+    }
+  });
+
+  // Bulk update status mutation
+  const bulkUpdateStatusMutation = useMutation({
+    mutationFn: async ({ userIds, isActive }: { userIds: string[]; isActive: boolean }) => {
+      await Promise.all(userIds.map(id => api.put(`/users/${id}`, { isActive })));
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success(`${selectedUsers.length} user(s) ${variables.isActive ? 'activated' : 'deactivated'} successfully`);
+      setSelectedUsers([]);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to update users');
+    }
+  });
+
+  // Bulk update role mutation
+  const bulkUpdateRoleMutation = useMutation({
+    mutationFn: async ({ userIds, role }: { userIds: string[]; role: string }) => {
+      await Promise.all(userIds.map(id => api.put(`/users/${id}`, { role })));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success(`${selectedUsers.length} user(s) role updated successfully`);
+      setSelectedUsers([]);
+      setShowRoleModal(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to update users');
+    }
+  });
+
+  // Bulk action handlers
+  const handleBulkDelete = () => {
+    if (window.confirm(`Are you sure you want to delete ${selectedUsers.length} user(s)? This action cannot be undone.`)) {
+      bulkDeleteMutation.mutate(selectedUsers);
+    }
+  };
+
+  const handleBulkActivate = () => {
+    bulkUpdateStatusMutation.mutate({ userIds: selectedUsers, isActive: true });
+  };
+
+  const handleBulkDeactivate = () => {
+    bulkUpdateStatusMutation.mutate({ userIds: selectedUsers, isActive: false });
+  };
+
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [bulkRole, setBulkRole] = useState<'admin' | 'owner' | 'vendor'>('vendor');
+
+  const handleBulkChangeRole = () => {
+    bulkUpdateRoleMutation.mutate({ userIds: selectedUsers, role: bulkRole });
+  };
+
   const handleOpenUserDetails = (user: User) => {
     setSelectedUser(user);
     setEditUserData({
@@ -290,6 +361,62 @@ const UserManagement = () => {
           </button>
         </form>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedUsers.length > 0 && (
+        <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-medium">
+                {selectedUsers.length}
+              </span>
+              <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
+                user{selectedUsers.length > 1 ? 's' : ''} selected
+              </span>
+              <button
+                onClick={() => setSelectedUsers([])}
+                className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 underline ml-2"
+              >
+                Clear selection
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleBulkActivate}
+                disabled={bulkUpdateStatusMutation.isPending}
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors disabled:opacity-50"
+              >
+                <CheckCircleIcon className="h-4 w-4 mr-1.5" />
+                Activate
+              </button>
+              <button
+                onClick={handleBulkDeactivate}
+                disabled={bulkUpdateStatusMutation.isPending}
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+              >
+                <NoSymbolIcon className="h-4 w-4 mr-1.5" />
+                Deactivate
+              </button>
+              <button
+                onClick={() => setShowRoleModal(true)}
+                disabled={bulkUpdateRoleMutation.isPending}
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
+              >
+                <UserGroupIcon className="h-4 w-4 mr-1.5" />
+                Change Role
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleteMutation.isPending}
+                className="inline-flex items-center px-3 py-2 text-sm font-medium text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
+              >
+                <TrashIcon className="h-4 w-4 mr-1.5" />
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -847,6 +974,57 @@ const UserManagement = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Role Change Modal */}
+      {showRoleModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Change Role for {selectedUsers.length} User{selectedUsers.length > 1 ? 's' : ''}
+              </h3>
+              <button
+                onClick={() => setShowRoleModal(false)}
+                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5 space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Select the new role to assign to the selected users.
+              </p>
+              <CustomSelect
+                label="New Role"
+                value={bulkRole}
+                onChange={(value) => setBulkRole(value as 'admin' | 'owner' | 'vendor')}
+                options={[
+                  { value: 'vendor', label: 'Vendor' },
+                  { value: 'owner', label: 'Owner' },
+                  { value: 'admin', label: 'Admin' },
+                ]}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 sm:p-5 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowRoleModal(false)}
+                className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkChangeRole}
+                disabled={bulkUpdateRoleMutation.isPending}
+                className="px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+              >
+                {bulkUpdateRoleMutation.isPending ? 'Updating...' : 'Update Role'}
+              </button>
+            </div>
           </div>
         </div>
       )}

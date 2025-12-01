@@ -122,6 +122,12 @@ export const getPartner = async (id: string): Promise<{ success: boolean; data: 
   return response.data;
 };
 
+// Get vendor's own partner profile
+export const getMyProfile = async (): Promise<{ success: boolean; data: Partner }> => {
+  const response = await api.get('/partners/my-profile');
+  return response.data;
+};
+
 // Create new partner (Admin/Vendor)
 export const createPartner = async (partnerData: Partial<Partner>): Promise<{ success: boolean; data: Partner }> => {
   const response = await api.post('/partners', partnerData);
@@ -146,4 +152,4 @@ export const addPartnerReview = async (id: string, rating: number, comment?: str
   return response.data;
 };
 
-export default { getPartners, getPartnerStats, getPartnerCategories, getPartner, createPartner, updatePartner, deletePartner, addPartnerReview };
+export default { getPartners, getPartnerStats, getPartnerCategories, getPartner, getMyProfile, createPartner, updatePartner, deletePartner, addPartnerReview };

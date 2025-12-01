@@ -12,20 +12,27 @@ import {
   Cog6ToothIcon,
   CameraIcon,
   PencilIcon,
+  BuildingOfficeIcon,
 } from '@heroicons/react/24/outline';
+import { Link } from 'react-router-dom';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const UserProfile = () => {
-  const { user } = useAuth();
+  const { user, isVendor } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
+  // Helper to safely get string value
+  const safeString = (value: unknown): string => {
+    return typeof value === 'string' ? value : '';
+  };
+
   const [editForm, setEditForm] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    location: user?.location || '',
-    bio: user?.bio || '',
+    name: safeString(user?.name),
+    email: safeString(user?.email),
+    phone: safeString((user as { phone?: string })?.phone),
+    location: safeString((user as { location?: string })?.location),
+    bio: safeString((user as { bio?: string })?.bio),
   });
 
   const handleSave = () => {
@@ -37,11 +44,11 @@ const UserProfile = () => {
 
   const handleCancel = () => {
     setEditForm({
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
-      location: user?.location || '',
-      bio: user?.bio || '',
+      name: safeString(user?.name),
+      email: safeString(user?.email),
+      phone: safeString((user as { phone?: string })?.phone),
+      location: safeString((user as { location?: string })?.location),
+      bio: safeString((user as { bio?: string })?.bio),
     });
     setIsEditing(false);
   };
@@ -70,23 +77,57 @@ const UserProfile = () => {
               </div>
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                  {user?.name || 'Your Profile'}
+                  {typeof user?.name === 'string' ? user.name : 'Your Profile'}
                 </h1>
                 <p className="mt-1 text-lg text-primary-100">
-                  {user?.role || 'Member'} • Joined {new Date().getFullYear()}
+                  {typeof user?.role === 'string' ? (user.role === 'vendor' ? 'Partner' : user.role === 'admin' ? 'Administrator' : 'Owner') : 'Member'}
+                  {user?.company && typeof user.company === 'string' ? ` • ${user.company}` : ''}
+                  {' • Joined '}{new Date().getFullYear()}
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setIsEditing(!isEditing)}
-              className="inline-flex items-center px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors duration-200"
-            >
-              <PencilIcon className="h-4 w-4 mr-2" />
-              {isEditing ? 'Cancel' : 'Edit Profile'}
-            </button>
+            <div className="flex items-center space-x-3">
+              {isVendor && (
+                <Link
+                  to="/settings"
+                  className="inline-flex items-center px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors duration-200"
+                >
+                  <BuildingOfficeIcon className="h-4 w-4 mr-2" />
+                  Partner Settings
+                </Link>
+              )}
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                className="inline-flex items-center px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors duration-200"
+              >
+                <PencilIcon className="h-4 w-4 mr-2" />
+                {isEditing ? 'Cancel' : 'Edit Profile'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Vendor Note */}
+      {isVendor && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+          <div className="flex items-start">
+            <BuildingOfficeIcon className="h-5 w-5 text-blue-500 dark:text-blue-400 mt-0.5 mr-3 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                This is your account profile
+              </p>
+              <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                To manage your company listing visible to owners, go to{' '}
+                <Link to="/settings" className="font-medium underline hover:text-blue-900 dark:hover:text-blue-200">
+                  Partner Settings
+                </Link>
+                .
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
@@ -134,7 +175,7 @@ const UserProfile = () => {
                   ) : (
                     <div className="mt-1 flex items-center space-x-2">
                       <UserIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{user?.name || 'Not provided'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{typeof user?.name === 'string' ? user.name : 'Not provided'}</span>
                     </div>
                   )}
                 </div>
@@ -151,7 +192,7 @@ const UserProfile = () => {
                   ) : (
                     <div className="mt-1 flex items-center space-x-2">
                       <EnvelopeIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{user?.email || 'Not provided'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{typeof user?.email === 'string' ? user.email : 'Not provided'}</span>
                     </div>
                   )}
                 </div>
@@ -168,7 +209,7 @@ const UserProfile = () => {
                   ) : (
                     <div className="mt-1 flex items-center space-x-2">
                       <PhoneIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{editForm.phone || 'Not provided'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{typeof editForm.phone === 'string' && editForm.phone ? editForm.phone : 'Not provided'}</span>
                     </div>
                   )}
                 </div>
@@ -185,7 +226,7 @@ const UserProfile = () => {
                   ) : (
                     <div className="mt-1 flex items-center space-x-2">
                       <MapPinIcon className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{editForm.location || 'Not provided'}</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{typeof editForm.location === 'string' && editForm.location ? editForm.location : 'Not provided'}</span>
                     </div>
                   )}
                 </div>
@@ -203,7 +244,7 @@ const UserProfile = () => {
                   />
                 ) : (
                   <div className="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                    {editForm.bio || 'No bio provided yet.'}
+                    {typeof editForm.bio === 'string' && editForm.bio ? editForm.bio : 'No bio provided yet.'}
                   </div>
                 )}
               </div>

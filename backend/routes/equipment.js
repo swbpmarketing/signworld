@@ -53,6 +53,30 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// @desc    Get vendor's own equipment listings
+// @route   GET /api/equipment/my-listings
+// @access  Private/Vendor
+router.get('/my-listings', protect, authorize('vendor', 'admin'), async (req, res) => {
+  try {
+    const query = req.user.role === 'admin' ? {} : { vendorId: req.user.id };
+
+    const equipment = await Equipment.find(query)
+      .sort({ createdAt: -1 })
+      .select('-__v -inquiries');
+
+    res.json({
+      success: true,
+      data: equipment
+    });
+  } catch (error) {
+    console.error('Error fetching vendor equipment:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error fetching equipment listings'
+    });
+  }
+});
+
 // @desc    Get all equipment
 // @route   GET /api/equipment
 // @access  Public
@@ -181,10 +205,18 @@ router.get('/:id', async (req, res) => {
 
 // @desc    Create new equipment
 // @route   POST /api/equipment
-// @access  Private/Admin
-router.post('/', protect, authorize('admin'), async (req, res) => {
+// @access  Private/Admin or Vendor
+router.post('/', protect, authorize('admin', 'vendor'), async (req, res) => {
   try {
     const equipmentData = { ...req.body };
+
+    // If vendor is creating, set vendorId to their user ID
+    if (req.user.role === 'vendor') {
+      equipmentData.vendorId = req.user.id;
+      // Vendors can't set featured status
+      delete equipmentData.isFeatured;
+      delete equipmentData.sortOrder;
+    }
 
     // Parse specifications if string
     if (typeof equipmentData.specifications === 'string') {
@@ -213,10 +245,34 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
 
 // @desc    Update equipment
 // @route   PUT /api/equipment/:id
-// @access  Private/Admin
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+// @access  Private/Admin or Vendor (own equipment only)
+router.put('/:id', protect, authorize('admin', 'vendor'), async (req, res) => {
   try {
+    const equipment = await Equipment.findById(req.params.id);
+
+    if (!equipment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Equipment not found'
+      });
+    }
+
+    // Vendors can only update their own equipment
+    if (req.user.role === 'vendor' && equipment.vendorId?.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to update this equipment'
+      });
+    }
+
     const updateData = { ...req.body };
+
+    // Vendors can't change certain fields
+    if (req.user.role === 'vendor') {
+      delete updateData.vendorId;
+      delete updateData.isFeatured;
+      delete updateData.sortOrder;
+    }
 
     // Parse specifications if string
     if (typeof updateData.specifications === 'string') {
@@ -228,22 +284,15 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
       updateData.features = JSON.parse(updateData.features);
     }
 
-    const equipment = await Equipment.findByIdAndUpdate(
+    const updatedEquipment = await Equipment.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true, runValidators: true }
     );
 
-    if (!equipment) {
-      return res.status(404).json({
-        success: false,
-        error: 'Equipment not found'
-      });
-    }
-
     res.json({
       success: true,
-      data: equipment
+      data: updatedEquipment
     });
   } catch (error) {
     console.error('Error updating equipment:', error);
@@ -256,8 +305,8 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
 
 // @desc    Delete equipment
 // @route   DELETE /api/equipment/:id
-// @access  Private/Admin
-router.delete('/:id', protect, authorize('admin'), async (req, res) => {
+// @access  Private/Admin or Vendor (own equipment only)
+router.delete('/:id', protect, authorize('admin', 'vendor'), async (req, res) => {
   try {
     const equipment = await Equipment.findById(req.params.id);
 
@@ -265,6 +314,14 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Equipment not found'
+      });
+    }
+
+    // Vendors can only delete their own equipment
+    if (req.user.role === 'vendor' && equipment.vendorId?.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to delete this equipment'
       });
     }
 

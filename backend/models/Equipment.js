@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const equipmentSchema = new mongoose.Schema({
+  vendorId: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+    default: null,
+  },
   name: {
     type: String,
     required: [true, 'Please add equipment name'],

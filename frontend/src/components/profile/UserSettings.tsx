@@ -201,90 +201,90 @@ const UserSettings = () => {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Full Name
           </label>
           <div className="relative">
-            <UserIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <UserIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
             <input
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
               disabled={!isEditing}
-              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 ${
-                getFieldError('name') ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+              className={`w-full pl-10 pr-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 ${
+                getFieldError('name') ? 'border-red-300 dark:border-red-600 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'
               }`}
               placeholder="Enter your full name"
             />
           </div>
           {getFieldError('name') && (
-            <p className="mt-1 text-sm text-red-600">{getFieldError('name')}</p>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{getFieldError('name')}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Email Address
           </label>
           <div className="relative">
-            <EnvelopeIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <EnvelopeIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
             <input
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
               disabled={!isEditing}
-              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 ${
-                getFieldError('email') ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+              className={`w-full pl-10 pr-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 ${
+                getFieldError('email') ? 'border-red-300 dark:border-red-600 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'
               }`}
               placeholder="Enter your email address"
             />
           </div>
           {getFieldError('email') && (
-            <p className="mt-1 text-sm text-red-600">{getFieldError('email')}</p>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{getFieldError('email')}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Phone Number
           </label>
           <div className="relative">
-            <PhoneIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <PhoneIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
             <input
               type="tel"
               value={formData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
               disabled={!isEditing}
-              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 ${
-                getFieldError('phone') ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+              className={`w-full pl-10 pr-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 ${
+                getFieldError('phone') ? 'border-red-300 dark:border-red-600 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'
               }`}
               placeholder="Enter your phone number"
             />
           </div>
           {getFieldError('phone') && (
-            <p className="mt-1 text-sm text-red-600">{getFieldError('phone')}</p>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{getFieldError('phone')}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Company Name
           </label>
           <div className="relative">
-            <BuildingOfficeIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <BuildingOfficeIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
             <input
               type="text"
               value={formData.company}
               onChange={(e) => handleInputChange('company', e.target.value)}
               disabled={!isEditing}
-              className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 ${
-                getFieldError('company') ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+              className={`w-full pl-10 pr-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 ${
+                getFieldError('company') ? 'border-red-300 dark:border-red-600 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600'
               }`}
               placeholder="Enter your company name"
             />
           </div>
           {getFieldError('company') && (
-            <p className="mt-1 text-sm text-red-600">{getFieldError('company')}</p>
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{getFieldError('company')}</p>
           )}
         </div>
       </div>
@@ -295,18 +295,18 @@ const UserSettings = () => {
     <div className="space-y-8">
       {/* Notifications */}
       <div>
-        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <BellIcon className="h-5 w-5 mr-2" />
+        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+          <BellIcon className="h-5 w-5 mr-2 text-gray-600 dark:text-gray-400" />
           Notifications
         </h4>
         <div className="space-y-4">
           {(Object.entries(formData.notifications) as Array<[keyof UserSettingsFormData['notifications'], boolean]>).map(([key, value]) => (
-            <div key={key} className="flex items-center justify-between">
+            <div key={key} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div>
-                <h5 className="text-sm font-medium text-gray-900 capitalize">
+                <h5 className="text-sm font-medium text-gray-900 dark:text-white capitalize">
                   {key === 'sms' ? 'SMS' : key} Notifications
                 </h5>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {key === 'email' && 'Receive email notifications for important updates'}
                   {key === 'push' && 'Receive push notifications in your browser'}
                   {key === 'sms' && 'Receive SMS notifications for urgent alerts'}
@@ -316,8 +316,8 @@ const UserSettings = () => {
               <button
                 onClick={() => handleNestedChange('notifications', key, !value)}
                 disabled={!isEditing}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 ${
-                  value ? 'bg-primary-600' : 'bg-gray-200'
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 ${
+                  value ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
                 }`}
               >
                 <span
@@ -334,7 +334,7 @@ const UserSettings = () => {
       {/* Language & Timezone */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             <LanguageIcon className="h-5 w-5 inline mr-2" />
             Language
           </label>
@@ -352,7 +352,7 @@ const UserSettings = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             <GlobeAltIcon className="h-5 w-5 inline mr-2" />
             Timezone
           </label>
@@ -374,20 +374,20 @@ const UserSettings = () => {
 
   const renderPrivacy = () => (
     <div className="space-y-6">
-      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-        <EyeIcon className="h-5 w-5 mr-2" />
+      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+        <EyeIcon className="h-5 w-5 mr-2 text-gray-600 dark:text-gray-400" />
         Privacy Controls
       </h4>
       <div className="space-y-4">
         {(Object.entries(formData.privacy) as Array<[keyof UserSettingsFormData['privacy'], boolean]>).map(([key, value]) => (
-          <div key={key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div key={key} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <div>
-              <h5 className="text-sm font-medium text-gray-900">
+              <h5 className="text-sm font-medium text-gray-900 dark:text-white">
                 {key === 'profileVisible' && 'Profile Visibility'}
                 {key === 'dataSharing' && 'Data Sharing'}
                 {key === 'analytics' && 'Analytics & Tracking'}
               </h5>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {key === 'profileVisible' && 'Allow other members to view your profile information'}
                 {key === 'dataSharing' && 'Share anonymized data to improve the platform'}
                 {key === 'analytics' && 'Allow analytics tracking to improve your experience'}
@@ -396,8 +396,8 @@ const UserSettings = () => {
             <button
               onClick={() => handleNestedChange('privacy', key, !value)}
               disabled={!isEditing}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 ${
-                value ? 'bg-primary-600' : 'bg-gray-200'
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 ${
+                value ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
               }`}
             >
               <span
@@ -414,26 +414,26 @@ const UserSettings = () => {
 
   const renderSecurity = () => (
     <div className="space-y-6">
-      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-        <ShieldCheckIcon className="h-5 w-5 mr-2" />
+      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+        <ShieldCheckIcon className="h-5 w-5 mr-2 text-gray-600 dark:text-gray-400" />
         Security Settings
       </h4>
-      
+
       {/* Password Section */}
-      <div className="bg-gray-50 rounded-lg p-6">
+      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <KeyIcon className="h-5 w-5 text-gray-400 mr-3" />
+            <KeyIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
             <div>
-              <h5 className="text-sm font-medium text-gray-900">Password</h5>
-              <p className="text-sm text-gray-500">
+              <h5 className="text-sm font-medium text-gray-900 dark:text-white">Password</h5>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Last changed: {new Date(formData.security.lastPasswordChange).toLocaleDateString()}
               </p>
             </div>
           </div>
           <button
             disabled={!isEditing}
-            className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 disabled:text-gray-400"
+            className="px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 disabled:text-gray-400 dark:disabled:text-gray-500"
           >
             Change Password
           </button>
@@ -441,26 +441,26 @@ const UserSettings = () => {
       </div>
 
       {/* Two-Factor Authentication */}
-      <div className="bg-gray-50 rounded-lg p-6">
+      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <DevicePhoneMobileIcon className="h-5 w-5 text-gray-400 mr-3" />
+            <DevicePhoneMobileIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
             <div>
-              <h5 className="text-sm font-medium text-gray-900">Two-Factor Authentication</h5>
-              <p className="text-sm text-gray-500">
+              <h5 className="text-sm font-medium text-gray-900 dark:text-white">Two-Factor Authentication</h5>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Add an extra layer of security to your account
               </p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <span className={`text-sm ${formData.security.twoFactorEnabled ? 'text-green-600' : 'text-gray-500'}`}>
+            <span className={`text-sm ${formData.security.twoFactorEnabled ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
               {formData.security.twoFactorEnabled ? 'Enabled' : 'Disabled'}
             </span>
             <button
               onClick={() => handleNestedChange('security', 'twoFactorEnabled', !formData.security.twoFactorEnabled)}
               disabled={!isEditing}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 ${
-                formData.security.twoFactorEnabled ? 'bg-primary-600' : 'bg-gray-200'
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 ${
+                formData.security.twoFactorEnabled ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'
               }`}
             >
               <span
@@ -477,11 +477,11 @@ const UserSettings = () => {
 
   const renderDisplay = () => (
     <div className="space-y-6">
-      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-        <PaintBrushIcon className="h-5 w-5 mr-2" />
+      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+        <PaintBrushIcon className="h-5 w-5 mr-2 text-gray-600 dark:text-gray-400" />
         Display & Theme
       </h4>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {['light', 'dark', 'auto'].map((theme) => (
           <button
@@ -490,8 +490,8 @@ const UserSettings = () => {
             disabled={!isEditing}
             className={`relative p-4 border-2 rounded-lg transition-all duration-200 ${
               formData.theme === theme
-                ? 'border-primary-500 bg-primary-50'
-                : 'border-gray-200 hover:border-gray-300'
+                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
+                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
             } disabled:opacity-50`}
           >
             <div className="flex flex-col items-center space-y-2">
@@ -500,10 +500,10 @@ const UserSettings = () => {
                 theme === 'dark' ? 'bg-gray-800' :
                 'bg-gradient-to-r from-white to-gray-800'
               }`} />
-              <span className="text-sm font-medium capitalize">{theme}</span>
+              <span className="text-sm font-medium capitalize text-gray-900 dark:text-white">{theme}</span>
             </div>
             {formData.theme === theme && (
-              <CheckIcon className="h-5 w-5 text-primary-600 absolute top-2 right-2" />
+              <CheckIcon className="h-5 w-5 text-primary-600 dark:text-primary-400 absolute top-2 right-2" />
             )}
           </button>
         ))}
@@ -529,16 +529,16 @@ const UserSettings = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Action Buttons */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h2>
         <div className="flex space-x-3">
           {isEditing ? (
             <>
               <button
                 onClick={handleCancel}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 <XMarkIcon className="h-4 w-4 inline mr-2" />
                 Cancel
@@ -580,16 +580,24 @@ const UserSettings = () => {
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
-                className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${
                   activeSection === section.id
-                    ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 border-l-4 border-primary-600'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
-                <section.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                <section.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                  activeSection === section.id
+                    ? 'text-primary-600 dark:text-primary-400'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`} />
                 <div className="flex-1 text-left">
                   <div className="font-medium">{section.name}</div>
-                  <div className="text-xs text-gray-500 hidden lg:block">
+                  <div className={`text-xs hidden lg:block ${
+                    activeSection === section.id
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}>
                     {section.description}
                   </div>
                 </div>
@@ -600,7 +608,7 @@ const UserSettings = () => {
 
         {/* Settings Content */}
         <div className="lg:col-span-3">
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
             {renderSectionContent()}
           </div>
         </div>

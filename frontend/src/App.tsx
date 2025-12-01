@@ -34,6 +34,9 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Billing = lazy(() => import('./pages/Billing'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
 const Chat = lazy(() => import('./pages/Chat'));
+const VendorProfile = lazy(() => import('./pages/VendorProfile'));
+const VendorMap = lazy(() => import('./pages/VendorMap'));
+const VendorEquipment = lazy(() => import('./pages/VendorEquipment'));
 
 // Loading component for Suspense fallback
 const LoadingFallback = () => (
@@ -98,6 +101,10 @@ function App() {
                   <Route path="profile" element={<UserProfile />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="billing" element={<Billing />} />
+                  {/* Vendor-specific routes */}
+                  <Route path="vendor-profile" element={<VendorProfile />} />
+                  <Route path="vendor-map" element={<VendorMap />} />
+                  <Route path="vendor-equipment" element={<VendorEquipment />} />
                 </Route>
               </Routes>
             </Suspense>

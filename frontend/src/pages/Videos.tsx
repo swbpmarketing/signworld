@@ -655,27 +655,26 @@ const Videos = () => {
         </div>
       </div>
 
-      {/* Video Modal - Full Screen Overlay using Portal */}
+      {/* Video Modal - Centered Modal */}
       {selectedVideo && createPortal(
         <div
-          className="fixed inset-0 bg-black flex flex-col"
-          style={{ zIndex: 9999, width: '100vw', height: '100vh' }}
+          className="fixed inset-0 bg-black/80 flex items-center justify-center p-4"
+          style={{ zIndex: 9999 }}
           onClick={(e) => {
             if (e.target === e.currentTarget) closeVideo();
           }}
         >
-          {/* Close Button - Fixed in top right corner */}
-          <button
-            onClick={closeVideo}
-            className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
-          >
-            <XMarkIcon className="h-8 w-8" />
-          </button>
+          <div className="relative w-full max-w-5xl bg-gray-900 rounded-xl overflow-hidden shadow-2xl">
+            {/* Close Button */}
+            <button
+              onClick={closeVideo}
+              className="absolute top-3 right-3 z-10 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
 
-          {/* Video Player Container - Takes full screen */}
-          <div className="flex-1 flex flex-col h-full">
-            {/* Video Player - YouTube or Native */}
-            <div className="flex-1 relative bg-black">
+            {/* Video Player - 16:9 aspect ratio */}
+            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
               {selectedVideo.youtubeId ? (
                 <iframe
                   className="absolute inset-0 w-full h-full"
@@ -687,7 +686,7 @@ const Videos = () => {
                 />
               ) : selectedVideo.videoUrl ? (
                 <video
-                  className="absolute inset-0 w-full h-full object-contain"
+                  className="absolute inset-0 w-full h-full object-contain bg-black"
                   src={selectedVideo.videoUrl}
                   controls
                   autoPlay
@@ -701,8 +700,8 @@ const Videos = () => {
               )}
             </div>
 
-            {/* Video Info - Bottom bar */}
-            <div className="bg-gray-900 px-6 py-4 flex-shrink-0">
+            {/* Video Info */}
+            <div className="px-6 py-4">
               <h3 className="text-lg font-bold text-white mb-1">{selectedVideo.title}</h3>
               {selectedVideo.description && (
                 <p className="text-gray-400 text-sm mb-3 line-clamp-2">{selectedVideo.description}</p>
