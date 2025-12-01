@@ -36,7 +36,7 @@ const equipmentData = [
     reviews: 127,
     warranty: '3 Years',
     isFeatured: true,
-    isNew: true,
+    isNewArrival: true,
     leadTime: 'Ships in 2-3 weeks',
     sortOrder: 1
   },
@@ -66,7 +66,7 @@ const equipmentData = [
     reviews: 89,
     warranty: '2 Years',
     isFeatured: true,
-    isNew: false,
+    isNewArrival: false,
     leadTime: 'Ships in 1-2 weeks',
     sortOrder: 2
   },
@@ -97,7 +97,7 @@ const equipmentData = [
     reviews: 45,
     warranty: '5 Years',
     isFeatured: true,
-    isNew: false,
+    isNewArrival: false,
     leadTime: 'Ships in 3-4 weeks',
     sortOrder: 3
   },
@@ -127,7 +127,7 @@ const equipmentData = [
     reviews: 32,
     warranty: '2 Years',
     isFeatured: false,
-    isNew: false,
+    isNewArrival: false,
     leadTime: 'Ships in 2-3 weeks',
     sortOrder: 4
   },
@@ -157,7 +157,7 @@ const equipmentData = [
     reviews: 156,
     warranty: '3 Years',
     isFeatured: false,
-    isNew: false,
+    isNewArrival: false,
     leadTime: 'Ships in 1-2 weeks',
     sortOrder: 5
   },
@@ -188,7 +188,7 @@ const equipmentData = [
     reviews: 23,
     warranty: '1 Year',
     isFeatured: false,
-    isNew: false,
+    isNewArrival: false,
     leadTime: '8-12 weeks',
     sortOrder: 6
   },
@@ -218,7 +218,7 @@ const equipmentData = [
     reviews: 234,
     warranty: '2 Years',
     isFeatured: false,
-    isNew: true,
+    isNewArrival: true,
     leadTime: 'Ships in 3-5 days',
     sortOrder: 7
   },
@@ -248,7 +248,7 @@ const equipmentData = [
     reviews: 67,
     warranty: '2 Years',
     isFeatured: false,
-    isNew: false,
+    isNewArrival: false,
     leadTime: 'Ships in 1-2 weeks',
     sortOrder: 8
   },
@@ -279,7 +279,7 @@ const equipmentData = [
     reviews: 312,
     warranty: '7 Years',
     isFeatured: false,
-    isNew: false,
+    isNewArrival: false,
     leadTime: 'Ships same day',
     sortOrder: 9
   },
@@ -309,7 +309,7 @@ const equipmentData = [
     reviews: 78,
     warranty: '3 Years',
     isFeatured: false,
-    isNew: true,
+    isNewArrival: true,
     leadTime: 'Ships in 1-2 weeks',
     sortOrder: 10
   },
@@ -339,7 +339,7 @@ const equipmentData = [
     reviews: 445,
     warranty: 'Lifetime',
     isFeatured: false,
-    isNew: false,
+    isNewArrival: false,
     leadTime: 'Ships same day',
     sortOrder: 11
   },
@@ -369,7 +369,7 @@ const equipmentData = [
     reviews: 167,
     warranty: '1 Year',
     isFeatured: false,
-    isNew: false,
+    isNewArrival: false,
     leadTime: 'Ships same day',
     sortOrder: 12
   }

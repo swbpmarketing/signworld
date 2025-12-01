@@ -247,7 +247,7 @@ const Equipment = () => {
                     className="w-full h-64 lg:h-full object-cover"
                   />
                   <div className="absolute top-4 left-4 flex gap-2">
-                    {selectedEquipment.isNew && (
+                    {selectedEquipment.isNewArrival && (
                       <span className="px-3 py-1 bg-green-500 text-white text-sm font-medium rounded-full">New</span>
                     )}
                     {selectedEquipment.isFeatured && (
@@ -843,7 +843,7 @@ const Equipment = () => {
                       className="w-full h-64 object-cover cursor-pointer"
                       onClick={() => setSelectedEquipment(item)}
                     />
-                    {item.isNew && (
+                    {item.isNewArrival && (
                       <span className="absolute top-2 left-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500 text-white">
                         New
                       </span>
@@ -950,7 +950,7 @@ const Equipment = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="text-sm text-gray-500 dark:text-gray-400">{item.brand} • {item.model}</span>
-                            {item.isNew && (
+                            {item.isNewArrival && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500 text-white">
                                 New
                               </span>

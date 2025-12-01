@@ -35,7 +35,7 @@ export type Equipment = {
   relatedProducts?: Equipment[];
   isActive: boolean;
   isFeatured: boolean;
-  isNew: boolean;
+  isNewArrival: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -87,7 +87,7 @@ export type CreateEquipmentData = {
   leadTime?: string;
   features?: string[];
   isFeatured?: boolean;
-  isNew?: boolean;
+  isNewArrival?: boolean;
 };
 
 export type InquiryData = {
