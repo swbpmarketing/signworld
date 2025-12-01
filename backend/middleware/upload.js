@@ -8,11 +8,29 @@ const storage = multer.memoryStorage();
 // File filter for validation
 const fileFilter = (req, file, cb) => {
   // Accept images
-  if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'featuredImage') {
+  if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail') {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed for images/gallery/logo'), false);
+      cb(new Error('Only image files are allowed for images/gallery/logo/thumbnail'), false);
+    }
+  }
+  // Accept videos
+  else if (file.fieldname === 'video') {
+    const allowedVideoMimes = [
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/x-ms-wmv',
+      'video/mpeg'
+    ];
+
+    if (allowedVideoMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only MP4, WebM, OGG, MOV, AVI, WMV, and MPEG video files are allowed'), false);
     }
   }
   // Accept documents (PDF, DOC, DOCX, XLS, XLSX, etc.)
@@ -37,12 +55,21 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configure multer
+// Configure multer with standard file size limit
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB max file size
+    fileSize: 10 * 1024 * 1024 // 10MB max file size for non-video files
+  }
+});
+
+// Configure multer with larger file size limit for videos
+const uploadVideo = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 500 * 1024 * 1024 // 500MB max file size for videos
   }
 });
 
@@ -62,10 +89,12 @@ const uploadFilesToS3 = async (req, res, next) => {
     const uploadPromises = files.map(async (file) => {
       // Determine folder based on field name
       let folder = 'other';
-      if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'featuredImage') {
+      if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail') {
         folder = 'images';
       } else if (file.fieldname === 'documents') {
         folder = 'documents';
+      } else if (file.fieldname === 'video') {
+        folder = 'videos';
       }
 
       // Generate unique filename
@@ -139,5 +168,17 @@ module.exports = {
       { name: 'images', maxCount: 5 }
     ]),
     uploadFilesToS3
-  ]
+  ],
+
+  // For video uploads with optional thumbnail
+  videoFiles: [
+    uploadVideo.fields([
+      { name: 'video', maxCount: 1 },
+      { name: 'thumbnail', maxCount: 1 }
+    ]),
+    uploadFilesToS3
+  ],
+
+  // Single video upload
+  videoSingle: (fieldName = 'video') => [uploadVideo.single(fieldName), uploadFilesToS3]
 };

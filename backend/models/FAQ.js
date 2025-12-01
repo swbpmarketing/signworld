@@ -23,7 +23,7 @@ const faqSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
-  sortOrder: {
+  order: {
     type: Number,
     default: 0,
   },
@@ -35,6 +35,9 @@ const faqSchema = new mongoose.Schema({
     user: {
       type: mongoose.Schema.ObjectId,
       ref: 'User',
+    },
+    visitorId: {
+      type: String,
     },
     isHelpful: Boolean,
     createdAt: {
@@ -49,7 +52,6 @@ const faqSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',
-    required: true,
   },
   createdAt: {
     type: Date,
@@ -73,5 +75,8 @@ faqSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
+
+// Index for text search
+faqSchema.index({ question: 'text', answer: 'text', tags: 'text' });
 
 module.exports = mongoose.model('FAQ', faqSchema);

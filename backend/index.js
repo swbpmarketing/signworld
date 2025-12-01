@@ -93,7 +93,13 @@ const corsOptions = {
     const allowedOrigins = [
       process.env.CLIENT_URL || 'http://localhost:5173',
       'http://localhost:5173',
-      'http://127.0.0.1:5173', // Allow 127.0.0.1 as well as localhost
+      'http://localhost:5174',
+      'http://localhost:5175',
+      'http://localhost:5176',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+      'http://127.0.0.1:5175',
+      'http://127.0.0.1:5176',
       'https://sign-company.onrender.com',
       'https://customadesign.github.io'
     ];
@@ -191,6 +197,7 @@ app.use('/api/owners', require('./routes/owners'));
 app.use('/api/ratings', require('./routes/ratings'));
 app.use('/api/partners', require('./routes/partners'));
 app.use('/api/videos', require('./routes/videos'));
+app.use('/api/playlists', require('./routes/playlists'));
 app.use('/api/equipment', require('./routes/equipment'));
 app.use('/api/faqs', require('./routes/faqs'));
 app.use('/api/search', require('./routes/search'));

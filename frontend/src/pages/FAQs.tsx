@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   QuestionMarkCircleIcon,
   MagnifyingGlassIcon,
   ChevronDownIcon,
-  ChevronUpIcon,
   BookOpenIcon,
   CpuChipIcon,
   CurrencyDollarIcon,
@@ -16,136 +17,45 @@ import {
   DocumentTextIcon,
   LightBulbIcon,
   CheckCircleIcon,
+  WrenchScrewdriverIcon,
+  CubeIcon,
+  PlusIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { getFAQs, getFAQStats, voteFAQHelpful, incrementFAQView, createFAQ } from '../services/faqService';
+import type { FAQ } from '../services/faqService';
+import { useAuth } from '../context/AuthContext';
 
-interface FAQ {
-  id: number;
-  question: string;
-  answer: string;
-  category: string;
-  helpful: number;
-  notHelpful: number;
-  views: number;
-}
+// Icon type from heroicons
+type HeroIcon = typeof BookOpenIcon;
 
-const faqs: FAQ[] = [
-  // Getting Started
-  {
-    id: 1,
-    question: "What is Sign Company and how does it work?",
-    answer: "Sign Company is a national sign franchise network that provides franchise owners with the tools, resources, and support needed to run a successful sign business. We offer comprehensive training, marketing support, preferred vendor relationships, and a proven business model without ongoing royalty fees.",
-    category: "Getting Started",
-    helpful: 156,
-    notHelpful: 12,
-    views: 2341
-  },
-  {
-    id: 2,
-    question: "How do I access the owner portal for the first time?",
-    answer: "To access the owner portal, you'll receive login credentials via email after your franchise agreement is finalized. Visit the portal URL, enter your credentials, and follow the first-time setup wizard to configure your profile and preferences. If you haven't received your credentials, contact support at support@signcompany.com.",
-    category: "Getting Started",
-    helpful: 98,
-    notHelpful: 5,
-    views: 1876
-  },
-  {
-    id: 3,
-    question: "What training resources are available for new owners?",
-    answer: "New owners have access to our comprehensive training program including: 1) Initial 2-week on-site training at our headquarters, 2) Online video library with 100+ training modules, 3) Monthly webinars on various topics, 4) One-on-one mentorship program, 5) Annual convention with advanced workshops, and 6) 24/7 access to our resource library.",
-    category: "Getting Started",
-    helpful: 134,
-    notHelpful: 8,
-    views: 1654
-  },
-  // Technical Support
-  {
-    id: 4,
-    question: "How do I troubleshoot issues with my Roland printer?",
-    answer: "Common Roland printer issues can be resolved by: 1) Checking ink levels and replacing if low, 2) Running the automatic cleaning cycle, 3) Verifying media is loaded correctly, 4) Updating firmware through the control panel, 5) Checking for clogged print heads. For persistent issues, contact Roland support at 1-800-542-2307 or access our video troubleshooting guides in the resource library.",
-    category: "Technical Support",
-    helpful: 87,
-    notHelpful: 3,
-    views: 1234
-  },
-  {
-    id: 5,
-    question: "What file formats are best for sign production?",
-    answer: "For optimal quality, use vector formats like AI (Adobe Illustrator), EPS, or PDF for logos and text. For photos and complex graphics, use high-resolution (300 DPI minimum) TIFF or PNG files. Avoid JPEG for text-heavy designs as compression can cause artifacts. Always convert text to outlines and use CMYK color mode for print production.",
-    category: "Technical Support",
-    helpful: 112,
-    notHelpful: 7,
-    views: 1456
-  },
-  // Pricing & Finance
-  {
-    id: 6,
-    question: "How does Sign Company's no-royalty model work?",
-    answer: "Unlike traditional franchises, Sign Company charges no ongoing royalty fees. You pay a one-time franchise fee for lifetime access to our brand, training, and support systems. Your only ongoing costs are optional: attending conventions, purchasing from preferred vendors (at discounted rates), and any additional training you choose. This model allows you to keep more of your profits.",
-    category: "Pricing & Finance",
-    helpful: 245,
-    notHelpful: 15,
-    views: 3456
-  },
-  {
-    id: 7,
-    question: "What financing options are available for equipment purchases?",
-    answer: "We offer several financing options through our preferred partners: 1) 0% financing for up to 60 months on select equipment, 2) Lease-to-own programs with tax benefits, 3) Bulk purchase discounts when buying multiple items, 4) Trade-in programs for upgrading equipment. Contact our equipment team for personalized financing solutions.",
-    category: "Pricing & Finance",
-    helpful: 167,
-    notHelpful: 9,
-    views: 2134
-  },
-  // Business Operations
-  {
-    id: 8,
-    question: "How do I find and hire qualified sign installers?",
-    answer: "Finding qualified installers: 1) Post on industry-specific job boards like SignJobs.com, 2) Network at local sign association meetings, 3) Partner with vocational schools offering sign programs, 4) Use our installer network directory, 5) Consider subcontracting initially. Always verify insurance, check references, and ensure they're certified for electrical work if needed.",
-    category: "Business Operations",
-    helpful: 93,
-    notHelpful: 6,
-    views: 1345
-  },
-  {
-    id: 9,
-    question: "What insurance coverage do I need for my sign business?",
-    answer: "Essential insurance coverage includes: 1) General Liability ($2M minimum), 2) Professional Liability/E&O, 3) Commercial Auto with hired/non-owned coverage, 4) Workers' Compensation, 5) Equipment/Inland Marine coverage, 6) Installation Floater policy. Our preferred insurance partner offers package deals specifically designed for sign shops with competitive rates.",
-    category: "Business Operations",
-    helpful: 178,
-    notHelpful: 11,
-    views: 2567
-  },
-  // Training & Resources
-  {
-    id: 10,
-    question: "How often are new training videos added to the library?",
-    answer: "We add new training content weekly, including: technique tutorials, equipment reviews, business development strategies, and case studies. All owners receive email notifications for new content in their interest areas. You can also request specific topics through the portal, and popular requests are prioritized for content creation.",
-    category: "Training & Resources",
-    helpful: 76,
-    notHelpful: 4,
-    views: 987
-  },
-  {
-    id: 11,
-    question: "Can I download resources for offline access?",
-    answer: "Yes, most resources can be downloaded for offline access. PDFs, templates, and forms are freely downloadable. Video content can be downloaded through our mobile app for offline viewing. Some proprietary content may have download restrictions but can be accessed online 24/7.",
-    category: "Training & Resources",
-    helpful: 89,
-    notHelpful: 5,
-    views: 1123
-  }
+// Category mapping from backend to frontend display
+const categoryConfig: { [key: string]: { name: string; icon: HeroIcon } } = {
+  'all': { name: 'All Topics', icon: BookOpenIcon },
+  'general': { name: 'Getting Started', icon: LightBulbIcon },
+  'technical': { name: 'Technical Support', icon: CpuChipIcon },
+  'billing': { name: 'Pricing & Finance', icon: CurrencyDollarIcon },
+  'equipment': { name: 'Equipment', icon: WrenchScrewdriverIcon },
+  'materials': { name: 'Materials', icon: CubeIcon },
+  'operations': { name: 'Business Operations', icon: UserGroupIcon },
+  'training': { name: 'Training & Resources', icon: AcademicCapIcon },
+  'other': { name: 'Legal & Compliance', icon: ShieldCheckIcon },
+};
+
+// Category options for the form (excluding 'all')
+const categoryOptions = [
+  { value: 'general', label: 'Getting Started' },
+  { value: 'technical', label: 'Technical Support' },
+  { value: 'billing', label: 'Pricing & Finance' },
+  { value: 'equipment', label: 'Equipment' },
+  { value: 'materials', label: 'Materials' },
+  { value: 'operations', label: 'Business Operations' },
+  { value: 'training', label: 'Training & Resources' },
+  { value: 'other', label: 'Legal & Compliance' },
 ];
 
-const categories = [
-  { name: "All Topics", icon: BookOpenIcon, count: 47 },
-  { name: "Getting Started", icon: LightBulbIcon, count: 8 },
-  { name: "Technical Support", icon: CpuChipIcon, count: 12 },
-  { name: "Pricing & Finance", icon: CurrencyDollarIcon, count: 7 },
-  { name: "Business Operations", icon: UserGroupIcon, count: 10 },
-  { name: "Training & Resources", icon: AcademicCapIcon, count: 6 },
-  { name: "Legal & Compliance", icon: ShieldCheckIcon, count: 4 }
-];
-
-const popularSearches = [
+// Default popular searches when no data
+const defaultPopularSearches = [
   "printer troubleshooting",
   "financing options",
   "insurance requirements",
@@ -155,11 +65,180 @@ const popularSearches = [
 ];
 
 const FAQs = () => {
-  const [selectedCategory, setSelectedCategory] = useState('All Topics');
+  const { isAdmin } = useAuth();
+  const queryClient = useQueryClient();
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedFAQs, setExpandedFAQs] = useState<number[]>([]);
-  const [helpfulVotes, setHelpfulVotes] = useState<{ [key: number]: 'helpful' | 'not-helpful' | null }>({});
+  const [expandedFAQs, setExpandedFAQs] = useState<string[]>([]);
+  const [helpfulVotes, setHelpfulVotes] = useState<{ [key: string]: 'helpful' | 'not-helpful' | null }>({});
+
+  // Add FAQ modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newFAQ, setNewFAQ] = useState({
+    question: '',
+    answer: '',
+    category: 'general',
+    tags: '',
+  });
+
+  // Search suggestions state
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Fetch FAQs
+  const { data: faqsData, isLoading: faqsLoading } = useQuery({
+    queryKey: ['faqs', selectedCategory, searchQuery],
+    queryFn: () => getFAQs({
+      category: selectedCategory !== 'all' ? selectedCategory : undefined,
+      search: searchQuery || undefined,
+      limit: 50
+    }),
+    staleTime: 30000,
+  });
+
+  // Fetch FAQ stats
+  const { data: statsData } = useQuery({
+    queryKey: ['faqs-stats'],
+    queryFn: getFAQStats,
+    staleTime: 60000,
+  });
+
+  // Fetch all FAQs for suggestions (cached)
+  const { data: allFaqsData } = useQuery({
+    queryKey: ['faqs-all'],
+    queryFn: () => getFAQs({ limit: 100 }),
+    staleTime: 300000, // Cache for 5 minutes
+  });
+
+  // Compute search suggestions based on input
+  const searchSuggestions = useMemo(() => {
+    if (!searchInput.trim() || searchInput.length < 2) return [];
+
+    const allFaqs = allFaqsData?.data || [];
+    const input = searchInput.toLowerCase();
+
+    const suggestions: { type: 'question' | 'tag'; text: string; faqId?: string; category?: string }[] = [];
+    const seenTexts = new Set<string>();
+
+    // Search through FAQ questions
+    allFaqs.forEach((faq) => {
+      const question = faq.question.toLowerCase();
+      if (question.includes(input) && !seenTexts.has(faq.question)) {
+        seenTexts.add(faq.question);
+        suggestions.push({
+          type: 'question',
+          text: faq.question,
+          faqId: faq._id,
+          category: faq.category
+        });
+      }
+
+      // Search through tags
+      if (faq.tags) {
+        faq.tags.forEach((tag) => {
+          const tagLower = tag.toLowerCase();
+          if (tagLower.includes(input) && !seenTexts.has(tag)) {
+            seenTexts.add(tag);
+            suggestions.push({
+              type: 'tag',
+              text: tag
+            });
+          }
+        });
+      }
+    });
+
+    // Sort by relevance (exact matches first, then starts with, then contains)
+    suggestions.sort((a, b) => {
+      const aText = a.text.toLowerCase();
+      const bText = b.text.toLowerCase();
+      const aExact = aText === input;
+      const bExact = bText === input;
+      const aStarts = aText.startsWith(input);
+      const bStarts = bText.startsWith(input);
+
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return 0;
+    });
+
+    return suggestions.slice(0, 8); // Limit to 8 suggestions
+  }, [searchInput, allFaqsData]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Vote mutation
+  const voteMutation = useMutation({
+    mutationFn: ({ id, isHelpful }: { id: string; isHelpful: boolean }) =>
+      voteFAQHelpful(id, isHelpful),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['faqs'] });
+    },
+  });
+
+  // View increment mutation
+  const viewMutation = useMutation({
+    mutationFn: (id: string) => incrementFAQView(id),
+  });
+
+  // Create FAQ mutation
+  const createMutation = useMutation({
+    mutationFn: createFAQ,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['faqs'] });
+      queryClient.invalidateQueries({ queryKey: ['faqs-stats'] });
+      setShowAddModal(false);
+      setNewFAQ({ question: '', answer: '', category: 'general', tags: '' });
+    },
+  });
+
+  const faqs = faqsData?.data || [];
+  const stats = statsData?.data;
+
+  // Build categories from stats
+  const categories = useMemo(() => {
+    const cats: { key: string; name: string; icon: HeroIcon; count: number }[] = [
+      { key: 'all', name: 'All Topics', icon: BookOpenIcon, count: stats?.totalFAQs || 0 }
+    ];
+
+    if (stats?.categoryCounts) {
+      Object.entries(stats.categoryCounts).forEach(([key, count]) => {
+        const config = categoryConfig[key];
+        if (config) {
+          cats.push({
+            key,
+            name: config.name,
+            icon: config.icon,
+            count: count as number
+          });
+        }
+      });
+    }
+
+    return cats;
+  }, [stats]);
+
+  const popularSearches = stats?.popularSearches?.length ? stats.popularSearches : defaultPopularSearches;
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -176,27 +255,190 @@ const FAQs = () => {
     setSearchQuery(search);
   };
 
-  const toggleFAQ = (faqId: number) => {
+  const toggleFAQ = (faqId: string) => {
+    const isExpanding = !expandedFAQs.includes(faqId);
+
     setExpandedFAQs(prev =>
       prev.includes(faqId)
         ? prev.filter(id => id !== faqId)
         : [...prev, faqId]
     );
+
+    // Increment view count when expanding
+    if (isExpanding) {
+      viewMutation.mutate(faqId);
+    }
   };
 
-  const handleHelpfulVote = (faqId: number, vote: 'helpful' | 'not-helpful') => {
+  const handleHelpfulVote = (faqId: string, vote: 'helpful' | 'not-helpful') => {
+    const currentVote = helpfulVotes[faqId];
+    const newVote = currentVote === vote ? null : vote;
+
     setHelpfulVotes(prev => ({
       ...prev,
-      [faqId]: prev[faqId] === vote ? null : vote
+      [faqId]: newVote
     }));
+
+    if (newVote !== null) {
+      voteMutation.mutate({ id: faqId, isHelpful: newVote === 'helpful' });
+    }
   };
 
-  const filteredFAQs = faqs.filter(faq => {
-    if (selectedCategory !== 'All Topics' && faq.category !== selectedCategory) return false;
-    if (searchQuery && !faq.question.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !faq.answer.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  const getCategoryDisplay = (category: string) => {
+    return categoryConfig[category]?.name || category;
+  };
+
+  const handleCreateFAQ = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFAQ.question.trim() || !newFAQ.answer.trim()) return;
+
+    createMutation.mutate({
+      question: newFAQ.question.trim(),
+      answer: newFAQ.answer.trim(),
+      category: newFAQ.category,
+      tags: newFAQ.tags ? newFAQ.tags.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+    });
+  };
+
+  // Add FAQ Modal
+  const AddFAQModal = () => {
+    if (!showAddModal) return null;
+
+    return createPortal(
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-screen items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 transition-opacity"
+            onClick={() => setShowAddModal(false)}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <PlusIcon className="h-6 w-6 text-primary-600" />
+                Add New FAQ
+              </h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleCreateFAQ} className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {/* Question */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Question <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newFAQ.question}
+                  onChange={(e) => setNewFAQ({ ...newFAQ, question: e.target.value })}
+                  placeholder="Enter the question..."
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  required
+                />
+              </div>
+
+              {/* Answer */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Answer <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={newFAQ.answer}
+                  onChange={(e) => setNewFAQ({ ...newFAQ, answer: e.target.value })}
+                  placeholder="Enter the answer..."
+                  rows={6}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none"
+                  required
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Category
+                </label>
+                <select
+                  value={newFAQ.category}
+                  onChange={(e) => setNewFAQ({ ...newFAQ, category: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                >
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Tags <span className="text-gray-400 font-normal">(comma-separated, optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={newFAQ.tags}
+                  onChange={(e) => setNewFAQ({ ...newFAQ, tags: e.target.value })}
+                  placeholder="e.g., printer, troubleshooting, maintenance"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              {/* Error message */}
+              {createMutation.isError && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    Failed to create FAQ. Please try again.
+                  </p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending || !newFAQ.question.trim() || !newFAQ.answer.trim()}
+                  className="flex-1 px-4 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  {createMutation.isPending ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <PlusIcon className="h-5 w-5" />
+                      Create FAQ
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -213,10 +455,21 @@ const FAQs = () => {
                 Find answers to common questions and get the support you need
               </p>
             </div>
-            <button className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200">
-              <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
-              Contact Support
-            </button>
+            <div className="mt-4 sm:mt-0 flex gap-3">
+              {isAdmin && (
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Add FAQ
+                </button>
+              )}
+              <button className="inline-flex items-center px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200 border border-white/30">
+                <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
+                Contact Support
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -239,29 +492,127 @@ const FAQs = () => {
             <div className="absolute -inset-0.5 bg-gradient-to-r from-primary-500 to-blue-500 rounded-2xl opacity-0 group-hover:opacity-20 group-focus-within:opacity-30 blur transition-all duration-300"></div>
             <div className="relative flex items-center gap-3">
               <div className="relative flex-1">
-                <MagnifyingGlassIcon className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-400 dark:text-gray-500 group-focus-within:text-primary-500 transition-colors duration-200" />
+                <MagnifyingGlassIcon className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-400 dark:text-gray-500 group-focus-within:text-primary-500 transition-colors duration-200 z-10" />
                 <input
+                  ref={searchInputRef}
                   type="text"
                   placeholder="Search for answers..."
                   value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  onChange={(e) => {
+                    setSearchInput(e.target.value);
+                    setShowSuggestions(true);
+                    setSelectedSuggestionIndex(-1);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (selectedSuggestionIndex >= 0 && searchSuggestions[selectedSuggestionIndex]) {
+                        e.preventDefault();
+                        const suggestion = searchSuggestions[selectedSuggestionIndex];
+                        setSearchInput(suggestion.text);
+                        setSearchQuery(suggestion.text);
+                        setShowSuggestions(false);
+                        setSelectedSuggestionIndex(-1);
+                      } else {
+                        handleSearch();
+                        setShowSuggestions(false);
+                      }
+                    } else if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setSelectedSuggestionIndex(prev =>
+                        prev < searchSuggestions.length - 1 ? prev + 1 : prev
+                      );
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
+                    } else if (e.key === 'Escape') {
+                      setShowSuggestions(false);
+                      setSelectedSuggestionIndex(-1);
+                    }
+                  }}
                   className="w-full pl-14 pr-12 py-4 text-lg border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700/80 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-0 focus:border-primary-500 dark:focus:border-primary-400 shadow-sm hover:shadow-md focus:shadow-md transition-all duration-200"
                 />
                 {searchInput && (
                   <button
                     type="button"
-                    onClick={handleClearSearch}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    onClick={() => {
+                      handleClearSearch();
+                      setShowSuggestions(false);
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors z-10"
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 )}
+
+                {/* Search Suggestions Dropdown */}
+                {showSuggestions && searchSuggestions.length > 0 && (
+                  <div
+                    ref={suggestionsRef}
+                    className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
+                  >
+                    <ul className="py-2 max-h-80 overflow-y-auto">
+                      {searchSuggestions.map((suggestion, index) => (
+                        <li key={`${suggestion.type}-${suggestion.text}`}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchInput(suggestion.text);
+                              setSearchQuery(suggestion.text);
+                              setShowSuggestions(false);
+                              setSelectedSuggestionIndex(-1);
+                            }}
+                            className={`w-full px-5 py-3 text-left flex items-center gap-3 transition-colors ${
+                              index === selectedSuggestionIndex
+                                ? 'bg-primary-50 dark:bg-primary-900/30'
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                            }`}
+                          >
+                            {suggestion.type === 'question' ? (
+                              <QuestionMarkCircleIcon className="h-5 w-5 text-primary-500 flex-shrink-0" />
+                            ) : (
+                              <span className="flex items-center justify-center h-5 w-5 rounded bg-gray-200 dark:bg-gray-600 text-xs font-medium text-gray-600 dark:text-gray-300 flex-shrink-0">
+                                #
+                              </span>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm truncate ${
+                                index === selectedSuggestionIndex
+                                  ? 'text-primary-700 dark:text-primary-300 font-medium'
+                                  : 'text-gray-900 dark:text-gray-100'
+                              }`}>
+                                {suggestion.text}
+                              </p>
+                              {suggestion.type === 'question' && suggestion.category && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                  {getCategoryDisplay(suggestion.category)}
+                                </p>
+                              )}
+                              {suggestion.type === 'tag' && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                  Search by tag
+                                </p>
+                              )}
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Press <kbd className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs">↑</kbd>{' '}
+                        <kbd className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs">↓</kbd> to navigate,{' '}
+                        <kbd className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 font-mono text-xs">Enter</kbd> to select
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
               <button
                 type="submit"
+                onClick={() => setShowSuggestions(false)}
                 className="px-6 py-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
               >
                 <MagnifyingGlassIcon className="h-5 w-5" />
@@ -292,6 +643,148 @@ const FAQs = () => {
         </div>
       </div>
 
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Categories Sidebar */}
+        <div className="lg:col-span-1">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 sticky top-20">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
+              <nav className="space-y-2">
+                {categories.map((category) => (
+                  <button
+                    key={category.key}
+                    onClick={() => setSelectedCategory(category.key)}
+                    className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
+                      selectedCategory === category.key
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <category.icon className={`h-5 w-5 mr-3 ${
+                        selectedCategory === category.key ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
+                      }`} />
+                      <span>{category.name}</span>
+                    </div>
+                    <span className={`text-sm ${
+                      selectedCategory === category.key ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
+                    }`}>
+                      {category.count}
+                    </span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+        </div>
+
+        {/* FAQs List */}
+        <div className="lg:col-span-3">
+          {searchQuery && (
+            <div className="mb-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Showing {faqs.length} results for "<span className="font-medium text-gray-900 dark:text-gray-100">{searchQuery}</span>"
+              </p>
+            </div>
+          )}
+
+          {faqsLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-pulse">
+                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-3"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {faqs.map((faq: FAQ) => (
+                <div
+                  key={faq._id}
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all duration-200"
+                >
+                  <button
+                    onClick={() => toggleFAQ(faq._id)}
+                    className="w-full px-6 py-5 text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 pr-4">
+                        <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 pr-4">
+                          {faq.question}
+                        </h4>
+                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                            {getCategoryDisplay(faq.category)}
+                          </span>
+                          <span>{faq.views.toLocaleString()} views</span>
+                        </div>
+                      </div>
+                      <div className={`transform transition-transform duration-200 ${
+                        expandedFAQs.includes(faq._id) ? 'rotate-180' : ''
+                      }`}>
+                        <ChevronDownIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                      </div>
+                    </div>
+                  </button>
+
+                  {expandedFAQs.includes(faq._id) && (
+                    <div className="px-6 pb-6 border-t border-gray-100 dark:border-gray-700">
+                      <div className="pt-4">
+                        <p className="text-gray-600 dark:text-gray-400 whitespace-pre-line">{faq.answer}</p>
+
+                        <div className="mt-6 flex items-center justify-between">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Was this helpful?</p>
+                            <div className="flex items-center gap-4">
+                              <button
+                                onClick={() => handleHelpfulVote(faq._id, 'helpful')}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                                  helpfulVotes[faq._id] === 'helpful'
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                <CheckCircleIcon className="h-4 w-4" />
+                                Yes ({faq.helpful + (helpfulVotes[faq._id] === 'helpful' ? 1 : 0)})
+                              </button>
+                              <button
+                                onClick={() => handleHelpfulVote(faq._id, 'not-helpful')}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                                  helpfulVotes[faq._id] === 'not-helpful'
+                                    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                No ({faq.notHelpful + (helpfulVotes[faq._id] === 'not-helpful' ? 1 : 0)})
+                              </button>
+                            </div>
+                          </div>
+                          <button className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
+                            Contact Support →
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!faqsLoading && faqs.length === 0 && (
+            <div className="text-center py-12">
+              <QuestionMarkCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400 mb-4">No FAQs found matching your search</p>
+              <button className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors">
+                Contact Support
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Quick Help Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow cursor-pointer">
@@ -317,141 +810,10 @@ const FAQs = () => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Categories Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 sticky top-20">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
-              <nav className="space-y-2">
-                {categories.map((category) => (
-                  <button
-                    key={category.name}
-                    onClick={() => setSelectedCategory(category.name)}
-                    className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
-                      selectedCategory === category.name
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <category.icon className={`h-5 w-5 mr-3 ${
-                        selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
-                      }`} />
-                      <span>{category.name}</span>
-                    </div>
-                    <span className={`text-sm ${
-                      selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
-                    }`}>
-                      {category.count}
-                    </span>
-                  </button>
-                ))}
-              </nav>
-            </div>
-          </div>
-        </div>
-
-        {/* FAQs List */}
-        <div className="lg:col-span-3">
-          {searchQuery && (
-            <div className="mb-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Showing {filteredFAQs.length} results for "<span className="font-medium text-gray-900 dark:text-gray-100">{searchQuery}</span>"
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            {filteredFAQs.map((faq) => (
-              <div
-                key={faq.id}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all duration-200"
-              >
-                <button
-                  onClick={() => toggleFAQ(faq.id)}
-                  className="w-full px-6 py-5 text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 pr-4">
-                      <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 pr-4">
-                        {faq.question}
-                      </h4>
-                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                          {faq.category}
-                        </span>
-                        <span>{faq.views.toLocaleString()} views</span>
-                      </div>
-                    </div>
-                    <div className={`transform transition-transform duration-200 ${
-                      expandedFAQs.includes(faq.id) ? 'rotate-180' : ''
-                    }`}>
-                      <ChevronDownIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                    </div>
-                  </div>
-                </button>
-
-                {expandedFAQs.includes(faq.id) && (
-                  <div className="px-6 pb-6 border-t border-gray-100 dark:border-gray-700">
-                    <div className="pt-4">
-                      <p className="text-gray-600 dark:text-gray-400 whitespace-pre-line">{faq.answer}</p>
-
-                      <div className="mt-6 flex items-center justify-between">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Was this helpful?</p>
-                          <div className="flex items-center gap-4">
-                            <button
-                              onClick={() => handleHelpfulVote(faq.id, 'helpful')}
-                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                                helpfulVotes[faq.id] === 'helpful'
-                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                              }`}
-                            >
-                              <CheckCircleIcon className="h-4 w-4" />
-                              Yes ({faq.helpful + (helpfulVotes[faq.id] === 'helpful' ? 1 : 0)})
-                            </button>
-                            <button
-                              onClick={() => handleHelpfulVote(faq.id, 'not-helpful')}
-                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                                helpfulVotes[faq.id] === 'not-helpful'
-                                  ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                              }`}
-                            >
-                              No ({faq.notHelpful + (helpfulVotes[faq.id] === 'not-helpful' ? 1 : 0)})
-                            </button>
-                          </div>
-                        </div>
-                        <button className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
-                          Contact Support →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {filteredFAQs.length === 0 && (
-            <div className="text-center py-12">
-              <QuestionMarkCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4">No FAQs found matching your search</p>
-              <button className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors">
-                Contact Support
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Still Need Help */}
-      <div className="bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl p-8 text-center">
-        <h2 className="text-2xl font-bold text-primary-900 mb-3">Still need help?</h2>
-        <p className="text-primary-700 mb-6 max-w-2xl mx-auto">
+      <div className="bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/30 dark:to-primary-800/30 rounded-xl p-8 text-center">
+        <h2 className="text-2xl font-bold text-primary-900 dark:text-primary-100 mb-3">Still need help?</h2>
+        <p className="text-primary-700 dark:text-primary-300 mb-6 max-w-2xl mx-auto">
           Our support team is standing by to assist you with any questions or issues you may have.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -465,6 +827,9 @@ const FAQs = () => {
           </button>
         </div>
       </div>
+
+      {/* Add FAQ Modal */}
+      <AddFAQModal />
     </div>
   );
 };

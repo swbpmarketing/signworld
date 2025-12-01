@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   ShoppingBagIcon,
   CpuChipIcon,
@@ -8,520 +10,570 @@ import {
   TagIcon,
   ShieldCheckIcon,
   SparklesIcon,
-  StarIcon,
   HeartIcon,
   ShoppingCartIcon,
-  ChevronRightIcon,
   CheckIcon,
   InformationCircleIcon,
   ClockIcon,
-  CurrencyDollarIcon,
   Squares2X2Icon,
   ListBulletIcon,
+  XMarkIcon,
+  TrashIcon,
+  PlusIcon,
+  MinusIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon, HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
+import { getEquipment, getEquipmentStats } from '../services/equipmentService';
+import type { Equipment as EquipmentType } from '../services/equipmentService';
 
-interface Equipment {
-  id: number;
-  name: string;
-  category: string;
-  brand: string;
-  model: string;
-  price: string;
-  priceNote?: string;
-  image: string;
-  description: string;
-  features: string[];
-  specifications: {
-    [key: string]: string;
-  };
-  inStock: boolean;
-  rating: number;
-  reviews: number;
-  warranty: string;
-  isFeatured: boolean;
-  isNew: boolean;
-  isFavorite: boolean;
-  leadTime: string;
+// Category configuration with icons
+const categoryConfig: { [key: string]: { name: string; icon: React.ComponentType<{ className?: string }> } } = {
+  'all': { name: 'All Equipment', icon: ShoppingBagIcon },
+  'large-format-printers': { name: 'Large Format Printers', icon: CpuChipIcon },
+  'vinyl-cutters': { name: 'Vinyl Cutters', icon: WrenchScrewdriverIcon },
+  'cnc-routers': { name: 'CNC Routers', icon: Squares2X2Icon },
+  'channel-letter': { name: 'Channel Letter Equipment', icon: WrenchScrewdriverIcon },
+  'welding': { name: 'Welding Equipment', icon: SparklesIcon },
+  'vehicles': { name: 'Vehicles & Trucks', icon: TruckIcon },
+  'heat-transfer': { name: 'Heat Press Equipment', icon: WrenchScrewdriverIcon },
+  'laminators': { name: 'Laminators', icon: Squares2X2Icon },
+  'led-lighting': { name: 'LED & Lighting', icon: SparklesIcon },
+  'digital-displays': { name: 'Digital Displays', icon: CpuChipIcon },
+  'hand-tools': { name: 'Installation Tools', icon: WrenchScrewdriverIcon },
+  'safety-equipment': { name: 'Safety Equipment', icon: ShieldCheckIcon },
+};
+
+// Cart item type
+interface CartItem {
+  equipment: EquipmentType;
+  quantity: number;
 }
 
-const equipment: Equipment[] = [
-  {
-    id: 1,
-    name: "Roland TrueVIS VG3-640 Wide Format Printer/Cutter",
-    category: "Large Format Printers",
-    brand: "Roland",
-    model: "VG3-640",
-    price: "$19,995",
-    priceNote: "Special Sign Company pricing",
-    image: "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?w=800&q=80",
-    description: "64-inch eco-solvent printer/cutter ideal for vinyl graphics, banners, vehicle wraps, and decals.",
-    features: [
-      "64-inch printing width",
-      "FlexFire print heads",
-      "True Rich Color 3 technology",
-      "Automated maintenance",
-      "Mobile remote monitoring"
-    ],
-    specifications: {
-      "Print Width": "64 inches",
-      "Resolution": "Up to 1440 dpi",
-      "Print Speed": "25.2 m²/h",
-      "Cutting Speed": "10-300 mm/s",
-      "Media Thickness": "1.0 mm max"
-    },
-    inStock: true,
-    rating: 4.9,
-    reviews: 127,
-    warranty: "2 years + extended options",
-    isFeatured: true,
-    isNew: true,
-    isFavorite: false,
-    leadTime: "2-3 weeks"
-  },
-  {
-    id: 2,
-    name: "Graphtec FC9000-160 Vinyl Cutting Plotter",
-    category: "Vinyl Cutters",
-    brand: "Graphtec",
-    model: "FC9000-160",
-    price: "$7,495",
-    priceNote: "64\" cutting width",
-    image: "https://images.unsplash.com/photo-1581092160607-ee22df5e7c7f?w=800&q=80",
-    description: "Professional vinyl cutting plotter with ARMS 5.0 automatic registration mark sensor for precision contour cutting.",
-    features: [
-      "64-inch cutting width",
-      "ARMS 5.0 registration system",
-      "Tangential control",
-      "Cut force up to 600 grams",
-      "Barcode cutting workflow"
-    ],
-    specifications: {
-      "Cutting Width": "64 inches",
-      "Cutting Force": "20-600 grams",
-      "Speed": "Up to 58.5 inch/sec",
-      "Accuracy": "±0.1% or less",
-      "Media Thickness": "0.8mm max"
-    },
-    inStock: true,
-    rating: 4.8,
-    reviews: 89,
-    warranty: "1 year parts & labor",
-    isFeatured: false,
-    isNew: false,
-    isFavorite: true,
-    leadTime: "Ships in 3-5 days"
-  },
-  {
-    id: 3,
-    name: "ShopSabre PRO4848 CNC Router",
-    category: "CNC Routers",
-    brand: "ShopSabre",
-    model: "PRO4848",
-    price: "$34,995",
-    priceNote: "4x4 ft cutting area",
-    image: "https://images.unsplash.com/photo-1565306257842-452704726532?w=800&q=80",
-    description: "Industrial-grade CNC router for cutting aluminum, ACM, wood, foam, and plastics for dimensional signage.",
-    features: [
-      "48\" x 48\" cutting area",
-      "3HP HSD spindle",
-      "Automatic tool changer ready",
-      "Helical rack & pinion drives",
-      "Dust collection system"
-    ],
-    specifications: {
-      "Work Area": "48\" x 48\" x 8\"",
-      "Spindle Power": "3HP (2.2kW)",
-      "Speed": "Up to 600 IPM",
-      "Accuracy": "±0.003\"",
-      "Control": "WinCNC or Mach3"
-    },
-    inStock: false,
-    rating: 4.7,
-    reviews: 56,
-    warranty: "2 years mechanical",
-    isFeatured: true,
-    isNew: false,
-    isFavorite: false,
-    leadTime: "6-8 weeks"
-  },
-  {
-    id: 4,
-    name: "AccuBend 410 Channel Letter Bender",
-    category: "Channel Letter Equipment",
-    brand: "Accu-Bend",
-    model: "410",
-    price: "$12,495",
-    priceNote: "Computerized bending",
-    image: "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=800&q=80",
-    description: "Computerized automatic channel letter bending machine for aluminum and steel coil, creating precise returns.",
-    features: [
-      "Windows-based software",
-      "Automatic notching",
-      "Multiple flange heights",
-      "Font library included",
-      "DXF file import"
-    ],
-    specifications: {
-      "Material": "Aluminum/Steel coil",
-      "Thickness": "0.016\" - 0.040\"",
-      "Return Heights": "1\" - 7\"",
-      "Speed": "Variable",
-      "Power": "110V/220V"
-    },
-    inStock: true,
-    rating: 4.6,
-    reviews: 34,
-    warranty: "1 year parts & labor",
-    isFeatured: false,
-    isNew: false,
-    isFavorite: false,
-    leadTime: "2-3 weeks"
-  },
-  {
-    id: 5,
-    name: "Miller Millermatic 252 MIG Welder",
-    category: "Welding Equipment",
-    brand: "Miller",
-    model: "Millermatic 252",
-    price: "$3,295",
-    priceNote: "Auto-Set Elite",
-    image: "https://images.unsplash.com/photo-1609205990107-6b8a0e7f7a3e?w=800&q=80",
-    description: "All-in-one MIG welder for fabricating aluminum and steel sign frames and structures.",
-    features: [
-      "Auto-Set Elite technology",
-      "230V single phase",
-      "Spool gun ready",
-      "Aluminum welding capable",
-      "Digital meters"
-    ],
-    specifications: {
-      "Input Power": "208/230V",
-      "Output Range": "30-300A",
-      "Wire Feed Speed": "60-800 IPM",
-      "Wire Diameter": ".023-.045 steel",
-      "Duty Cycle": "40% at 250A"
-    },
-    inStock: true,
-    rating: 4.9,
-    reviews: 167,
-    warranty: "3 years",
-    isFeatured: false,
-    isNew: false,
-    isFavorite: false,
-    leadTime: "Ships in 1-2 days"
-  },
-  {
-    id: 6,
-    name: "Elliott G85 Bucket Truck",
-    category: "Installation Equipment",
-    brand: "Elliott",
-    model: "G85",
-    price: "$145,000",
-    priceNote: "85ft working height",
-    image: "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800&q=80",
-    description: "Heavy-duty aerial work platform for high-rise sign installation and maintenance.",
-    features: [
-      "85ft working height",
-      "500lb platform capacity",
-      "Insulated upper boom",
-      "Platform rotation",
-      "Outriggers included"
-    ],
-    specifications: {
-      "Working Height": "85 feet",
-      "Horizontal Reach": "71 feet",
-      "Platform Capacity": "500 lbs",
-      "Rotation": "360° continuous",
-      "Chassis": "Class 7 or 8"
-    },
-    inStock: false,
-    rating: 4.8,
-    reviews: 23,
-    warranty: "2 years structural",
-    isFeatured: true,
-    isNew: false,
-    isFavorite: false,
-    leadTime: "12-16 weeks"
-  },
-  {
-    id: 7,
-    name: "Stahls Hotronix Fusion IQ Heat Press",
-    category: "Heat Press Equipment",
-    brand: "Stahls",
-    model: "Fusion IQ",
-    price: "$2,995",
-    priceNote: "16\" x 20\" platen",
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
-    description: "Smart heat press with touch screen interface for heat transfer vinyl application on banners and soft signage.",
-    features: [
-      "Touch screen controls",
-      "ThreadSense technology",
-      "Auto-open feature",
-      "Laser alignment system",
-      "Quick change platens"
-    ],
-    specifications: {
-      "Platen Size": "16\" x 20\"",
-      "Temperature": "Up to 500°F",
-      "Pressure": "0-120 PSI",
-      "Timer": "0-999 seconds",
-      "Power": "120V, 15A"
-    },
-    inStock: true,
-    rating: 4.7,
-    reviews: 92,
-    warranty: "2 years",
-    isFeatured: false,
-    isNew: true,
-    isFavorite: false,
-    leadTime: "Ships in 3-5 days"
-  },
-  {
-    id: 8,
-    name: "GBC Titan 1264WF Wide Format Laminator",
-    category: "Laminators",
-    brand: "GBC",
-    model: "Titan 1264WF",
-    price: "$8,495",
-    priceNote: "64\" width capacity",
-    image: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80",
-    description: "Wide format roll laminator for protecting prints, posters, and outdoor signage.",
-    features: [
-      "64-inch laminating width",
-      "Hot and cold lamination",
-      "Variable speed control",
-      "Digital temperature display",
-      "Built-in slitters"
-    ],
-    specifications: {
-      "Max Width": "64 inches",
-      "Max Thickness": "1 inch",
-      "Temperature": "Cold to 320°F",
-      "Speed": "0-30 fpm",
-      "Roll Diameter": "5.5\" max"
-    },
-    inStock: true,
-    rating: 4.5,
-    reviews: 44,
-    warranty: "1 year",
-    isFeatured: false,
-    isNew: false,
-    isFavorite: false,
-    leadTime: "2-3 weeks"
-  },
-  {
-    id: 9,
-    name: "SloanLED VL4 LED Module System",
-    category: "LED & Lighting",
-    brand: "SloanLED",
-    model: "VL4",
-    price: "$3.85/module",
-    priceNote: "Case of 500",
-    image: "https://images.unsplash.com/photo-1565636225786-b51c76051d8a?w=800&q=80",
-    description: "High-output LED modules for channel letters and sign cabinet illumination.",
-    features: [
-      "160° viewing angle",
-      "IP68 waterproof rating",
-      "50,000 hour lifespan",
-      "5-year warranty",
-      "UL recognized"
-    ],
-    specifications: {
-      "Voltage": "12V DC",
-      "Lumens": "100 lm/module",
-      "Colors": "White, Red, Blue, Green",
-      "Spacing": "3-6 inches",
-      "Operating Temp": "-40°F to 185°F"
-    },
-    inStock: true,
-    rating: 4.8,
-    reviews: 203,
-    warranty: "5 years",
-    isFeatured: true,
-    isNew: false,
-    isFavorite: true,
-    leadTime: "Ships same day"
-  },
-  {
-    id: 10,
-    name: "Samsung OM55N-D Outdoor Display",
-    category: "Digital Displays",
-    brand: "Samsung",
-    model: "OM55N-D",
-    price: "$6,995",
-    priceNote: "55\" outdoor rated",
-    image: "https://images.unsplash.com/photo-1611532736579-6b16e2b50449?w=800&q=80",
-    description: "High-brightness outdoor digital display for dynamic signage applications.",
-    features: [
-      "3,500 nit brightness",
-      "IP56 weather rating",
-      "Anti-reflective glass",
-      "Built-in cooling system",
-      "24/7 operation capable"
-    ],
-    specifications: {
-      "Screen Size": "55 inches",
-      "Resolution": "1920 x 1080",
-      "Brightness": "3,500 nits",
-      "Protection": "IP56",
-      "Operating Temp": "-22°F to 122°F"
-    },
-    inStock: false,
-    rating: 4.6,
-    reviews: 31,
-    warranty: "3 years",
-    isFeatured: false,
-    isNew: true,
-    isFavorite: false,
-    leadTime: "4-6 weeks"
-  },
-  {
-    id: 11,
-    name: "SignTools Pro Installation Kit",
-    category: "Installation Tools",
-    brand: "SignTools",
-    model: "PRO-KIT",
-    price: "$895",
-    priceNote: "Complete 45-piece set",
-    image: "https://images.unsplash.com/photo-1609205990107-6b8a0e7f7a3e?w=800&q=80",
-    description: "Professional sign installation toolkit with all essential tools for mounting and installing signs.",
-    features: [
-      "Hammer drill with bits",
-      "Stud finder & level",
-      "Rivet gun & rivets",
-      "Wire fishing tools",
-      "Safety equipment included"
-    ],
-    specifications: {
-      "Pieces": "45 tools",
-      "Case": "Heavy-duty rolling case",
-      "Drill": "18V cordless",
-      "Includes": "All fasteners",
-      "Weight": "65 lbs total"
-    },
-    inStock: true,
-    rating: 4.9,
-    reviews: 78,
-    warranty: "Lifetime on hand tools",
-    isFeatured: false,
-    isNew: false,
-    isFavorite: false,
-    leadTime: "Ships same day"
-  },
-  {
-    id: 12,
-    name: "3M Fall Protection Harness Kit",
-    category: "Safety Equipment",
-    brand: "3M",
-    model: "Protecta PRO",
-    price: "$495",
-    priceNote: "OSHA compliant",
-    image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&q=80",
-    description: "Complete fall protection system for sign installers working at heights.",
-    features: [
-      "Full body harness",
-      "6ft shock absorbing lanyard",
-      "Rope grab & lifeline",
-      "Storage bag included",
-      "ANSI/OSHA compliant"
-    ],
-    specifications: {
-      "Capacity": "420 lbs",
-      "Harness Size": "Universal",
-      "Lanyard": "6ft with rebar hook",
-      "Standards": "OSHA 1926.502",
-      "Material": "Polyester webbing"
-    },
-    inStock: true,
-    rating: 4.8,
-    reviews: 156,
-    warranty: "1 year",
-    isFeatured: false,
-    isNew: false,
-    isFavorite: true,
-    leadTime: "Ships same day"
+// Helper functions to load from localStorage
+const loadCartFromStorage = (): CartItem[] => {
+  try {
+    const stored = localStorage.getItem('equipment-cart');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
   }
-];
+};
 
-const categories = [
-  { name: "All Equipment", icon: ShoppingBagIcon, count: 234 },
-  { name: "Large Format Printers", icon: CpuChipIcon, count: 28 },
-  { name: "Vinyl Cutters", icon: WrenchScrewdriverIcon, count: 19 },
-  { name: "CNC Routers", icon: Squares2X2Icon, count: 15 },
-  { name: "Channel Letter Equipment", icon: WrenchScrewdriverIcon, count: 22 },
-  { name: "Welding Equipment", icon: SparklesIcon, count: 18 },
-  { name: "Installation Equipment", icon: TruckIcon, count: 34 },
-  { name: "Heat Press Equipment", icon: WrenchScrewdriverIcon, count: 12 },
-  { name: "Laminators", icon: Squares2X2Icon, count: 16 },
-  { name: "LED & Lighting", icon: SparklesIcon, count: 42 },
-  { name: "Digital Displays", icon: CpuChipIcon, count: 18 },
-  { name: "Installation Tools", icon: WrenchScrewdriverIcon, count: 26 },
-  { name: "Safety Equipment", icon: ShieldCheckIcon, count: 24 }
-];
-
-const brands = ["Roland", "Graphtec", "ShopSabre", "Accu-Bend", "Miller", "Elliott", "Stahls", "GBC", "SloanLED", "Samsung", "3M", "Epson", "Mimaki", "Summa", "HP", "Multicam"];
+const loadFavoritesFromStorage = (): Set<string> => {
+  try {
+    const stored = localStorage.getItem('equipment-favorites');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
 
 const Equipment = () => {
-  const [selectedCategory, setSelectedCategory] = useState('All Equipment');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [equipmentList, setEquipmentList] = useState(equipment);
   const [sortBy, setSortBy] = useState('featured');
+  const [cartItems, setCartItems] = useState<CartItem[]>(loadCartFromStorage);
+  const [favorites, setFavorites] = useState<Set<string>>(loadFavoritesFromStorage);
+  const [page, setPage] = useState(1);
+  const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
+
+  // Modal states
+  const [selectedEquipment, setSelectedEquipment] = useState<EquipmentType | null>(null);
+  const [showCartDrawer, setShowCartDrawer] = useState(false);
+  const [showWishlistDrawer, setShowWishlistDrawer] = useState(false);
+
+  // Persist cart to localStorage
+  useEffect(() => {
+    localStorage.setItem('equipment-cart', JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  // Persist favorites to localStorage
+  useEffect(() => {
+    localStorage.setItem('equipment-favorites', JSON.stringify(Array.from(favorites)));
+  }, [favorites]);
+
+  // Fetch equipment from API
+  const { data: equipmentData, isLoading: equipmentLoading } = useQuery({
+    queryKey: ['equipment', selectedCategory, searchQuery, sortBy, page, Array.from(selectedBrands)],
+    queryFn: () => getEquipment({
+      category: selectedCategory,
+      search: searchQuery,
+      sort: sortBy as 'featured' | 'price-low' | 'price-high' | 'rating' | 'name',
+      page,
+      limit: 20,
+      brand: selectedBrands.size > 0 ? Array.from(selectedBrands).join(',') : undefined,
+    }),
+  });
+
+  // Fetch stats for category counts and brands
+  const { data: statsData } = useQuery({
+    queryKey: ['equipmentStats'],
+    queryFn: getEquipmentStats,
+    staleTime: 0, // Always refetch to get latest brands/categories
+    refetchOnMount: 'always',
+  });
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     setSearchQuery(searchInput);
+    setPage(1);
   };
 
   const handleClearSearch = () => {
     setSearchInput('');
     setSearchQuery('');
-  };
-  const [cart, setCart] = useState<number[]>([]);
-
-  const toggleFavorite = (equipmentId: number) => {
-    setEquipmentList(equipmentList.map(item =>
-      item.id === equipmentId
-        ? { ...item, isFavorite: !item.isFavorite }
-        : item
-    ));
+    setPage(1);
   };
 
-  const addToCart = (equipmentId: number) => {
-    if (!cart.includes(equipmentId)) {
-      setCart([...cart, equipmentId]);
-    }
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setPage(1);
   };
 
-  const filteredEquipment = equipmentList
-    .filter(item => {
-      if (selectedCategory !== 'All Equipment' && item.category !== selectedCategory) return false;
-      if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !item.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'featured':
-          return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
-        case 'price-low':
-          return parseFloat(a.price.replace(/[^0-9.]/g, '')) - parseFloat(b.price.replace(/[^0-9.]/g, ''));
-        case 'price-high':
-          return parseFloat(b.price.replace(/[^0-9.]/g, '')) - parseFloat(a.price.replace(/[^0-9.]/g, ''));
-        case 'rating':
-          return b.rating - a.rating;
-        case 'name':
-          return a.name.localeCompare(b.name);
-        default:
-          return 0;
+  const toggleBrand = (brand: string) => {
+    setSelectedBrands(prev => {
+      const newBrands = new Set(prev);
+      if (newBrands.has(brand)) {
+        newBrands.delete(brand);
+      } else {
+        newBrands.add(brand);
       }
+      return newBrands;
     });
+    setPage(1);
+  };
+
+  const toggleFavorite = (equipmentId: string) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(equipmentId)) {
+        newFavorites.delete(equipmentId);
+      } else {
+        newFavorites.add(equipmentId);
+      }
+      return newFavorites;
+    });
+  };
+
+  const addToCart = (equipment: EquipmentType) => {
+    setCartItems(prev => {
+      const existing = prev.find(item => item.equipment._id === equipment._id);
+      if (existing) {
+        return prev.map(item =>
+          item.equipment._id === equipment._id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [...prev, { equipment, quantity: 1 }];
+    });
+  };
+
+  const removeFromCart = (equipmentId: string) => {
+    setCartItems(prev => prev.filter(item => item.equipment._id !== equipmentId));
+  };
+
+  const updateCartQuantity = (equipmentId: string, delta: number) => {
+    setCartItems(prev => prev.map(item => {
+      if (item.equipment._id === equipmentId) {
+        const newQuantity = item.quantity + delta;
+        return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
+      }
+      return item;
+    }).filter(item => item.quantity > 0));
+  };
+
+  const isInCart = (equipmentId: string) => {
+    return cartItems.some(item => item.equipment._id === equipmentId);
+  };
+
+  const equipmentList = equipmentData?.data || [];
+  const stats = statsData?.data;
+  const pagination = equipmentData?.pagination;
+
+  // Get favorite items from equipment list
+  const favoriteItems = equipmentList.filter(item => favorites.has(item._id));
+
+  // Build categories list with counts
+  const categories = [
+    { key: 'all', name: 'All Equipment', icon: ShoppingBagIcon, count: stats?.totalEquipment || 0 },
+    ...Object.entries(categoryConfig)
+      .filter(([key]) => key !== 'all')
+      .map(([key, config]) => ({
+        key,
+        name: config.name,
+        icon: config.icon,
+        count: stats?.categoryCounts?.[key] || 0,
+      })),
+  ];
+
+  // Get unique brands from stats
+  const brands = stats?.brands || [];
+
+  // Calculate cart total
+  const cartTotal = cartItems.reduce((total, item) => {
+    const priceStr = item.equipment.price.replace(/[^0-9.]/g, '');
+    const price = parseFloat(priceStr) || 0;
+    return total + (price * item.quantity);
+  }, 0);
+
+  // Equipment Detail Modal
+  const EquipmentDetailModal = () => {
+    if (!selectedEquipment) return null;
+
+    return createPortal(
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedEquipment(null)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Close button */}
+            <button
+              onClick={() => setSelectedEquipment(null)}
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/90 dark:bg-gray-700/90 hover:bg-white dark:hover:bg-gray-700 transition-colors"
+            >
+              <XMarkIcon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
+            </button>
+
+            <div className="overflow-y-auto max-h-[90vh]">
+              <div className="grid grid-cols-1 lg:grid-cols-2">
+                {/* Image */}
+                <div className="relative">
+                  <img
+                    src={selectedEquipment.image || 'https://via.placeholder.com/600x400?text=Equipment'}
+                    alt={selectedEquipment.name}
+                    className="w-full h-64 lg:h-full object-cover"
+                  />
+                  <div className="absolute top-4 left-4 flex gap-2">
+                    {selectedEquipment.isNew && (
+                      <span className="px-3 py-1 bg-green-500 text-white text-sm font-medium rounded-full">New</span>
+                    )}
+                    {selectedEquipment.isFeatured && (
+                      <span className="px-3 py-1 bg-yellow-400 text-yellow-900 text-sm font-medium rounded-full">Featured</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="p-6 lg:p-8">
+                  <div className="mb-4">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{selectedEquipment.brand} • {selectedEquipment.model}</span>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{selectedEquipment.name}</h2>
+                  </div>
+
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="flex items-center">
+                      <StarSolidIcon className="h-5 w-5 text-yellow-400" />
+                      <span className="ml-1 font-semibold text-gray-900 dark:text-gray-100">{selectedEquipment.rating}</span>
+                      <span className="ml-1 text-gray-500 dark:text-gray-400">({selectedEquipment.reviews} reviews)</span>
+                    </div>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
+                      selectedEquipment.availability === 'in-stock'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
+                      {selectedEquipment.availability === 'in-stock' ? 'In Stock' : selectedEquipment.availability === 'pre-order' ? 'Pre-Order' : 'Out of Stock'}
+                    </span>
+                  </div>
+
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">{selectedEquipment.description}</p>
+
+                  <div className="mb-6">
+                    <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{selectedEquipment.price}</p>
+                    {selectedEquipment.priceNote && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{selectedEquipment.priceNote}</p>
+                    )}
+                  </div>
+
+                  {/* Specifications */}
+                  {selectedEquipment.specifications && Object.keys(selectedEquipment.specifications).length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Specifications</h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(selectedEquipment.specifications).map(([key, value]) => (
+                          <div key={key} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{key}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Features */}
+                  {selectedEquipment.features && selectedEquipment.features.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Features</h3>
+                      <ul className="space-y-2">
+                        {selectedEquipment.features.map((feature, index) => (
+                          <li key={index} className="flex items-start">
+                            <CheckIcon className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-gray-600 dark:text-gray-400">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Additional Info */}
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <ShieldCheckIcon className="h-5 w-5 mr-2 text-gray-400" />
+                      <span>Warranty: {selectedEquipment.warranty}</span>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <ClockIcon className="h-5 w-5 mr-2 text-gray-400" />
+                      <span>{selectedEquipment.leadTime}</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => toggleFavorite(selectedEquipment._id)}
+                      className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      {favorites.has(selectedEquipment._id) ? (
+                        <HeartSolidIcon className="h-6 w-6 text-red-500" />
+                      ) : (
+                        <HeartIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        addToCart(selectedEquipment);
+                        setSelectedEquipment(null);
+                        setShowCartDrawer(true);
+                      }}
+                      disabled={selectedEquipment.availability !== 'in-stock'}
+                      className={`flex-1 inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-lg transition-colors ${
+                        selectedEquipment.availability === 'in-stock'
+                          ? 'bg-primary-600 text-white hover:bg-primary-700'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <ShoppingCartIcon className="h-5 w-5 mr-2" />
+                      {isInCart(selectedEquipment._id) ? 'Add Another' : 'Add to Cart'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
+  // Cart Drawer
+  const CartDrawer = () => {
+    if (!showCartDrawer) return null;
+
+    return createPortal(
+      <div className="fixed inset-0 z-50 overflow-hidden">
+        <div className="absolute inset-0 bg-black/50" onClick={() => setShowCartDrawer(false)} />
+        <div className="absolute inset-y-0 right-0 max-w-full flex">
+          <div className="w-screen max-w-md">
+            <div className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-xl">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <ShoppingCartIcon className="h-6 w-6 mr-2" />
+                  Shopping Cart ({cartItems.length})
+                </h2>
+                <button
+                  onClick={() => setShowCartDrawer(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <XMarkIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
+
+              {/* Cart Items */}
+              <div className="flex-1 overflow-y-auto px-6 py-4">
+                {cartItems.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ShoppingCartIcon className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400">Your cart is empty</p>
+                    <button
+                      onClick={() => setShowCartDrawer(false)}
+                      className="mt-4 text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      Continue Shopping
+                    </button>
+                  </div>
+                ) : (
+                  <ul className="space-y-4">
+                    {cartItems.map((item) => (
+                      <li key={item.equipment._id} className="flex gap-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                        <img
+                          src={item.equipment.image || 'https://via.placeholder.com/100'}
+                          alt={item.equipment.name}
+                          className="w-20 h-20 object-cover rounded-lg"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.equipment.name}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{item.equipment.brand}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-1">{item.equipment.price}</p>
+
+                          {/* Quantity Controls */}
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => updateCartQuantity(item.equipment._id, -1)}
+                                className="p-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
+                              >
+                                <MinusIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                              </button>
+                              <span className="w-8 text-center text-sm font-medium text-gray-900 dark:text-gray-100">{item.quantity}</span>
+                              <button
+                                onClick={() => updateCartQuantity(item.equipment._id, 1)}
+                                className="p-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600"
+                              >
+                                <PlusIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                              </button>
+                            </div>
+                            <button
+                              onClick={() => removeFromCart(item.equipment._id)}
+                              className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Footer */}
+              {cartItems.length > 0 && (
+                <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4 space-y-4">
+                  <div className="flex items-center justify-between text-lg">
+                    <span className="font-medium text-gray-900 dark:text-gray-100">Subtotal</span>
+                    <span className="font-bold text-gray-900 dark:text-gray-100">${cartTotal.toLocaleString()}</span>
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Shipping and taxes calculated at checkout.</p>
+                  <button className="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors">
+                    Request Quote
+                  </button>
+                  <button
+                    onClick={() => setShowCartDrawer(false)}
+                    className="w-full py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Continue Shopping
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
+  // Wishlist Drawer
+  const WishlistDrawer = () => {
+    if (!showWishlistDrawer) return null;
+
+    // Get all equipment for wishlist display
+    const wishlistItems = equipmentList.filter(item => favorites.has(item._id));
+
+    return createPortal(
+      <div className="fixed inset-0 z-50 overflow-hidden">
+        <div className="absolute inset-0 bg-black/50" onClick={() => setShowWishlistDrawer(false)} />
+        <div className="absolute inset-y-0 right-0 max-w-full flex">
+          <div className="w-screen max-w-md">
+            <div className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-xl">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <HeartIcon className="h-6 w-6 mr-2" />
+                  Wishlist ({favorites.size})
+                </h2>
+                <button
+                  onClick={() => setShowWishlistDrawer(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <XMarkIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
+
+              {/* Wishlist Items */}
+              <div className="flex-1 overflow-y-auto px-6 py-4">
+                {wishlistItems.length === 0 ? (
+                  <div className="text-center py-12">
+                    <HeartIcon className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400">Your wishlist is empty</p>
+                    <button
+                      onClick={() => setShowWishlistDrawer(false)}
+                      className="mt-4 text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      Browse Equipment
+                    </button>
+                  </div>
+                ) : (
+                  <ul className="space-y-4">
+                    {wishlistItems.map((item) => (
+                      <li key={item._id} className="flex gap-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                        <img
+                          src={item.image || 'https://via.placeholder.com/100'}
+                          alt={item.name}
+                          className="w-20 h-20 object-cover rounded-lg"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{item.name}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{item.brand}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-1">{item.price}</p>
+
+                          <div className="flex items-center gap-2 mt-2">
+                            <button
+                              onClick={() => {
+                                addToCart(item);
+                                toggleFavorite(item._id);
+                              }}
+                              disabled={item.availability !== 'in-stock'}
+                              className={`flex-1 text-xs py-1.5 px-3 rounded font-medium transition-colors ${
+                                item.availability === 'in-stock'
+                                  ? 'bg-primary-600 text-white hover:bg-primary-700'
+                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                              }`}
+                            >
+                              Add to Cart
+                            </button>
+                            <button
+                              onClick={() => toggleFavorite(item._id)}
+                              className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
 
   return (
     <div className="space-y-8">
+      {/* Modals */}
+      <EquipmentDetailModal />
+      <CartDrawer />
+      <WishlistDrawer />
+
       {/* Header Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
         <div className="px-6 py-8 sm:px-8 sm:py-10">
@@ -536,18 +588,24 @@ const Equipment = () => {
               </p>
             </div>
             <div className="mt-4 sm:mt-0 flex items-center gap-3">
-              <button className="relative inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200">
+              <button
+                onClick={() => setShowCartDrawer(true)}
+                className="relative inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200"
+              >
                 <ShoppingCartIcon className="h-5 w-5 mr-2" />
                 Cart
-                {cart.length > 0 && (
+                {cartItems.length > 0 && (
                   <span className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                    {cart.length}
+                    {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
                   </span>
                 )}
               </button>
-              <button className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200">
+              <button
+                onClick={() => setShowWishlistDrawer(true)}
+                className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+              >
                 <HeartIcon className="h-5 w-5 mr-2" />
-                Wishlist
+                Wishlist ({favorites.size})
               </button>
             </div>
           </div>
@@ -628,12 +686,14 @@ const Equipment = () => {
             </div>
             <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
               <button
+                type="button"
                 onClick={() => setViewMode('grid')}
                 className={`p-2 ${viewMode === 'grid' ? 'bg-primary-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'} transition-colors duration-200`}
               >
                 <Squares2X2Icon className="h-5 w-5" />
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode('list')}
                 className={`p-2 ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'} transition-colors duration-200`}
               >
@@ -655,22 +715,22 @@ const Equipment = () => {
               <nav className="space-y-2">
                 {categories.map((category) => (
                   <button
-                    key={category.name}
-                    onClick={() => setSelectedCategory(category.name)}
+                    key={category.key}
+                    onClick={() => handleCategoryChange(category.key)}
                     className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
-                      selectedCategory === category.name
+                      selectedCategory === category.key
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
                     }`}
                   >
                     <div className="flex items-center">
                       <category.icon className={`h-5 w-5 mr-3 ${
-                        selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
+                        selectedCategory === category.key ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
                       }`} />
-                      <span>{category.name}</span>
+                      <span className="text-sm">{category.name}</span>
                     </div>
                     <span className={`text-sm ${
-                      selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
+                      selectedCategory === category.key ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
                     }`}>
                       {category.count}
                     </span>
@@ -681,35 +741,55 @@ const Equipment = () => {
           </div>
 
           {/* Brands Filter */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Brands</h3>
-            <div className="space-y-2">
-              {brands.map((brand) => (
-                <label key={brand} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">{brand}</span>
-                </label>
-              ))}
+          {brands.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Brands</h3>
+                {selectedBrands.size > 0 && (
+                  <button
+                    onClick={() => setSelectedBrands(new Set())}
+                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {brands.map((brand) => {
+                  const brandCount = stats?.brandCounts?.[brand] || 0;
+                  return (
+                    <label key={brand} className="flex items-center justify-between cursor-pointer group">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedBrands.has(brand)}
+                          onChange={() => toggleBrand(brand)}
+                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{brand}</span>
+                      </div>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">({brandCount})</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Quick Links */}
-          <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl p-6 border border-primary-200">
-            <h3 className="text-lg font-semibold text-primary-900 mb-3">Need Help?</h3>
+          <div className="bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-xl p-6 border border-primary-200 dark:border-primary-800">
+            <h3 className="text-lg font-semibold text-primary-900 dark:text-primary-100 mb-3">Need Help?</h3>
             <div className="space-y-2">
-              <button className="w-full text-left text-sm text-primary-700 hover:text-primary-900 font-medium">
+              <button className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium">
                 Equipment Comparison Tool →
               </button>
-              <button className="w-full text-left text-sm text-primary-700 hover:text-primary-900 font-medium">
+              <button className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium">
                 Financing Calculator →
               </button>
-              <button className="w-full text-left text-sm text-primary-700 hover:text-primary-900 font-medium">
+              <button className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium">
                 Request a Quote →
               </button>
-              <button className="w-full text-left text-sm text-primary-700 hover:text-primary-900 font-medium">
+              <button className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium">
                 Live Chat Support →
               </button>
             </div>
@@ -718,18 +798,50 @@ const Equipment = () => {
 
         {/* Equipment Grid/List */}
         <div className="lg:col-span-3">
-          {viewMode === 'grid' ? (
+          {/* Active Filters */}
+          {selectedBrands.size > 0 && (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {Array.from(selectedBrands).map(brand => (
+                <span key={brand} className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 text-sm rounded-full">
+                  {brand}
+                  <button onClick={() => toggleBrand(brand)} className="hover:text-primary-900 dark:hover:text-primary-200">
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Loading State */}
+          {equipmentLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!equipmentLoading && equipmentList.length === 0 && (
+            <div className="text-center py-12">
+              <ShoppingBagIcon className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No equipment found</h3>
+              <p className="text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria</p>
+            </div>
+          )}
+
+          {/* Grid View */}
+          {!equipmentLoading && equipmentList.length > 0 && viewMode === 'grid' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 lg:gap-6">
-              {filteredEquipment.map((item) => (
+              {equipmentList.map((item: EquipmentType) => (
                 <div
-                  key={item.id}
+                  key={item._id}
                   className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300"
                 >
                   <div className="relative">
                     <img
-                      src={item.image}
+                      src={item.image || 'https://via.placeholder.com/400x300?text=Equipment'}
                       alt={item.name}
-                      className="w-full h-64 object-cover"
+                      className="w-full h-64 object-cover cursor-pointer"
+                      onClick={() => setSelectedEquipment(item)}
                     />
                     {item.isNew && (
                       <span className="absolute top-2 left-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500 text-white">
@@ -742,10 +854,10 @@ const Equipment = () => {
                       </span>
                     )}
                     <button
-                      onClick={() => toggleFavorite(item.id)}
+                      onClick={() => toggleFavorite(item._id)}
                       className="absolute bottom-2 right-2 p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors"
                     >
-                      {item.isFavorite ? (
+                      {favorites.has(item._id) ? (
                         <HeartSolidIcon className="h-5 w-5 text-red-500" />
                       ) : (
                         <HeartIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
@@ -755,7 +867,12 @@ const Equipment = () => {
                   <div className="p-6">
                     <div className="mb-2">
                       <span className="text-sm text-gray-500 dark:text-gray-400">{item.brand} • {item.model}</span>
-                      <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mt-1 line-clamp-2">{item.name}</h3>
+                      <h3
+                        className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mt-1 line-clamp-2 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400"
+                        onClick={() => setSelectedEquipment(item)}
+                      >
+                        {item.name}
+                      </h3>
                     </div>
                     <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{item.description}</p>
 
@@ -775,10 +892,10 @@ const Equipment = () => {
 
                     <div className="flex items-center justify-between text-sm mb-4">
                       <span className={`inline-flex items-center ${
-                        item.inStock ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        item.availability === 'in-stock' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                       }`}>
                         <CheckIcon className="h-4 w-4 mr-1" />
-                        {item.inStock ? 'In Stock' : 'Out of Stock'}
+                        {item.availability === 'in-stock' ? 'In Stock' : item.availability === 'pre-order' ? 'Pre-Order' : 'Out of Stock'}
                       </span>
                       <span className="text-gray-500 dark:text-gray-400 flex items-center">
                         <ClockIcon className="h-4 w-4 mr-1" />
@@ -787,39 +904,46 @@ const Equipment = () => {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-2">
-                      <button className="flex-1 inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 text-xs sm:text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                      <button
+                        onClick={() => setSelectedEquipment(item)}
+                        className="flex-1 inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 text-xs sm:text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                      >
                         <InformationCircleIcon className="h-4 w-4 mr-1.5" />
                         View Details
                       </button>
                       <button
-                        onClick={() => addToCart(item.id)}
-                        disabled={!item.inStock}
+                        onClick={() => addToCart(item)}
+                        disabled={item.availability !== 'in-stock'}
                         className={`flex-1 inline-flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
-                          item.inStock
+                          item.availability === 'in-stock'
                             ? 'bg-primary-600 text-white hover:bg-primary-700'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                         }`}
                       >
                         <ShoppingCartIcon className="h-4 w-4 mr-1.5" />
-                        {cart.includes(item.id) ? 'In Cart' : 'Add to Cart'}
+                        {isInCart(item._id) ? 'Add More' : 'Add to Cart'}
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
+          )}
+
+          {/* List View */}
+          {!equipmentLoading && equipmentList.length > 0 && viewMode === 'list' && (
             <div className="space-y-4">
-              {filteredEquipment.map((item) => (
+              {equipmentList.map((item: EquipmentType) => (
                 <div
-                  key={item.id}
+                  key={item._id}
                   className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-all duration-200"
                 >
                   <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                     <img
-                      src={item.image}
+                      src={item.image || 'https://via.placeholder.com/400x300?text=Equipment'}
                       alt={item.name}
-                      className="w-full sm:w-32 h-48 sm:h-32 object-cover rounded-lg flex-shrink-0"
+                      className="w-full sm:w-32 h-48 sm:h-32 object-cover rounded-lg flex-shrink-0 cursor-pointer"
+                      onClick={() => setSelectedEquipment(item)}
                     />
                     <div className="flex-1">
                       <div className="flex flex-col lg:flex-row items-start justify-between gap-4">
@@ -837,15 +961,20 @@ const Equipment = () => {
                               </span>
                             )}
                           </div>
-                          <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{item.name}</h3>
+                          <h3
+                            className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400"
+                            onClick={() => setSelectedEquipment(item)}
+                          >
+                            {item.name}
+                          </h3>
                           <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{item.description}</p>
 
                           <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-sm">
                             <span className={`inline-flex items-center ${
-                              item.inStock ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                              item.availability === 'in-stock' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                             }`}>
                               <CheckIcon className="h-4 w-4 mr-1" />
-                              {item.inStock ? 'In Stock' : 'Out of Stock'}
+                              {item.availability === 'in-stock' ? 'In Stock' : item.availability === 'pre-order' ? 'Pre-Order' : 'Out of Stock'}
                             </span>
                             <span className="text-gray-500 dark:text-gray-400 flex items-center">
                               <ClockIcon className="h-4 w-4 mr-1" />
@@ -869,30 +998,33 @@ const Equipment = () => {
                           )}
                           <div className="flex flex-wrap lg:flex-nowrap items-stretch gap-2">
                             <button
-                              onClick={() => toggleFavorite(item.id)}
+                              onClick={() => toggleFavorite(item._id)}
                               className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                             >
-                              {item.isFavorite ? (
+                              {favorites.has(item._id) ? (
                                 <HeartSolidIcon className="h-5 w-5 text-red-500" />
                               ) : (
                                 <HeartIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                               )}
                             </button>
-                            <button className="flex-1 lg:flex-initial inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors whitespace-nowrap">
+                            <button
+                              onClick={() => setSelectedEquipment(item)}
+                              className="flex-1 lg:flex-initial inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors whitespace-nowrap"
+                            >
                               <InformationCircleIcon className="h-4 w-4 mr-1.5" />
                               View Details
                             </button>
                             <button
-                              onClick={() => addToCart(item.id)}
-                              disabled={!item.inStock}
+                              onClick={() => addToCart(item)}
+                              disabled={item.availability !== 'in-stock'}
                               className={`flex-1 lg:flex-initial inline-flex items-center justify-center px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
-                                item.inStock
+                                item.availability === 'in-stock'
                                   ? 'bg-primary-600 text-white hover:bg-primary-700'
                                   : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                               }`}
                             >
                               <ShoppingCartIcon className="h-4 w-4 mr-1.5" />
-                              {cart.includes(item.id) ? 'In Cart' : 'Add to Cart'}
+                              {isInCart(item._id) ? 'Add More' : 'Add to Cart'}
                             </button>
                           </div>
                         </div>
@@ -904,12 +1036,28 @@ const Equipment = () => {
             </div>
           )}
 
-          {/* Load More */}
-          <div className="text-center mt-8">
-            <button className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200">
-              Load More Equipment
-            </button>
-          </div>
+          {/* Pagination */}
+          {pagination && pagination.pages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
+                Page {page} of {pagination.pages}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                disabled={page === pagination.pages}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

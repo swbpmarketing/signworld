@@ -10,15 +10,22 @@ const videoSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  // For YouTube videos
   youtubeId: {
     type: String,
-    required: [true, 'Please add a YouTube video ID'],
   },
   youtubeUrl: {
     type: String,
-    required: [true, 'Please add a YouTube URL'],
+  },
+  // For uploaded videos
+  videoUrl: {
+    type: String,
+  },
+  videoSize: {
+    type: Number,
   },
   thumbnail: String,
+  thumbnailUrl: String,
   duration: String,
   presenter: {
     name: String,
@@ -46,6 +53,10 @@ const videoSchema = new mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'User',
   }],
+  uploadedBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+  },
   isActive: {
     type: Boolean,
     default: true,
@@ -68,6 +79,14 @@ const videoSchema = new mongoose.Schema({
   },
 });
 
+// Custom validation: must have either youtubeUrl or videoUrl
+videoSchema.pre('validate', function(next) {
+  if (!this.youtubeUrl && !this.videoUrl) {
+    this.invalidate('youtubeUrl', 'Please provide either a YouTube URL or upload a video file');
+  }
+  next();
+});
+
 // Extract YouTube ID from URL if needed
 videoSchema.pre('save', function(next) {
   if (this.youtubeUrl && !this.youtubeId) {
@@ -76,12 +95,12 @@ videoSchema.pre('save', function(next) {
       this.youtubeId = match[1];
     }
   }
-  
-  // Set thumbnail if not provided
-  if (this.youtubeId && !this.thumbnail) {
+
+  // Set thumbnail from YouTube if not provided and is YouTube video
+  if (this.youtubeId && !this.thumbnail && !this.thumbnailUrl) {
     this.thumbnail = `https://img.youtube.com/vi/${this.youtubeId}/maxresdefault.jpg`;
   }
-  
+
   next();
 });
 

@@ -15,9 +15,29 @@ const equipmentSchema = new mongoose.Schema({
     required: [true, 'Please add a brand'],
     trim: true,
   },
+  model: {
+    type: String,
+    trim: true,
+  },
   category: {
     type: String,
-    enum: ['printers', 'cutters', 'laminators', 'routers', 'software', 'materials', 'tools', 'other'],
+    enum: [
+      'large-format-printers',
+      'vinyl-cutters',
+      'cnc-routers',
+      'channel-letter',
+      'welding',
+      'vehicles',
+      'heat-transfer',
+      'laminators',
+      'led-lighting',
+      'digital-displays',
+      'hand-tools',
+      'safety-equipment',
+      'software',
+      'materials',
+      'other'
+    ],
     required: true,
   },
   specifications: {
@@ -32,31 +52,60 @@ const equipmentSchema = new mongoose.Schema({
       default: false,
     },
   }],
+  // Primary image URL for easy access
+  image: {
+    type: String,
+  },
   documents: [{
     title: String,
     fileUrl: String,
     fileType: String,
   }],
   price: {
-    min: Number,
-    max: Number,
-    currency: {
-      type: String,
-      default: 'USD',
-    },
-    note: String,
+    type: String,
+    required: true,
+  },
+  priceNote: {
+    type: String,
   },
   availability: {
     type: String,
     enum: ['in-stock', 'out-of-stock', 'pre-order', 'discontinued'],
     default: 'in-stock',
   },
+  // Rating system
+  rating: {
+    type: Number,
+    min: 0,
+    max: 5,
+    default: 0,
+  },
+  reviews: {
+    type: Number,
+    default: 0,
+  },
+  // Additional info
+  warranty: {
+    type: String,
+    default: '1 Year',
+  },
+  leadTime: {
+    type: String,
+    default: 'Ships in 1-2 weeks',
+  },
+  features: [{
+    type: String,
+    trim: true,
+  }],
   inquiries: [{
     user: {
       type: mongoose.Schema.ObjectId,
       ref: 'User',
     },
+    name: String,
+    email: String,
     company: String,
+    phone: String,
     message: String,
     status: {
       type: String,
@@ -68,10 +117,6 @@ const equipmentSchema = new mongoose.Schema({
       default: Date.now,
     },
   }],
-  features: [{
-    type: String,
-    trim: true,
-  }],
   relatedProducts: [{
     type: mongoose.Schema.ObjectId,
     ref: 'Equipment',
@@ -81,6 +126,10 @@ const equipmentSchema = new mongoose.Schema({
     default: true,
   },
   isFeatured: {
+    type: Boolean,
+    default: false,
+  },
+  isNew: {
     type: Boolean,
     default: false,
   },
@@ -103,5 +152,8 @@ equipmentSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
+
+// Index for search
+equipmentSchema.index({ name: 'text', description: 'text', brand: 'text' });
 
 module.exports = mongoose.model('Equipment', equipmentSchema);

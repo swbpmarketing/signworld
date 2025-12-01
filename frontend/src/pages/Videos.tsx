@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   VideoCameraIcon,
   PlayIcon,
@@ -15,171 +17,179 @@ import {
   ArrowTrendingUpIcon,
   PlayCircleIcon,
   XMarkIcon,
+  PlusIcon,
+  CloudArrowUpIcon,
+  LinkIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolidIcon, PlayIcon as PlaySolidIcon, StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
+import { useAuth } from '../context/AuthContext';
+import { getVideos, getVideoStats, createVideo, uploadVideo, deleteVideo, incrementVideoView } from '../services/videoService';
+import type { Video as VideoType, CreateVideoData } from '../services/videoService';
+import { getPlaylists } from '../services/playlistService';
+import type { Playlist } from '../services/playlistService';
+import toast from 'react-hot-toast';
 
-interface Video {
-  id: number;
-  title: string;
-  description: string;
-  thumbnail: string;
-  youtubeId: string;
-  youtubeUrl: string;
-  duration: string;
-  views: number;
-  uploadDate: string;
-  category: string;
-  instructor: string;
-  level: 'Beginner' | 'Intermediate' | 'Advanced';
-  rating: number;
-  isBookmarked: boolean;
-  isFeatured: boolean;
-  isNew: boolean;
-  tags: string[];
+interface VideoUI extends VideoType {
+  isBookmarked?: boolean;
+  isNew?: boolean;
+  level?: 'Beginner' | 'Intermediate' | 'Advanced';
+  instructor?: string;
+  uploadDate?: string;
+  thumbnailUrl?: string;
 }
 
-// Sample YouTube videos for sign industry
-const videos: Video[] = [
-  {
-    id: 1,
-    title: "How to Install Vinyl Lettering on Windows - Sign Making Tutorial",
-    description: "Learn the professional techniques for applying vinyl lettering to windows and glass surfaces. Perfect for beginners in the sign making industry.",
-    thumbnail: "https://img.youtube.com/vi/XLsJvlf_EBM/maxresdefault.jpg",
-    youtubeId: "XLsJvlf_EBM",
-    youtubeUrl: "https://www.youtube.com/watch?v=XLsJvlf_EBM",
-    duration: "12:47",
-    views: 45832,
-    uploadDate: "2 weeks ago",
-    category: "Vehicle Wraps",
-    instructor: "Sign Pro Academy",
-    level: "Beginner",
-    rating: 4.8,
-    isBookmarked: false,
-    isFeatured: true,
-    isNew: true,
-    tags: ["vinyl", "installation", "windows"]
-  },
-  {
-    id: 2,
-    title: "LED Sign Manufacturing Process - Behind the Scenes",
-    description: "Take a detailed look at how LED signs are manufactured from start to finish. Understand the technology behind modern digital signage.",
-    thumbnail: "https://img.youtube.com/vi/HRqO-F7x4mM/maxresdefault.jpg",
-    youtubeId: "HRqO-F7x4mM",
-    youtubeUrl: "https://www.youtube.com/watch?v=HRqO-F7x4mM",
-    duration: "8:23",
-    views: 28921,
-    uploadDate: "1 month ago",
-    category: "Technical Training",
-    instructor: "LED Sign Tech",
-    level: "Intermediate",
-    rating: 4.9,
-    isBookmarked: true,
-    isFeatured: false,
-    isNew: false,
-    tags: ["LED", "manufacturing", "technology"]
-  },
-  {
-    id: 3,
-    title: "Vehicle Wrap Design & Installation - Full Process",
-    description: "Watch a complete vehicle wrap project from design concept to final installation. Learn tips and tricks from industry professionals.",
-    thumbnail: "https://img.youtube.com/vi/KYl7U9bOv14/maxresdefault.jpg",
-    youtubeId: "KYl7U9bOv14",
-    youtubeUrl: "https://www.youtube.com/watch?v=KYl7U9bOv14",
-    duration: "15:42",
-    views: 67234,
-    uploadDate: "3 weeks ago",
-    category: "Vehicle Wraps",
-    instructor: "Wrap Masters",
-    level: "Advanced",
-    rating: 4.9,
-    isBookmarked: false,
-    isFeatured: true,
-    isNew: false,
-    tags: ["vehicle wrap", "design", "installation"]
-  },
-  {
-    id: 4,
-    title: "Channel Letter Signs - Complete Installation Guide",
-    description: "Step-by-step guide on installing illuminated channel letter signs. Covers electrical connections, mounting, and safety procedures.",
-    thumbnail: "https://img.youtube.com/vi/P9cOmvuY8cY/maxresdefault.jpg",
-    youtubeId: "P9cOmvuY8cY",
-    youtubeUrl: "https://www.youtube.com/watch?v=P9cOmvuY8cY",
-    duration: "22:15",
-    views: 34521,
-    uploadDate: "2 months ago",
-    category: "Installation",
-    instructor: "Sign Installation Pro",
-    level: "Intermediate",
-    rating: 4.7,
-    isBookmarked: false,
-    isFeatured: false,
-    isNew: false,
-    tags: ["channel letters", "installation", "electrical"]
-  },
-  {
-    id: 5,
-    title: "Digital Signage Content Creation Tips",
-    description: "Learn how to create engaging content for digital signs. Covers design principles, software tools, and best practices.",
-    thumbnail: "https://img.youtube.com/vi/lSSqD-s1hXA/maxresdefault.jpg",
-    youtubeId: "lSSqD-s1hXA",
-    youtubeUrl: "https://www.youtube.com/watch?v=lSSqD-s1hXA",
-    duration: "10:35",
-    views: 19876,
-    uploadDate: "1 week ago",
-    category: "Business Growth",
-    instructor: "Digital Sign Expert",
-    level: "Beginner",
-    rating: 4.6,
-    isBookmarked: false,
-    isFeatured: false,
-    isNew: true,
-    tags: ["digital signage", "content", "design"]
-  },
-  {
-    id: 6,
-    title: "Sign Business Marketing Strategies That Work",
-    description: "Proven marketing strategies specifically for sign companies. Learn how to attract more customers and grow your business.",
-    thumbnail: "https://img.youtube.com/vi/rH5L_YaUfqw/maxresdefault.jpg",
-    youtubeId: "rH5L_YaUfqw",
-    youtubeUrl: "https://www.youtube.com/watch?v=rH5L_YaUfqw",
-    duration: "18:20",
-    views: 23654,
-    uploadDate: "3 weeks ago",
-    category: "Business Growth",
-    instructor: "Sign Business Coach",
-    level: "Intermediate",
-    rating: 4.8,
-    isBookmarked: false,
-    isFeatured: false,
-    isNew: false,
-    tags: ["marketing", "business", "growth"]
-  }
-];
+const categoryMapping: { [key: string]: string } = {
+  'All Videos': 'all',
+  'Vehicle Wraps': 'marketing',
+  'Technical Training': 'technical',
+  'Business Growth': 'business',
+  'Installation': 'training',
+  'Design Tips': 'other',
+};
+
+const backendToUICategory: { [key: string]: string } = {
+  'training': 'Installation',
+  'marketing': 'Vehicle Wraps',
+  'technical': 'Technical Training',
+  'business': 'Business Growth',
+  'product-demo': 'Product Demo',
+  'webinar': 'Webinar',
+  'other': 'Design Tips',
+};
 
 const categories = [
-  { name: "All Videos", icon: VideoCameraIcon, count: 156 },
-  { name: "Vehicle Wraps", icon: ArrowTrendingUpIcon, count: 34 },
-  { name: "Technical Training", icon: WrenchScrewdriverIcon, count: 45 },
-  { name: "Business Growth", icon: LightBulbIcon, count: 28 },
-  { name: "Installation", icon: SparklesIcon, count: 23 },
-  { name: "Design Tips", icon: AcademicCapIcon, count: 26 }
+  { name: "All Videos", icon: VideoCameraIcon, count: 0 },
+  { name: "Vehicle Wraps", icon: ArrowTrendingUpIcon, count: 0 },
+  { name: "Technical Training", icon: WrenchScrewdriverIcon, count: 0 },
+  { name: "Business Growth", icon: LightBulbIcon, count: 0 },
+  { name: "Installation", icon: SparklesIcon, count: 0 },
+  { name: "Design Tips", icon: AcademicCapIcon, count: 0 }
 ];
 
-const playlists = [
-  { name: "New Owner Essentials", videos: 12, duration: "4h 30m" },
-  { name: "Advanced Techniques", videos: 8, duration: "3h 15m" },
-  { name: "Marketing Mastery", videos: 6, duration: "2h 45m" },
-  { name: "Equipment Maintenance", videos: 10, duration: "3h 50m" }
-];
 
 const Videos = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+
   const [selectedCategory, setSelectedCategory] = useState('All Videos');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [videoList, setVideoList] = useState(videos);
+  const [selectedVideo, setSelectedVideo] = useState<VideoUI | null>(null);
   const [sortBy, setSortBy] = useState('newest');
+  const [bookmarkedVideos, setBookmarkedVideos] = useState<Set<string>>(new Set());
+
+  // Upload modal state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadType, setUploadType] = useState<'youtube' | 'file'>('youtube');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [formData, setFormData] = useState<CreateVideoData>({
+    title: '',
+    description: '',
+    youtubeUrl: '',
+    category: 'other',
+    duration: '',
+    tags: [],
+    presenter: { name: '', title: '', company: '' },
+    isFeatured: false,
+  });
+  const [tagsInput, setTagsInput] = useState('');
+
+  // Fetch videos
+  const { data: videosData, isLoading: videosLoading } = useQuery({
+    queryKey: ['videos', selectedCategory, searchQuery, sortBy],
+    queryFn: () => getVideos({
+      category: categoryMapping[selectedCategory] || 'all',
+      search: searchQuery,
+      sort: sortBy,
+      limit: 50,
+    }),
+  });
+
+  // Fetch stats
+  const { data: statsData } = useQuery({
+    queryKey: ['videoStats'],
+    queryFn: getVideoStats,
+  });
+
+  // Fetch playlists
+  const { data: playlistsData } = useQuery({
+    queryKey: ['playlists'],
+    queryFn: () => getPlaylists({ limit: 10 }),
+  });
+
+  // Create video mutation (YouTube)
+  const createVideoMutation = useMutation({
+    mutationFn: createVideo,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
+      queryClient.invalidateQueries({ queryKey: ['videoStats'] });
+      toast.success('Video added successfully!');
+      resetForm();
+      setShowUploadModal(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add video');
+    },
+  });
+
+  // Upload video mutation
+  const uploadVideoMutation = useMutation({
+    mutationFn: async ({ file, metadata }: { file: File; metadata: CreateVideoData }) => {
+      setIsUploading(true);
+      return uploadVideo(file, metadata, setUploadProgress);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
+      queryClient.invalidateQueries({ queryKey: ['videoStats'] });
+      toast.success('Video uploaded successfully!');
+      resetForm();
+      setShowUploadModal(false);
+      setIsUploading(false);
+      setUploadProgress(0);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to upload video');
+      setIsUploading(false);
+      setUploadProgress(0);
+    },
+  });
+
+  // Delete video mutation
+  const deleteVideoMutation = useMutation({
+    mutationFn: deleteVideo,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
+      queryClient.invalidateQueries({ queryKey: ['videoStats'] });
+      toast.success('Video deleted successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete video');
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      youtubeUrl: '',
+      category: 'other',
+      duration: '',
+      tags: [],
+      presenter: { name: '', title: '', company: '' },
+      isFeatured: false,
+    });
+    setTagsInput('');
+    setVideoFile(null);
+    setThumbnailFile(null);
+    setUploadType('youtube');
+  };
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -190,51 +200,95 @@ const Videos = () => {
     setSearchInput('');
     setSearchQuery('');
   };
-  const [isLoading, setIsLoading] = useState(false);
 
-  const toggleBookmark = (videoId: number) => {
-    setVideoList(videoList.map(video =>
-      video.id === videoId
-        ? { ...video, isBookmarked: !video.isBookmarked }
-        : video
-    ));
+  const toggleBookmark = (videoId: string) => {
+    setBookmarkedVideos(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(videoId)) {
+        newSet.delete(videoId);
+      } else {
+        newSet.add(videoId);
+      }
+      return newSet;
+    });
   };
 
-  const openVideo = (video: Video) => {
+  const openVideo = async (video: VideoUI) => {
     setSelectedVideo(video);
-    // Track view
-    setVideoList(videoList.map(v => 
-      v.id === video.id ? { ...v, views: v.views + 1 } : v
-    ));
+    // Increment view count
+    try {
+      await incrementVideoView(video._id);
+    } catch (error) {
+      console.error('Failed to increment view count:', error);
+    }
   };
 
   const closeVideo = () => {
     setSelectedVideo(null);
   };
 
-  const filteredVideos = videoList
-    .filter(video => {
-      if (selectedCategory !== 'All Videos' && video.category !== selectedCategory) return false;
-      if (searchQuery && !video.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !video.description.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'newest':
-          return new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime();
-        case 'oldest':
-          return new Date(a.uploadDate).getTime() - new Date(b.uploadDate).getTime();
-        case 'popular':
-          return b.views - a.views;
-        case 'rating':
-          return b.rating - a.rating;
-        case 'duration':
-          return parseInt(b.duration) - parseInt(a.duration);
-        default:
-          return 0;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.title) {
+      toast.error('Please enter a title');
+      return;
+    }
+
+    const tags = tagsInput.split(',').map(t => t.trim()).filter(t => t);
+
+    if (uploadType === 'youtube') {
+      if (!formData.youtubeUrl) {
+        toast.error('Please enter a YouTube URL');
+        return;
       }
-    });
+      createVideoMutation.mutate({
+        ...formData,
+        tags,
+      });
+    } else {
+      if (!videoFile) {
+        toast.error('Please select a video file');
+        return;
+      }
+      uploadVideoMutation.mutate({
+        file: videoFile,
+        metadata: {
+          ...formData,
+          tags,
+        },
+      });
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setVideoFile(file);
+    }
+  };
+
+  const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setThumbnailFile(file);
+    }
+  };
+
+  // Transform API data to UI format
+  const videos: VideoUI[] = (videosData?.data || []).map((video: VideoType) => ({
+    ...video,
+    isBookmarked: bookmarkedVideos.has(video._id),
+    isNew: new Date(video.createdAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000,
+    level: 'Intermediate' as const,
+    instructor: video.presenter?.name || 'Sign Pro Academy',
+    uploadDate: new Date(video.publishedAt || video.createdAt).toLocaleDateString(),
+  }));
+
+  const featuredVideo = videos.find(v => v.isFeatured) || videos[0];
+  const stats = statsData?.data;
+
+  const isAdmin = user?.role === 'admin';
 
   return (
     <div className="space-y-8">
@@ -251,10 +305,21 @@ const Videos = () => {
                 Expert tutorials and training videos to grow your business
               </p>
             </div>
-            <button className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200">
-              <PlayCircleIcon className="h-5 w-5 mr-2" />
-              Watch Intro
-            </button>
+            <div className="flex gap-2 mt-4 sm:mt-0">
+              {isAdmin && (
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Add Video
+                </button>
+              )}
+              <button className="inline-flex items-center px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200">
+                <PlayCircleIcon className="h-5 w-5 mr-2" />
+                Watch Intro
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -263,22 +328,22 @@ const Videos = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <VideoCameraIcon className="h-8 w-8 text-primary-600 dark:text-primary-500 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">156</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats?.totalVideos || 0}</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">Total Videos</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <ClockIcon className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">48h</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats?.totalDuration || '0h'}</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">Total Content</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <EyeIcon className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">234K</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats?.totalViews?.toLocaleString() || 0}</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">Total Views</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <StarIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">4.8</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats?.avgRating || '0.0'}</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">Avg. Rating</p>
         </div>
       </div>
@@ -326,7 +391,6 @@ const Videos = () => {
                 { value: 'oldest', label: 'Oldest' },
                 { value: 'popular', label: 'Most Viewed' },
                 { value: 'rating', label: 'Top Rated' },
-                { value: 'duration', label: 'Longest' },
               ]}
             />
           </div>
@@ -361,7 +425,7 @@ const Videos = () => {
                     <span className={`text-sm ${
                       selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
                     }`}>
-                      {category.count}
+                      {stats?.categoryCounts?.[categoryMapping[category.name]] || 0}
                     </span>
                   </button>
                 ))}
@@ -373,24 +437,30 @@ const Videos = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Popular Playlists</h3>
             <div className="space-y-3">
-              {playlists.map((playlist) => (
-                <button
-                  key={playlist.name}
-                  className="w-full text-left p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
-                        {playlist.name}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {playlist.videos} videos • {playlist.duration}
-                      </p>
+              {playlistsData?.data && playlistsData.data.length > 0 ? (
+                playlistsData.data.map((playlist: Playlist) => (
+                  <button
+                    key={playlist._id}
+                    className="w-full text-left p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                          {playlist.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {playlist.videoCount} videos • {playlist.duration}
+                        </p>
+                      </div>
+                      <ChevronRightIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 flex-shrink-0 mt-0.5" />
                     </div>
-                    <ChevronRightIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 flex-shrink-0 mt-0.5" />
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                  No playlists available yet
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -398,45 +468,57 @@ const Videos = () => {
         {/* Video Grid */}
         <div className="lg:col-span-3">
           {/* Featured Video */}
-          {!searchQuery && selectedCategory === 'All Videos' && (
+          {!searchQuery && selectedCategory === 'All Videos' && featuredVideo && (
             <div className="mb-8">
               <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Featured Video</h3>
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                 <div className="aspect-w-16 aspect-h-9 relative group cursor-pointer">
                   <img
-                    src={videos[0].thumbnail}
-                    alt={videos[0].title}
+                    src={featuredVideo.thumbnail || featuredVideo.thumbnailUrl || 'https://via.placeholder.com/640x360?text=Video'}
+                    alt={featuredVideo.title}
                     className="w-full h-80 object-cover"
                   />
                   <div
-                    onClick={() => openVideo(videos[0])}
+                    onClick={() => openVideo(featuredVideo)}
                     className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <PlaySolidIcon className="h-16 w-16 text-white" />
                   </div>
                   <div className="absolute top-4 left-4">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-400 text-yellow-900">
-                      ⭐ Featured
+                      Featured
                     </span>
                   </div>
-                  <div className="absolute bottom-4 right-4">
-                    <span className="inline-flex items-center px-2 py-1 rounded bg-black bg-opacity-75 text-white text-sm">
-                      {videos[0].duration}
-                    </span>
-                  </div>
+                  {featuredVideo.duration && (
+                    <div className="absolute bottom-4 right-4">
+                      <span className="inline-flex items-center px-2 py-1 rounded bg-black bg-opacity-75 text-white text-sm">
+                        {featuredVideo.duration}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="p-6">
-                  <h4 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">{videos[0].title}</h4>
-                  <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-4 line-clamp-2">{videos[0].description}</p>
+                  <div className="flex items-start justify-between">
+                    <h4 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2 flex-1">{featuredVideo.title}</h4>
+                    {isAdmin && (
+                      <button
+                        onClick={() => deleteVideoMutation.mutate(featuredVideo._id)}
+                        className="ml-2 p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-4 line-clamp-2">{featuredVideo.description}</p>
                   <div className="flex items-center justify-between">
                     <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-500 dark:text-gray-400">
-                      <span>{videos[0].instructor}</span>
+                      <span>{featuredVideo.instructor}</span>
                       <span className="hidden sm:inline">•</span>
-                      <span>{videos[0].views.toLocaleString()} views</span>
+                      <span>{featuredVideo.views?.toLocaleString() || 0} views</span>
                       <span className="hidden sm:inline">•</span>
-                      <span>{videos[0].uploadDate}</span>
+                      <span>{featuredVideo.uploadDate}</span>
                     </div>
                     <button
-                      onClick={() => openVideo(videos[0])}
+                      onClick={() => openVideo(featuredVideo)}
                       className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors">
                       <PlayIcon className="h-4 w-4 mr-2" />
                       Watch Now
@@ -447,19 +529,26 @@ const Videos = () => {
             </div>
           )}
 
+          {/* Loading State */}
+          {videosLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+            </div>
+          )}
+
           {/* Video Grid */}
-          {!isLoading && (
+          {!videosLoading && videos.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
-            {filteredVideos.map((video) => (
+            {videos.map((video) => (
               <div
-                key={video.id}
+                key={video._id}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
               >
-                <div 
+                <div
                   onClick={() => openVideo(video)}
                   className="aspect-w-16 aspect-h-9 relative group">
                   <img
-                    src={video.thumbnail}
+                    src={video.thumbnail || video.thumbnailUrl || 'https://via.placeholder.com/640x360?text=Video'}
                     alt={video.title}
                     className="w-full h-48 object-cover"
                   />
@@ -473,30 +562,45 @@ const Videos = () => {
                       </span>
                     </div>
                   )}
-                  <div className="absolute bottom-2 right-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded bg-black bg-opacity-75 text-white text-xs">
-                      {video.duration}
-                    </span>
-                  </div>
+                  {video.duration && (
+                    <div className="absolute bottom-2 right-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded bg-black bg-opacity-75 text-white text-xs">
+                        {video.duration}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-2 gap-2">
                     <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 flex-1">
                       {video.title}
                     </h4>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleBookmark(video.id);
-                      }}
-                      className="ml-2 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                    >
-                      {video.isBookmarked ? (
-                        <BookmarkSolidIcon className="h-5 w-5 text-primary-600 dark:text-primary-500" />
-                      ) : (
-                        <BookmarkIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                    <div className="flex items-center">
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteVideoMutation.mutate(video._id);
+                          }}
+                          className="ml-1 p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
                       )}
-                    </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleBookmark(video._id);
+                        }}
+                        className="ml-1 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      >
+                        {video.isBookmarked ? (
+                          <BookmarkSolidIcon className="h-5 w-5 text-primary-600 dark:text-primary-500" />
+                        ) : (
+                          <BookmarkIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 mb-3">
@@ -507,7 +611,9 @@ const Videos = () => {
                     }`}>
                       {video.level}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{video.category}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {backendToUICategory[video.category] || video.category}
+                    </span>
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
@@ -515,11 +621,11 @@ const Videos = () => {
                       <span>{video.instructor}</span>
                       <div className="flex items-center">
                         <StarSolidIcon className="h-4 w-4 text-yellow-400 mr-1" />
-                        <span>{video.rating}</span>
+                        <span>{video.likes?.length || 0}</span>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
-                      <span className="whitespace-nowrap">{video.views.toLocaleString()} views</span>
+                      <span className="whitespace-nowrap">{video.views?.toLocaleString() || 0} views</span>
                       <span className="whitespace-nowrap">{video.uploadDate}</span>
                     </div>
                   </div>
@@ -530,39 +636,47 @@ const Videos = () => {
           )}
 
           {/* Empty State */}
-          {!isLoading && filteredVideos.length === 0 && (
+          {!videosLoading && videos.length === 0 && (
             <div className="text-center py-12">
               <VideoCameraIcon className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No videos found</h3>
-              <p className="text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria</p>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">Try adjusting your search or filter criteria</p>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Add Your First Video
+                </button>
+              )}
             </div>
           )}
-
-          {/* Load More */}
-          <div className="text-center mt-8">
-            <button className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200">
-              Load More Videos
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Video Modal */}
-      {selectedVideo && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
-          <div className="relative w-full max-w-6xl mx-auto">
-            {/* Close Button */}
-            <button
-              onClick={closeVideo}
-              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
-            >
-              <XMarkIcon className="h-8 w-8" />
-            </button>
-            
-            {/* Video Player Container */}
-            <div className="relative bg-black rounded-lg overflow-hidden shadow-2xl">
-              {/* YouTube Iframe */}
-              <div className="relative pb-[56.25%]">
+      {/* Video Modal - Full Screen Overlay using Portal */}
+      {selectedVideo && createPortal(
+        <div
+          className="fixed inset-0 bg-black flex flex-col"
+          style={{ zIndex: 9999, width: '100vw', height: '100vh' }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeVideo();
+          }}
+        >
+          {/* Close Button - Fixed in top right corner */}
+          <button
+            onClick={closeVideo}
+            className="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+          >
+            <XMarkIcon className="h-8 w-8" />
+          </button>
+
+          {/* Video Player Container - Takes full screen */}
+          <div className="flex-1 flex flex-col h-full">
+            {/* Video Player - YouTube or Native */}
+            <div className="flex-1 relative bg-black">
+              {selectedVideo.youtubeId ? (
                 <iframe
                   className="absolute inset-0 w-full h-full"
                   src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1&rel=0&modestbranding=1`}
@@ -571,44 +685,338 @@ const Videos = () => {
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
-              </div>
-              
-              {/* Video Info */}
-              <div className="bg-gray-900 p-6">
-                <h3 className="text-xl font-bold text-white mb-2">{selectedVideo.title}</h3>
-                <p className="text-gray-300 mb-4">{selectedVideo.description}</p>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
-                  <span className="flex items-center">
-                    <VideoCameraIcon className="h-4 w-4 mr-1" />
-                    {selectedVideo.instructor}
-                  </span>
-                  <span className="flex items-center">
-                    <EyeIcon className="h-4 w-4 mr-1" />
-                    {selectedVideo.views.toLocaleString()} views
-                  </span>
+              ) : selectedVideo.videoUrl ? (
+                <video
+                  className="absolute inset-0 w-full h-full object-contain"
+                  src={selectedVideo.videoUrl}
+                  controls
+                  autoPlay
+                >
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+                  <p className="text-white">Video not available</p>
+                </div>
+              )}
+            </div>
+
+            {/* Video Info - Bottom bar */}
+            <div className="bg-gray-900 px-6 py-4 flex-shrink-0">
+              <h3 className="text-lg font-bold text-white mb-1">{selectedVideo.title}</h3>
+              {selectedVideo.description && (
+                <p className="text-gray-400 text-sm mb-3 line-clamp-2">{selectedVideo.description}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
+                <span className="flex items-center">
+                  <VideoCameraIcon className="h-4 w-4 mr-1" />
+                  {selectedVideo.instructor}
+                </span>
+                <span className="flex items-center">
+                  <EyeIcon className="h-4 w-4 mr-1" />
+                  {selectedVideo.views?.toLocaleString() || 0} views
+                </span>
+                {selectedVideo.duration && (
                   <span className="flex items-center">
                     <ClockIcon className="h-4 w-4 mr-1" />
                     {selectedVideo.duration}
                   </span>
-                  <span className="flex items-center">
-                    <StarIcon className="h-4 w-4 mr-1" />
-                    {selectedVideo.rating} rating
-                  </span>
-                </div>
-                
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {selectedVideo.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-800 text-gray-300"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+                )}
+                <span className="flex items-center">
+                  <StarIcon className="h-4 w-4 mr-1" />
+                  {selectedVideo.likes?.length || 0} likes
+                </span>
+                {/* Tags inline */}
+                {selectedVideo.tags && selectedVideo.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedVideo.tags.slice(0, 3).map((tag, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-800 text-gray-300"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Add New Video</h2>
+                <button
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    resetForm();
+                  }}
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Upload Type Toggle */}
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setUploadType('youtube')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    uploadType === 'youtube'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <LinkIcon className="h-5 w-5" />
+                  YouTube Link
+                </button>
+                <button
+                  onClick={() => setUploadType('file')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    uploadType === 'file'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <CloudArrowUpIcon className="h-5 w-5" />
+                  Upload File
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                  placeholder="Enter video title"
+                  required
+                />
+              </div>
+
+              {/* YouTube URL or File Upload */}
+              {uploadType === 'youtube' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    YouTube URL *
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.youtubeUrl}
+                    onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Video File *
+                    </label>
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-primary-500 transition-colors"
+                    >
+                      {videoFile ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <VideoCameraIcon className="h-8 w-8 text-primary-600" />
+                          <span className="text-gray-700 dark:text-gray-300">{videoFile.name}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-600 dark:text-gray-400">Click to upload video</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">MP4, WebM, MOV up to 500MB</p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Thumbnail (optional)
+                    </label>
+                    <div
+                      onClick={() => thumbnailInputRef.current?.click()}
+                      className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-primary-500 transition-colors"
+                    >
+                      {thumbnailFile ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-gray-700 dark:text-gray-300">{thumbnailFile.name}</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload thumbnail</p>
+                      )}
+                    </div>
+                    <input
+                      ref={thumbnailInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleThumbnailSelect}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                  placeholder="Enter video description"
+                />
+              </div>
+
+              {/* Category and Duration */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="training">Installation</option>
+                    <option value="marketing">Vehicle Wraps</option>
+                    <option value="technical">Technical Training</option>
+                    <option value="business">Business Growth</option>
+                    <option value="product-demo">Product Demo</option>
+                    <option value="webinar">Webinar</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Duration
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.duration}
+                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., 12:30"
+                  />
+                </div>
+              </div>
+
+              {/* Presenter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Presenter Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.presenter?.name || ''}
+                  onChange={(e) => setFormData({ ...formData, presenter: { ...formData.presenter, name: e.target.value } })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                  placeholder="Enter presenter name"
+                />
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tags (comma separated)
+                </label>
+                <input
+                  type="text"
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                  placeholder="e.g., vinyl, installation, tutorial"
+                />
+              </div>
+
+              {/* Featured */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isFeatured"
+                  checked={formData.isFeatured}
+                  onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label htmlFor="isFeatured" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Mark as featured video
+                </label>
+              </div>
+
+              {/* Upload Progress */}
+              {isUploading && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                    <span>Uploading...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    resetForm();
+                  }}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploading || createVideoMutation.isPending || uploadVideoMutation.isPending}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {(isUploading || createVideoMutation.isPending || uploadVideoMutation.isPending) ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                      {isUploading ? 'Uploading...' : 'Saving...'}
+                    </>
+                  ) : (
+                    <>
+                      {uploadType === 'youtube' ? <LinkIcon className="h-5 w-5" /> : <CloudArrowUpIcon className="h-5 w-5" />}
+                      {uploadType === 'youtube' ? 'Add Video' : 'Upload Video'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

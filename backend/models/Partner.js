@@ -1,5 +1,27 @@
 const mongoose = require('mongoose');
 
+const reviewSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  rating: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 5,
+  },
+  comment: {
+    type: String,
+    trim: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const partnerSchema = new mongoose.Schema({
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -17,20 +39,24 @@ const partnerSchema = new mongoose.Schema({
   },
   logo: {
     type: String,
-    required: [true, 'Please add a logo'],
+    default: '',
+  },
+  logoUrl: {
+    type: String,
+    default: '',
   },
   category: {
     type: String,
-    enum: ['materials', 'equipment', 'software', 'services', 'financing', 'insurance', 'other'],
+    enum: ['Materials & Supplies', 'Equipment', 'Distributor', 'Services', 'Software', 'Financing', 'Insurance', 'Other'],
     required: true,
   },
   country: {
     type: String,
-    enum: ['USA', 'Canada'],
-    required: true,
+    enum: ['USA', 'Canada', 'Both'],
+    default: 'USA',
   },
   contact: {
-    name: String,
+    contactPerson: String,
     email: {
       type: String,
       match: [
@@ -40,27 +66,59 @@ const partnerSchema = new mongoose.Schema({
     },
     phone: String,
     website: String,
+    address: String,
   },
-  services: [{
+  specialties: [{
     type: String,
     trim: true,
   }],
+  benefits: [{
+    type: String,
+    trim: true,
+  }],
+  discount: {
+    type: String,
+    default: '',
+  },
+  yearEstablished: {
+    type: Number,
+  },
+  locations: {
+    type: Number,
+    default: 1,
+  },
   specialOffers: [{
     title: String,
     description: String,
     validUntil: Date,
     code: String,
+    discountPercent: Number,
   }],
   documents: [{
     title: String,
     fileUrl: String,
     fileType: String,
   }],
+  reviews: [reviewSchema],
+  rating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5,
+  },
+  reviewCount: {
+    type: Number,
+    default: 0,
+  },
   isActive: {
     type: Boolean,
     default: true,
   },
   isFeatured: {
+    type: Boolean,
+    default: false,
+  },
+  isVerified: {
     type: Boolean,
     default: false,
   },
@@ -72,6 +130,21 @@ const partnerSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+// Calculate average rating before saving
+partnerSchema.pre('save', function(next) {
+  if (this.reviews && this.reviews.length > 0) {
+    const totalRating = this.reviews.reduce((sum, review) => sum + review.rating, 0);
+    this.rating = Math.round((totalRating / this.reviews.length) * 10) / 10;
+    this.reviewCount = this.reviews.length;
+  }
+  this.updatedAt = Date.now();
+  next();
 });
 
 module.exports = mongoose.model('Partner', partnerSchema);
