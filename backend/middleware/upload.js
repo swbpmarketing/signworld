@@ -8,7 +8,7 @@ const storage = multer.memoryStorage();
 // File filter for validation
 const fileFilter = (req, file, cb) => {
   // Accept images
-  if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail') {
+  if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail' || file.fieldname === 'file') {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
@@ -79,11 +79,17 @@ const uploadVideo = multer({
  */
 const uploadFilesToS3 = async (req, res, next) => {
   try {
+    console.log('uploadFilesToS3 middleware called');
+    console.log('req.file:', req.file ? { fieldname: req.file.fieldname, originalname: req.file.originalname, mimetype: req.file.mimetype, size: req.file.size } : 'none');
+    console.log('req.files:', req.files ? 'present' : 'none');
+
     if (!req.files && !req.file) {
+      console.log('No files to upload, skipping');
       return next();
     }
 
     const files = req.files ? (Array.isArray(req.files) ? req.files : Object.values(req.files).flat()) : [req.file];
+    console.log('Files to upload:', files.length);
 
     // Upload each file to S3
     const uploadPromises = files.map(async (file) => {
@@ -91,6 +97,8 @@ const uploadFilesToS3 = async (req, res, next) => {
       let folder = 'other';
       if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail') {
         folder = 'images';
+      } else if (file.fieldname === 'file') {
+        folder = 'profile-photos';
       } else if (file.fieldname === 'documents') {
         folder = 'documents';
       } else if (file.fieldname === 'video') {
@@ -103,8 +111,12 @@ const uploadFilesToS3 = async (req, res, next) => {
       const basename = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '-');
       const fileName = `${basename}-${uniqueSuffix}${ext}`;
 
+      console.log('Uploading to S3:', { folder, fileName, mimetype: file.mimetype, bufferLength: file.buffer?.length });
+
       // Upload to S3
       const s3Url = await uploadToS3(file.buffer, fileName, file.mimetype, folder);
+
+      console.log('S3 upload successful:', s3Url);
 
       // Add S3 URL to file object
       file.s3Url = s3Url;
@@ -115,6 +127,7 @@ const uploadFilesToS3 = async (req, res, next) => {
 
     await Promise.all(uploadPromises);
 
+    console.log('All uploads complete, calling next()');
     next();
   } catch (error) {
     console.error('S3 upload middleware error:', error);

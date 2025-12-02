@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import {
   ChatBubbleLeftRightIcon,
   FireIcon,
@@ -20,6 +21,8 @@ import {
   TrashIcon,
   ArrowUturnLeftIcon,
   PhotoIcon,
+  CheckCircleIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import {
   HeartIcon as HeartSolidIcon,
@@ -86,12 +89,31 @@ const forumCategories = [
 
 const Forum = () => {
   const { user } = useAuth();
+  const { canEditItem, canDeleteItem, canManage } = usePermissions();
 
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [threads, setThreads] = useState<ForumThread[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // My Threads state
+  const [showMyThreads, setShowMyThreads] = useState(false);
+  const [myThreads, setMyThreads] = useState<ForumThread[]>([]);
+  const [loadingMyThreads, setLoadingMyThreads] = useState(false);
+
+  // Edit thread state
+  const [showEditThreadModal, setShowEditThreadModal] = useState(false);
+  const [editingThread, setEditingThread] = useState<ForumThread | null>(null);
+  const [editThreadData, setEditThreadData] = useState({
+    title: '',
+    content: '',
+    category: 'general',
+    tags: [] as string[],
+  });
+  const [editTagInput, setEditTagInput] = useState('');
+  const [updatingThread, setUpdatingThread] = useState(false);
+  const [deletingThreadId, setDeletingThreadId] = useState<string | null>(null);
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -236,6 +258,160 @@ const Forum = () => {
     } catch (err) {
       console.error('Error fetching forum stats:', err);
     }
+  };
+
+  // Fetch user's own threads
+  const fetchMyThreads = async () => {
+    if (!user) return;
+
+    try {
+      setLoadingMyThreads(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/forum/my-threads', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setMyThreads(data.data);
+      } else {
+        toast.error(data.error || 'Failed to load your threads');
+      }
+    } catch (err) {
+      console.error('Error fetching my threads:', err);
+      toast.error('Failed to load your threads');
+    } finally {
+      setLoadingMyThreads(false);
+    }
+  };
+
+  // Handle open edit thread modal
+  const handleOpenEditThread = (thread: ForumThread) => {
+    setEditingThread(thread);
+    setEditThreadData({
+      title: thread.title,
+      content: thread.content,
+      category: thread.category,
+      tags: thread.tags || [],
+    });
+    setShowEditThreadModal(true);
+  };
+
+  // Handle update thread
+  const handleUpdateThread = async () => {
+    if (!editingThread) return;
+
+    if (!editThreadData.title.trim() || !editThreadData.content.trim()) {
+      toast.error('Please provide a title and content');
+      return;
+    }
+
+    try {
+      setUpdatingThread(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/forum/${editingThread._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: editThreadData.title.trim(),
+          content: editThreadData.content.trim(),
+          category: editThreadData.category,
+          tags: editThreadData.tags,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Thread updated successfully!');
+        setShowEditThreadModal(false);
+        setEditingThread(null);
+        setEditThreadData({ title: '', content: '', category: 'general', tags: [] });
+
+        // Refresh threads
+        fetchThreads();
+        if (showMyThreads) {
+          fetchMyThreads();
+        }
+        // Update selected thread if viewing in detail modal
+        if (selectedThread && selectedThread._id === editingThread._id) {
+          setSelectedThread(data.data);
+        }
+      } else {
+        toast.error(data.error || 'Failed to update thread');
+      }
+    } catch (err) {
+      console.error('Error updating thread:', err);
+      toast.error('Failed to update thread');
+    } finally {
+      setUpdatingThread(false);
+    }
+  };
+
+  // Handle delete thread
+  const handleDeleteThread = async (threadId: string) => {
+    if (!window.confirm('Are you sure you want to delete this thread? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingThreadId(threadId);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/forum/${threadId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Thread deleted successfully!');
+
+        // Remove from threads lists
+        setThreads(prev => prev.filter(t => t._id !== threadId));
+        setMyThreads(prev => prev.filter(t => t._id !== threadId));
+
+        // Close detail modal if open
+        if (selectedThread?._id === threadId) {
+          setShowDetailModal(false);
+          setSelectedThread(null);
+        }
+
+        fetchStats();
+      } else {
+        toast.error(data.error || 'Failed to delete thread');
+      }
+    } catch (err) {
+      console.error('Error deleting thread:', err);
+      toast.error('Failed to delete thread');
+    } finally {
+      setDeletingThreadId(null);
+    }
+  };
+
+  // Handle edit tag functions for thread
+  const handleAddEditThreadTag = () => {
+    if (editTagInput.trim() && !editThreadData.tags.includes(editTagInput.trim().toLowerCase())) {
+      setEditThreadData({
+        ...editThreadData,
+        tags: [...editThreadData.tags, editTagInput.trim().toLowerCase()],
+      });
+      setEditTagInput('');
+    }
+  };
+
+  const handleRemoveEditThreadTag = (tagToRemove: string) => {
+    setEditThreadData({
+      ...editThreadData,
+      tags: editThreadData.tags.filter(tag => tag !== tagToRemove),
+    });
   };
 
   // Load threads and stats on component mount and when filters change
@@ -764,13 +940,33 @@ const Forum = () => {
                 Connect, share, and learn from fellow Sign Company owners
               </p>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              New Thread
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
+              {user && (
+                <button
+                  className={`inline-flex items-center px-4 py-2 font-medium rounded-lg transition-colors duration-200 ${
+                    showMyThreads
+                      ? 'bg-primary-600 text-white hover:bg-primary-700'
+                      : 'bg-white/20 text-white hover:bg-white/30'
+                  }`}
+                  onClick={() => {
+                    setShowMyThreads(!showMyThreads);
+                    if (!showMyThreads) {
+                      fetchMyThreads();
+                    }
+                  }}
+                >
+                  <UserIcon className="h-5 w-5 mr-2" />
+                  My Threads
+                </button>
+              )}
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                New Thread
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -903,8 +1099,96 @@ const Forum = () => {
 
         {/* Thread List */}
         <div className="lg:col-span-3 space-y-6">
+          {/* My Threads Section */}
+          {showMyThreads && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <UserIcon className="h-5 w-5 mr-2 text-primary-600" />
+                  My Threads
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Manage your forum discussions
+                </p>
+              </div>
+              <div className="p-6">
+                {loadingMyThreads ? (
+                  <div className="flex items-center justify-center py-8">
+                    <ArrowPathIcon className="h-8 w-8 text-primary-600 animate-spin" />
+                  </div>
+                ) : myThreads.length === 0 ? (
+                  <div className="text-center py-8">
+                    <ChatBubbleLeftRightIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400">You haven't created any threads yet.</p>
+                    <button
+                      onClick={() => setShowCreateModal(true)}
+                      className="mt-4 inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700"
+                    >
+                      <PlusIcon className="h-5 w-5 mr-2" />
+                      Create Your First Thread
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {myThreads.map((thread) => (
+                      <div
+                        key={thread._id}
+                        className="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                      >
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleOpenThread(thread)}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                              {thread.title}
+                            </h4>
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                              thread.status === 'active'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                            }`}>
+                              {thread.category}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {formatDate(thread.createdAt)} • {thread.views} views • {thread.replyCount} replies • {thread.likes?.length || 0} likes
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditThread(thread);
+                            }}
+                            className="p-2 text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteThread(thread._id);
+                            }}
+                            disabled={deletingThreadId === thread._id}
+                            className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+                            title="Delete"
+                          >
+                            {deletingThreadId === thread._id ? (
+                              <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                            ) : (
+                              <TrashIcon className="h-5 w-5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Loading State */}
-          {loading && (
+          {loading && !showMyThreads && (
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center space-y-4">
                 <ArrowPathIcon className="h-12 w-12 text-primary-600 dark:text-primary-400 animate-spin" />
@@ -914,7 +1198,7 @@ const Forum = () => {
           )}
 
           {/* Error State */}
-          {error && !loading && (
+          {error && !loading && !showMyThreads && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 flex items-start space-x-3">
               <ExclamationCircleIcon className="h-6 w-6 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -932,7 +1216,7 @@ const Forum = () => {
           )}
 
           {/* Empty State */}
-          {!loading && !error && threads.length === 0 && (
+          {!loading && !error && threads.length === 0 && !showMyThreads && (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
               <ChatBubbleLeftRightIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No threads found</h3>
@@ -950,6 +1234,9 @@ const Forum = () => {
           {/* Threads List */}
           {!loading && !error && threads.length > 0 && (
             <>
+              {showMyThreads && (
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-6">All Forum Threads</h3>
+              )}
               {threads.map((thread) => (
                 <article
                   key={thread._id}
@@ -973,6 +1260,36 @@ const Forum = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {/* Edit/Delete buttons for own threads */}
+                        {canEditItem('forum', thread.author?._id) && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditThread(thread);
+                              }}
+                              className="p-1.5 text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                              title="Edit"
+                            >
+                              <PencilIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteThread(thread._id);
+                              }}
+                              disabled={deletingThreadId === thread._id}
+                              className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                              title="Delete"
+                            >
+                              {deletingThreadId === thread._id ? (
+                                <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <TrashIcon className="h-4 w-4" />
+                              )}
+                            </button>
+                          </>
+                        )}
                         {thread.isPinned && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400">
                             <FireIcon className="h-3 w-3 mr-1" />
@@ -1777,6 +2094,156 @@ const Forum = () => {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Thread Modal */}
+      {showEditThreadModal && editingThread && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowEditThreadModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Edit Thread</h3>
+              <button
+                onClick={() => setShowEditThreadModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={editThreadData.title}
+                  onChange={(e) => setEditThreadData({ ...editThreadData, title: e.target.value })}
+                  placeholder="Enter a descriptive title for your thread"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  maxLength={200}
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {editThreadData.title.length}/200 characters
+                </p>
+              </div>
+
+              <div>
+                <CustomSelect
+                  label="Category"
+                  required
+                  value={editThreadData.category}
+                  onChange={(value) => setEditThreadData({ ...editThreadData, category: value })}
+                  options={[
+                    { value: 'general', label: 'General Discussion' },
+                    { value: 'technical', label: 'Technical Support' },
+                    { value: 'marketing', label: 'Marketing & Sales' },
+                    { value: 'operations', label: 'Operations' },
+                    { value: 'equipment', label: 'Equipment' },
+                    { value: 'suppliers', label: 'Suppliers' },
+                    { value: 'help', label: 'Help & Questions' },
+                    { value: 'announcements', label: 'Announcements' },
+                  ]}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Content *
+                </label>
+                <textarea
+                  value={editThreadData.content}
+                  onChange={(e) => setEditThreadData({ ...editThreadData, content: e.target.value })}
+                  placeholder="Write your thread content here..."
+                  rows={8}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Tags
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={editTagInput}
+                    onChange={(e) => setEditTagInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddEditThreadTag();
+                      }
+                    }}
+                    placeholder="Type a tag and press Enter"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddEditThreadTag}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                {editThreadData.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {editThreadData.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
+                      >
+                        #{tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEditThreadTag(tag)}
+                          className="ml-2 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowEditThreadModal(false)}
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateThread}
+                disabled={updatingThread || !editThreadData.title.trim() || !editThreadData.content.trim()}
+                className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {updatingThread ? (
+                  <>
+                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="h-5 w-5" />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

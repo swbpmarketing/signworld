@@ -8,6 +8,7 @@ const {
   uploadPhoto,
 } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -25,6 +26,6 @@ router
   .put(authorize('admin'), updateUser)
   .delete(authorize('admin'), deleteUser);
 
-router.put('/:id/photo', uploadPhoto);
+router.put('/:id/photo', ...upload.single('file'), uploadPhoto);
 
 module.exports = router;

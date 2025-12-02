@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
 import {
   ShoppingBagIcon,
   CpuChipIcon,
@@ -50,19 +51,21 @@ interface CartItem {
   quantity: number;
 }
 
-// Helper functions to load from localStorage
-const loadCartFromStorage = (): CartItem[] => {
+// Helper functions to load from localStorage with user-specific keys
+const loadCartFromStorage = (userId: string | undefined): CartItem[] => {
+  if (!userId) return [];
   try {
-    const stored = localStorage.getItem('equipment-cart');
+    const stored = localStorage.getItem(`equipment-cart-${userId}`);
     return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
   }
 };
 
-const loadFavoritesFromStorage = (): Set<string> => {
+const loadFavoritesFromStorage = (userId: string | undefined): Set<string> => {
+  if (!userId) return new Set();
   try {
-    const stored = localStorage.getItem('equipment-favorites');
+    const stored = localStorage.getItem(`equipment-favorites-${userId}`);
     return stored ? new Set(JSON.parse(stored)) : new Set();
   } catch {
     return new Set();
@@ -70,13 +73,14 @@ const loadFavoritesFromStorage = (): Set<string> => {
 };
 
 const Equipment = () => {
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('featured');
-  const [cartItems, setCartItems] = useState<CartItem[]>(loadCartFromStorage);
-  const [favorites, setFavorites] = useState<Set<string>>(loadFavoritesFromStorage);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
 
@@ -85,15 +89,30 @@ const Equipment = () => {
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [showWishlistDrawer, setShowWishlistDrawer] = useState(false);
 
-  // Persist cart to localStorage
+  // Load cart and favorites when user changes
   useEffect(() => {
-    localStorage.setItem('equipment-cart', JSON.stringify(cartItems));
-  }, [cartItems]);
+    if (user?.id) {
+      setCartItems(loadCartFromStorage(user.id));
+      setFavorites(loadFavoritesFromStorage(user.id));
+    } else {
+      setCartItems([]);
+      setFavorites(new Set());
+    }
+  }, [user?.id]);
 
-  // Persist favorites to localStorage
+  // Persist cart to localStorage with user-specific key
   useEffect(() => {
-    localStorage.setItem('equipment-favorites', JSON.stringify(Array.from(favorites)));
-  }, [favorites]);
+    if (user?.id) {
+      localStorage.setItem(`equipment-cart-${user.id}`, JSON.stringify(cartItems));
+    }
+  }, [cartItems, user?.id]);
+
+  // Persist favorites to localStorage with user-specific key
+  useEffect(() => {
+    if (user?.id) {
+      localStorage.setItem(`equipment-favorites-${user.id}`, JSON.stringify(Array.from(favorites)));
+    }
+  }, [favorites, user?.id]);
 
   // Fetch equipment from API
   const { data: equipmentData, isLoading: equipmentLoading } = useQuery({

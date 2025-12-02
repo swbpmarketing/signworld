@@ -66,7 +66,7 @@ const Dashboard = () => {
     {
       icon: CalendarIcon,
       label: 'View Upcoming Events',
-      path: '/events'
+      path: '/calendar'
     },
     {
       icon: VideoCameraIcon,

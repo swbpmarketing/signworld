@@ -209,8 +209,8 @@ const OwnerProfileEnhanced = () => {
             {/* Owner Info */}
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl font-bold text-white">{owner.name}</h1>
-              <p className="text-xl text-primary-100 mt-1">{owner.company}</p>
-              
+              {owner.company && <p className="text-xl text-primary-100 mt-1">{owner.company}</p>}
+
               {/* Stats */}
               <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-6 stats-container">
                 <div className="flex items-center space-x-2">
@@ -221,9 +221,11 @@ const OwnerProfileEnhanced = () => {
                     {owner.rating?.averageRating || owner.stats?.averageRating || 0} ({owner.rating?.totalRatings || owner.stats?.totalRatings || 0} reviews)
                   </span>
                 </div>
-                <div className="text-primary-100">
-                  <span className="font-semibold text-white">{owner.yearsInBusiness}</span> years in business
-                </div>
+                {owner.yearsInBusiness && (
+                  <div className="text-primary-100">
+                    <span className="font-semibold text-white">{owner.yearsInBusiness}</span> years in business
+                  </div>
+                )}
                 <div className="text-primary-100">
                   <span className="font-semibold text-white">{owner.stats?.projectsCompleted || 0}</span> projects completed
                 </div>
@@ -231,13 +233,15 @@ const OwnerProfileEnhanced = () => {
 
               {/* Contact Buttons */}
               <div className="mt-6 flex flex-wrap gap-3 justify-center md:justify-start contact-buttons">
-                <a
-                  href={`tel:${owner.phone}`}
-                  className="contact-button inline-flex items-center px-4 py-2 bg-white text-primary-600 rounded-lg font-medium hover:bg-primary-50 transition-colors duration-200"
-                >
-                  <PhoneIcon className="h-5 w-5 mr-2" />
-                  Call
-                </a>
+                {owner.phone && (
+                  <a
+                    href={`tel:${owner.phone}`}
+                    className="contact-button inline-flex items-center px-4 py-2 bg-white text-primary-600 rounded-lg font-medium hover:bg-primary-50 transition-colors duration-200"
+                  >
+                    <PhoneIcon className="h-5 w-5 mr-2" />
+                    Call
+                  </a>
+                )}
                 <a
                   href={`mailto:${owner.email}`}
                   className="contact-button inline-flex items-center px-4 py-2 bg-white text-primary-600 rounded-lg font-medium hover:bg-primary-50 transition-colors duration-200"
@@ -297,13 +301,15 @@ const OwnerProfileEnhanced = () => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Contact Information</h3>
                 <div className="space-y-3">
-                  <div className="flex items-start">
-                    <PhoneIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Phone</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{owner.phone}</p>
+                  {owner.phone && (
+                    <div className="flex items-start">
+                      <PhoneIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Phone</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{owner.phone}</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div className="flex items-start">
                     <EnvelopeIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
                     <div>
@@ -311,99 +317,109 @@ const OwnerProfileEnhanced = () => {
                       <p className="text-sm text-gray-600 dark:text-gray-400">{owner.email}</p>
                     </div>
                   </div>
-                  <div className="flex items-start">
-                    <MapPinIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Address</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {owner.address.street}<br />
-                        {owner.address.city}, {owner.address.state} {owner.address.zipCode}
-                      </p>
+                  {(owner.address?.street || owner.address?.city || owner.address?.state) && (
+                    <div className="flex items-start">
+                      <MapPinIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Address</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {owner.address?.street && <>{owner.address.street}<br /></>}
+                          {[owner.address?.city, owner.address?.state, owner.address?.zipCode].filter(Boolean).join(', ')}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-start">
-                    <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Open Since</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(owner.openDate)}</p>
+                  )}
+                  {owner.openDate && (
+                    <div className="flex items-start">
+                      <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Open Since</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(owner.openDate)}</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Social Links */}
-                <div className="mt-6">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Connect Online</h4>
-                  <div className="flex space-x-3">
-                    {owner.socialLinks.facebook && (
-                      <a
-                        href={owner.socialLinks.facebook}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                      >
-                        <span className="sr-only">Facebook</span>
-                        <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
-                        </svg>
-                      </a>
-                    )}
-                    {owner.socialLinks.linkedin && (
-                      <a
-                        href={owner.socialLinks.linkedin}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                      >
-                        <span className="sr-only">LinkedIn</span>
-                        <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                        </svg>
-                      </a>
-                    )}
-                    {owner.socialLinks.instagram && (
-                      <a
-                        href={owner.socialLinks.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                      >
-                        <span className="sr-only">Instagram</span>
-                        <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zM5.838 12a6.162 6.162 0 1112.324 0 6.162 6.162 0 01-12.324 0zM12 16a4 4 0 110-8 4 4 0 010 8zm4.965-10.405a1.44 1.44 0 112.881.001 1.44 1.44 0 01-2.881-.001z"/>
-                        </svg>
-                      </a>
-                    )}
-                    {owner.socialLinks.website && (
-                      <a
-                        href={owner.socialLinks.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                      >
-                        <span className="sr-only">Website</span>
-                        <GlobeAltIcon className="h-6 w-6" />
-                      </a>
-                    )}
+                {(owner.socialLinks?.facebook || owner.socialLinks?.linkedin || owner.socialLinks?.instagram || owner.socialLinks?.website) && (
+                  <div className="mt-6">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Connect Online</h4>
+                    <div className="flex space-x-3">
+                      {owner.socialLinks?.facebook && (
+                        <a
+                          href={owner.socialLinks.facebook}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                        >
+                          <span className="sr-only">Facebook</span>
+                          <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
+                          </svg>
+                        </a>
+                      )}
+                      {owner.socialLinks?.linkedin && (
+                        <a
+                          href={owner.socialLinks.linkedin}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                        >
+                          <span className="sr-only">LinkedIn</span>
+                          <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                          </svg>
+                        </a>
+                      )}
+                      {owner.socialLinks?.instagram && (
+                        <a
+                          href={owner.socialLinks.instagram}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                        >
+                          <span className="sr-only">Instagram</span>
+                          <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zM5.838 12a6.162 6.162 0 1112.324 0 6.162 6.162 0 01-12.324 0zM12 16a4 4 0 110-8 4 4 0 010 8zm4.965-10.405a1.44 1.44 0 112.881.001 1.44 1.44 0 01-2.881-.001z"/>
+                          </svg>
+                        </a>
+                      )}
+                      {owner.socialLinks?.website && (
+                        <a
+                          href={owner.socialLinks.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="social-link text-gray-400 dark:text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                        >
+                          <span className="sr-only">Website</span>
+                          <GlobeAltIcon className="h-6 w-6" />
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Specialties and Mentoring */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Specialties</h3>
                 <div className="flex flex-wrap gap-2 mb-6">
-                  {owner.specialties.map((specialty, index) => (
-                    <span
-                      key={index}
-                      className="specialty-tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300"
-                    >
-                      {specialty}
-                    </span>
-                  ))}
+                  {(owner.specialties && owner.specialties.length > 0) ? (
+                    owner.specialties.map((specialty, index) => (
+                      <span
+                        key={index}
+                        className="specialty-tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300"
+                      >
+                        {specialty}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No specialties listed</p>
+                  )}
                 </div>
 
                 {/* Mentoring Status */}
-                {owner.mentoring.available && (
+                {owner.mentoring?.available && (
                   <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mentoring-badge">
                     <div className="flex items-start">
                       <AcademicCapIcon className="h-5 w-5 text-green-600 dark:text-green-400 mr-3 mt-0.5" />
@@ -413,7 +429,7 @@ const OwnerProfileEnhanced = () => {
                           {owner.name} is available to mentor in the following areas:
                         </p>
                         <ul className="mt-2 space-y-1">
-                          {owner.mentoring.areas.map((area, index) => (
+                          {(owner.mentoring?.areas || []).map((area, index) => (
                             <li key={index} className="text-sm text-green-700 dark:text-green-300 flex items-center">
                               <span className="w-1.5 h-1.5 bg-green-600 dark:bg-green-400 rounded-full mr-2"></span>
                               {area}
@@ -432,14 +448,18 @@ const OwnerProfileEnhanced = () => {
           {activeTab === 'equipment' && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Equipment & Capabilities</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {owner.equipment.map((item, index) => (
-                  <div key={index} className="equipment-card flex items-start bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                    <WrenchScrewdriverIcon className="h-5 w-5 text-primary-600 dark:text-primary-400 mr-3 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{item}</p>
-                  </div>
-                ))}
-              </div>
+              {(owner.equipment && owner.equipment.length > 0) ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {owner.equipment.map((item, index) => (
+                    <div key={index} className="equipment-card flex items-start bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                      <WrenchScrewdriverIcon className="h-5 w-5 text-primary-600 dark:text-primary-400 mr-3 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-gray-700 dark:text-gray-300">{item}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">No equipment listed</p>
+              )}
             </div>
           )}
 

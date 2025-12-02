@@ -399,11 +399,19 @@ const Layout = () => {
                     className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
                     onClick={handleUserMenuToggle}
                   >
-                    <img
-                      className="h-7 w-7 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
-                      src="https://i.pravatar.cc/150?img=8"
-                      alt={user?.name || "User profile"}
-                    />
+                    {user?.profileImage ? (
+                      <img
+                        className="h-7 w-7 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
+                        src={user.profileImage}
+                        alt={user?.name || "User profile"}
+                      />
+                    ) : (
+                      <div className="h-7 w-7 rounded-full bg-primary-600 flex items-center justify-center ring-2 ring-gray-200 dark:ring-gray-700">
+                        <span className="text-xs font-medium text-white">
+                          {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
+                        </span>
+                      </div>
+                    )}
                   </button>
                 </div>
 
@@ -472,11 +480,19 @@ const Layout = () => {
                     className="relative"
                     onClick={handleUserMenuToggle}
                   >
-                    <img
-                      className="h-8 w-8 rounded-full object-cover"
-                      src="https://i.pravatar.cc/150?img=8"
-                      alt={user?.name || "User profile"}
-                    />
+                    {user?.profileImage ? (
+                      <img
+                        className="h-8 w-8 rounded-full object-cover"
+                        src={user.profileImage}
+                        alt={user?.name || "User profile"}
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center">
+                        <span className="text-sm font-medium text-white">
+                          {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
+                        </span>
+                      </div>
+                    )}
                   </button>
                 </div>
               </div>

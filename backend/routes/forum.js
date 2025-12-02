@@ -85,6 +85,32 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @desc    Get user's own forum threads
+// @route   GET /api/forum/my-threads
+// @access  Private
+router.get('/my-threads', protect, async (req, res) => {
+  try {
+    const threads = await ForumThread.find({ author: req.user._id })
+      .populate('author', 'name email role')
+      .populate('lastReplyBy', 'name email')
+      .sort('-createdAt');
+
+    res.status(200).json({
+      success: true,
+      data: threads.map(thread => ({
+        ...thread.toObject(),
+        replyCount: thread.replies?.length || 0
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching user threads:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch your threads'
+    });
+  }
+});
+
 // @desc    Get single thread by ID
 // @route   GET /api/forum/:id
 // @access  Public

@@ -25,6 +25,7 @@ import {
 import { BookmarkIcon as BookmarkSolidIcon, PlayIcon as PlaySolidIcon, StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
 import { useAuth } from '../context/AuthContext';
+import usePermissions from '../hooks/usePermissions';
 import { getVideos, getVideoStats, createVideo, uploadVideo, deleteVideo, incrementVideoView } from '../services/videoService';
 import type { Video as VideoType, CreateVideoData } from '../services/videoService';
 import { getPlaylists } from '../services/playlistService';
@@ -71,6 +72,7 @@ const categories = [
 
 const Videos = () => {
   const { user } = useAuth();
+  const { canCreate, canDelete } = usePermissions();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
@@ -288,7 +290,9 @@ const Videos = () => {
   const featuredVideo = videos.find(v => v.isFeatured) || videos[0];
   const stats = statsData?.data;
 
-  const isAdmin = user?.role === 'admin';
+  // Use permissions hook for role-based access
+  const canAddVideo = canCreate('videos');
+  const canRemoveVideo = canDelete('videos');
 
   return (
     <div className="space-y-8">
@@ -306,7 +310,7 @@ const Videos = () => {
               </p>
             </div>
             <div className="flex gap-2 mt-4 sm:mt-0">
-              {isAdmin && (
+              {canAddVideo && (
                 <button
                   onClick={() => setShowUploadModal(true)}
                   className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
@@ -499,7 +503,7 @@ const Videos = () => {
                 <div className="p-6">
                   <div className="flex items-start justify-between">
                     <h4 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2 flex-1">{featuredVideo.title}</h4>
-                    {isAdmin && (
+                    {canRemoveVideo && (
                       <button
                         onClick={() => deleteVideoMutation.mutate(featuredVideo._id)}
                         className="ml-2 p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
@@ -576,7 +580,7 @@ const Videos = () => {
                       {video.title}
                     </h4>
                     <div className="flex items-center">
-                      {isAdmin && (
+                      {canRemoveVideo && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -641,7 +645,7 @@ const Videos = () => {
               <VideoCameraIcon className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No videos found</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-4">Try adjusting your search or filter criteria</p>
-              {isAdmin && (
+              {canAddVideo && (
                 <button
                   onClick={() => setShowUploadModal(true)}
                   className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"

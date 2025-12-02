@@ -9,6 +9,7 @@ interface User {
   email: string;
   role: 'admin' | 'owner' | 'vendor';
   company?: string;
+  profileImage?: string;
 }
 
 interface AuthContextType {
@@ -16,6 +17,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isAdmin: boolean;
   isVendor: boolean;
 }
@@ -83,11 +85,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     navigate('/login');
   };
 
+  const refreshUser = async () => {
+    try {
+      const response = await api.get('/auth/me');
+      setUser(response.data.data);
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+    }
+  };
+
   const value = {
     user,
     loading,
     login,
     logout,
+    refreshUser,
     isAdmin: user?.role === 'admin',
     isVendor: user?.role === 'vendor',
   };

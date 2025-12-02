@@ -17,6 +17,9 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   ClipboardDocumentListIcon,
+  PencilIcon,
+  TrashIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import {
@@ -26,10 +29,14 @@ import {
   createBrag,
   addComment,
   moderateBrag,
+  updateBrag,
+  deleteBrag,
+  getMyBrags,
   type Brag,
   type GetBragsParams
 } from '../services/bragsService';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import toast from 'react-hot-toast';
 import CustomSelect from '../components/CustomSelect';
 
@@ -46,12 +53,32 @@ const categories = [
 
 const Brags = () => {
   const { user } = useAuth();
+  const { canManage, canEditItem, canDeleteItem } = usePermissions();
   const [selectedCategory, setSelectedCategory] = useState('All Stories');
   const [stories, setStories] = useState<Brag[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // My Stories state (for owners)
+  const [showMyStories, setShowMyStories] = useState(false);
+  const [myStories, setMyStories] = useState<Brag[]>([]);
+  const [loadingMyStories, setLoadingMyStories] = useState(false);
+
+  // Edit story state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingStory, setEditingStory] = useState<Brag | null>(null);
+  const [editStoryData, setEditStoryData] = useState({
+    title: '',
+    content: '',
+    tags: [] as string[],
+  });
+  const [editTagInput, setEditTagInput] = useState('');
+  const [editFeaturedImage, setEditFeaturedImage] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [updatingStory, setUpdatingStory] = useState(false);
+  const [deletingStoryId, setDeletingStoryId] = useState<string | null>(null);
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -113,7 +140,7 @@ const Brags = () => {
 
   // Fetch pending stories (admin only)
   const fetchPendingStories = async () => {
-    if (user?.role !== 'admin') return;
+    if (!canManage('successStories')) return;
 
     try {
       setLoadingPending(true);
@@ -124,6 +151,146 @@ const Brags = () => {
     } finally {
       setLoadingPending(false);
     }
+  };
+
+  // Fetch user's own stories
+  const fetchMyStories = async () => {
+    if (!user) return;
+
+    try {
+      setLoadingMyStories(true);
+      const response = await getMyBrags();
+      setMyStories(response.data);
+    } catch (err) {
+      console.error('Error fetching my stories:', err);
+      toast.error('Failed to load your stories');
+    } finally {
+      setLoadingMyStories(false);
+    }
+  };
+
+  // Handle edit story
+  const handleOpenEditModal = (story: Brag) => {
+    setEditingStory(story);
+    setEditStoryData({
+      title: story.title,
+      content: story.content,
+      tags: story.tags || [],
+    });
+    setEditImagePreview(story.featuredImage || null);
+    setEditFeaturedImage(null);
+    setShowEditModal(true);
+  };
+
+  // Handle update story
+  const handleUpdateStory = async () => {
+    if (!editingStory) return;
+
+    if (!editStoryData.title.trim() || !editStoryData.content.trim()) {
+      toast.error('Please provide a title and content');
+      return;
+    }
+
+    try {
+      setUpdatingStory(true);
+      await updateBrag(editingStory._id, {
+        title: editStoryData.title.trim(),
+        content: editStoryData.content.trim(),
+        tags: editStoryData.tags,
+        featuredImage: editFeaturedImage || undefined,
+      });
+      toast.success('Story updated successfully!');
+      setShowEditModal(false);
+      setEditingStory(null);
+      setEditStoryData({ title: '', content: '', tags: [] });
+      setEditFeaturedImage(null);
+      setEditImagePreview(null);
+
+      // Refresh stories
+      fetchStories();
+      if (showMyStories) {
+        fetchMyStories();
+      }
+    } catch (err: any) {
+      console.error('Error updating story:', err);
+      toast.error(err.response?.data?.error || 'Failed to update story');
+    } finally {
+      setUpdatingStory(false);
+    }
+  };
+
+  // Handle delete story
+  const handleDeleteStory = async (storyId: string) => {
+    if (!window.confirm('Are you sure you want to delete this story? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingStoryId(storyId);
+      await deleteBrag(storyId);
+      toast.success('Story deleted successfully!');
+
+      // Remove from stories lists
+      setStories(prev => prev.filter(s => s._id !== storyId));
+      setMyStories(prev => prev.filter(s => s._id !== storyId));
+
+      // Close detail modal if open
+      if (selectedStory?._id === storyId) {
+        setShowDetailModal(false);
+        setSelectedStory(null);
+      }
+
+      fetchStats();
+    } catch (err: any) {
+      console.error('Error deleting story:', err);
+      toast.error(err.response?.data?.error || 'Failed to delete story');
+    } finally {
+      setDeletingStoryId(null);
+    }
+  };
+
+  // Handle edit tag functions
+  const handleAddEditTag = () => {
+    if (editTagInput.trim() && !editStoryData.tags.includes(editTagInput.trim().toLowerCase())) {
+      setEditStoryData({
+        ...editStoryData,
+        tags: [...editStoryData.tags, editTagInput.trim().toLowerCase()],
+      });
+      setEditTagInput('');
+    }
+  };
+
+  const handleRemoveEditTag = (tagToRemove: string) => {
+    setEditStoryData({
+      ...editStoryData,
+      tags: editStoryData.tags.filter(tag => tag !== tagToRemove),
+    });
+  };
+
+  // Handle edit image selection
+  const handleEditImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Image must be less than 10MB');
+        return;
+      }
+      setEditFeaturedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveEditImage = () => {
+    setEditFeaturedImage(null);
+    setEditImagePreview(null);
   };
 
   // Handle moderation (approve/reject)
@@ -193,10 +360,10 @@ const Brags = () => {
   useEffect(() => {
     fetchStories();
     fetchStats();
-    if (user?.role === 'admin') {
+    if (canManage('successStories')) {
       fetchPendingStories();
     }
-  }, [user]);
+  }, [user, canManage]);
 
   // Re-fetch when filters change
   useEffect(() => {
@@ -449,7 +616,7 @@ const Brags = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
-              {user?.role === 'admin' && (
+              {canManage('successStories') && (
                 <button
                   className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors duration-200"
                   onClick={() => {
@@ -464,6 +631,24 @@ const Brags = () => {
                       {pendingStories.length}
                     </span>
                   )}
+                </button>
+              )}
+              {user && (
+                <button
+                  className={`inline-flex items-center px-4 py-2 font-medium rounded-lg transition-colors duration-200 ${
+                    showMyStories
+                      ? 'bg-primary-600 text-white hover:bg-primary-700'
+                      : 'bg-white/20 text-white hover:bg-white/30'
+                  }`}
+                  onClick={() => {
+                    setShowMyStories(!showMyStories);
+                    if (!showMyStories) {
+                      fetchMyStories();
+                    }
+                  }}
+                >
+                  <UserIcon className="h-5 w-5 mr-2" />
+                  My Stories
                 </button>
               )}
               <button
@@ -586,8 +771,92 @@ const Brags = () => {
 
         {/* Stories Grid */}
         <div className="lg:col-span-3 space-y-6">
+          {/* My Stories Section */}
+          {showMyStories && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <UserIcon className="h-5 w-5 mr-2 text-primary-600" />
+                  My Stories
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Manage your submitted success stories
+                </p>
+              </div>
+              <div className="p-6">
+                {loadingMyStories ? (
+                  <div className="flex items-center justify-center py-8">
+                    <ArrowPathIcon className="h-8 w-8 text-primary-600 animate-spin" />
+                  </div>
+                ) : myStories.length === 0 ? (
+                  <div className="text-center py-8">
+                    <TrophyIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400">You haven't shared any stories yet.</p>
+                    <button
+                      onClick={() => setShowCreateModal(true)}
+                      className="mt-4 inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700"
+                    >
+                      <PlusIcon className="h-5 w-5 mr-2" />
+                      Share Your First Story
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {myStories.map((story) => (
+                      <div
+                        key={story._id}
+                        className="flex items-start justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {story.title}
+                            </h4>
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                              story.status === 'approved'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                : story.status === 'pending'
+                                ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                                : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                            }`}>
+                              {story.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {formatDate(story.createdAt)} • {story.likesCount} likes • {story.commentsCount} comments
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <button
+                            onClick={() => handleOpenEditModal(story)}
+                            className="p-2 text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStory(story._id)}
+                            disabled={deletingStoryId === story._id}
+                            className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+                            title="Delete"
+                          >
+                            {deletingStoryId === story._id ? (
+                              <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                            ) : (
+                              <TrashIcon className="h-5 w-5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Loading State */}
-          {loading && (
+          {loading && !showMyStories && (
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center space-y-4">
                 <ArrowPathIcon className="h-12 w-12 text-primary-600 dark:text-primary-400 animate-spin" />
@@ -597,7 +866,7 @@ const Brags = () => {
           )}
 
           {/* Error State */}
-          {error && !loading && (
+          {error && !loading && !showMyStories && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 flex items-start space-x-3">
               <ExclamationCircleIcon className="h-6 w-6 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -615,7 +884,7 @@ const Brags = () => {
           )}
 
           {/* Empty State */}
-          {!loading && !error && stories.length === 0 && (
+          {!loading && !error && stories.length === 0 && !showMyStories && (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
               <TrophyIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No stories found</h3>
@@ -626,6 +895,9 @@ const Brags = () => {
           {/* Stories List */}
           {!loading && !error && stories.length > 0 && (
             <>
+              {showMyStories && (
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-6">All Published Stories</h3>
+              )}
               {stories.map((story) => (
                 <article
                   key={story._id}
@@ -635,12 +907,42 @@ const Brags = () => {
                   <div className="flex flex-col">
                     {/* Featured Image */}
                     {story.featuredImage && (
-                      <div className="w-full h-48 sm:h-64">
+                      <div className="w-full h-48 sm:h-64 relative">
                         <img
                           src={story.featuredImage}
                           alt={story.title}
                           className="w-full h-full object-cover"
                         />
+                        {/* Edit/Delete buttons for own stories */}
+                        {canEditItem('successStories', story.author._id) && (
+                          <div className="absolute top-2 right-2 flex gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditModal(story);
+                              }}
+                              className="p-2 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 rounded-lg shadow-sm transition-colors"
+                              title="Edit"
+                            >
+                              <PencilIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteStory(story._id);
+                              }}
+                              disabled={deletingStoryId === story._id}
+                              className="p-2 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 rounded-lg shadow-sm transition-colors disabled:opacity-50"
+                              title="Delete"
+                            >
+                              {deletingStoryId === story._id ? (
+                                <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <TrashIcon className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -658,11 +960,43 @@ const Brags = () => {
                             </p>
                           </div>
                         </div>
-                        {story.tags && story.tags.length > 0 && (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 capitalize">
-                            {story.tags[0]}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {story.tags && story.tags.length > 0 && (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 capitalize">
+                              {story.tags[0]}
+                            </span>
+                          )}
+                          {/* Edit/Delete buttons for own stories (no featured image) */}
+                          {!story.featuredImage && canEditItem('successStories', story.author._id) && (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEditModal(story);
+                                }}
+                                className="p-1.5 text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                title="Edit"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteStory(story._id);
+                                }}
+                                disabled={deletingStoryId === story._id}
+                                className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                                title="Delete"
+                              >
+                                {deletingStoryId === story._id ? (
+                                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <TrashIcon className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Story Content */}
@@ -1130,6 +1464,204 @@ const Brags = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Story Modal */}
+      {showEditModal && editingStory && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowEditModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Edit Your Story</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="p-6 space-y-5">
+              {editingStory.status === 'pending' && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    This story is pending approval. Your changes will be saved but still require admin review.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={editStoryData.title}
+                  onChange={(e) => setEditStoryData({ ...editStoryData, title: e.target.value })}
+                  placeholder="Give your story a catchy title"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  maxLength={200}
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {editStoryData.title.length}/200 characters
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Your Story *
+                </label>
+                <textarea
+                  value={editStoryData.content}
+                  onChange={(e) => setEditStoryData({ ...editStoryData, content: e.target.value })}
+                  placeholder="Tell us about your success!"
+                  rows={8}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                />
+              </div>
+
+              {/* Featured Image */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Featured Image
+                </label>
+                {editImagePreview ? (
+                  <div className="relative">
+                    <img
+                      src={editImagePreview}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded-lg border border-gray-300 dark:border-gray-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveEditImage}
+                      className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                    >
+                      <XMarkIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-primary-500 dark:hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <PhotoIcon className="h-10 w-10 text-gray-400 dark:text-gray-500 mb-2" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-medium text-primary-600 dark:text-primary-400">Click to upload</span> a new image
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleEditImageSelect}
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Tags
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={editTagInput}
+                    onChange={(e) => setEditTagInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddEditTag();
+                      }
+                    }}
+                    placeholder="Type a tag and press Enter"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddEditTag}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {categories.slice(1).map(cat => (
+                    <button
+                      key={cat.name}
+                      type="button"
+                      onClick={() => {
+                        if (!editStoryData.tags.includes(cat.name)) {
+                          setEditStoryData({ ...editStoryData, tags: [...editStoryData.tags, cat.name] });
+                        }
+                      }}
+                      className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                        editStoryData.tags.includes(cat.name)
+                          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+                {editStoryData.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {editStoryData.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
+                      >
+                        #{tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEditTag(tag)}
+                          className="ml-2 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateStory}
+                disabled={updatingStory || !editStoryData.title.trim() || !editStoryData.content.trim()}
+                className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {updatingStory ? (
+                  <>
+                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="h-5 w-5" />
+                    Save Changes
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

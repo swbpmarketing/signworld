@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    match: [/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/, 'Please add a valid phone number'],
+    match: [/^[\+]?[0-9]{1,4}[-\s]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,4}[-\s\.]?[0-9]{1,9}$/, 'Please add a valid phone number'],
   },
   company: {
     type: String,
@@ -51,11 +51,9 @@ const userSchema = new mongoose.Schema({
     type: {
       type: String,
       enum: ['Point'],
-      default: 'Point',
     },
     coordinates: {
       type: [Number], // [longitude, latitude]
-      index: '2dsphere',
     },
   },
   // Business hours
@@ -101,6 +99,9 @@ const userSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+// Create sparse 2dsphere index - only indexes documents with location coordinates
+userSchema.index({ 'location': '2dsphere' }, { sparse: true });
 
 // Encrypt password using bcrypt
 userSchema.pre('save', async function(next) {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import usePermissions from '../hooks/usePermissions';
 import {
   UsersIcon,
   BuildingOfficeIcon,
@@ -77,6 +78,7 @@ const initialFormData = {
 
 const Partners = () => {
   const { user } = useAuth();
+  const { canCreate, canEdit, canDelete } = usePermissions();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState('All Partners');
@@ -344,7 +346,7 @@ const Partners = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-0">
-              {user?.role === 'admin' && (
+              {canCreate('partners') && (
                 <button
                   onClick={() => setShowAddModal(true)}
                   className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
@@ -901,23 +903,23 @@ const Partners = () => {
               {/* Footer */}
               <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-between">
                 <div className="flex gap-2">
-                  {user?.role === 'admin' && (
-                    <>
-                      <button
-                        onClick={() => handleEditPartner(selectedPartner)}
-                        className="inline-flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                      >
-                        <PencilIcon className="h-4 w-4 mr-1" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(selectedPartner)}
-                        className="inline-flex items-center px-3 py-2 text-red-600 dark:text-red-400 font-medium rounded-lg border border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                      >
-                        <TrashIcon className="h-4 w-4 mr-1" />
-                        Delete
-                      </button>
-                    </>
+                  {canEdit('partners') && (
+                    <button
+                      onClick={() => handleEditPartner(selectedPartner)}
+                      className="inline-flex items-center px-3 py-2 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <PencilIcon className="h-4 w-4 mr-1" />
+                      Edit
+                    </button>
+                  )}
+                  {canDelete('partners') && (
+                    <button
+                      onClick={() => handleDeleteClick(selectedPartner)}
+                      className="inline-flex items-center px-3 py-2 text-red-600 dark:text-red-400 font-medium rounded-lg border border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                      <TrashIcon className="h-4 w-4 mr-1" />
+                      Delete
+                    </button>
                   )}
                 </div>
                 <div className="flex gap-3">

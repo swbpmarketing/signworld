@@ -362,62 +362,6 @@ const UserManagement = () => {
         </form>
       </div>
 
-      {/* Bulk Actions Bar */}
-      {selectedUsers.length > 0 && (
-        <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-medium">
-                {selectedUsers.length}
-              </span>
-              <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
-                user{selectedUsers.length > 1 ? 's' : ''} selected
-              </span>
-              <button
-                onClick={() => setSelectedUsers([])}
-                className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 underline ml-2"
-              >
-                Clear selection
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={handleBulkActivate}
-                disabled={bulkUpdateStatusMutation.isPending}
-                className="inline-flex items-center px-3 py-2 text-sm font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors disabled:opacity-50"
-              >
-                <CheckCircleIcon className="h-4 w-4 mr-1.5" />
-                Activate
-              </button>
-              <button
-                onClick={handleBulkDeactivate}
-                disabled={bulkUpdateStatusMutation.isPending}
-                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
-              >
-                <NoSymbolIcon className="h-4 w-4 mr-1.5" />
-                Deactivate
-              </button>
-              <button
-                onClick={() => setShowRoleModal(true)}
-                disabled={bulkUpdateRoleMutation.isPending}
-                className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
-              >
-                <UserGroupIcon className="h-4 w-4 mr-1.5" />
-                Change Role
-              </button>
-              <button
-                onClick={handleBulkDelete}
-                disabled={bulkDeleteMutation.isPending}
-                className="inline-flex items-center px-3 py-2 text-sm font-medium text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
-              >
-                <TrashIcon className="h-4 w-4 mr-1.5" />
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         {isLoading ? (
@@ -439,63 +383,47 @@ const UserManagement = () => {
               {users.map((user) => (
                 <div
                   key={user._id}
-                  className={`
-                    bg-white dark:bg-gray-800 rounded-lg border-2 p-4 transition-all
-                    ${selectedUsers.includes(user._id)
-                      ? 'border-primary-500 dark:border-primary-400 bg-primary-50/50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                    }
-                  `}
+                  className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 p-4 transition-all"
                 >
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      className="mt-1 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 cursor-pointer flex-shrink-0"
-                      checked={selectedUsers.includes(user._id)}
-                      onChange={() => toggleSelectUser(user._id)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                            {user.name}
-                          </h3>
-                          <p className="text-xs text-blue-600 dark:text-blue-400 truncate mt-0.5">
-                            {user.email}
-                          </p>
-                        </div>
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${getRoleBadgeColor(user.role)}`}>
-                          {user.role}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-4">
-                          {user.isActive ? (
-                            <span className="inline-flex items-center text-green-600 dark:text-green-400 font-medium">
-                              <span className="h-2 w-2 rounded-full bg-green-400 mr-1.5"></span>
-                              Active
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center text-gray-500 dark:text-gray-400 font-medium">
-                              <span className="h-2 w-2 rounded-full bg-gray-400 mr-1.5"></span>
-                              Inactive
-                            </span>
-                          )}
-                          {user.company && (
-                            <span className="text-gray-600 dark:text-gray-400 truncate">
-                              {user.company}
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => handleOpenUserDetails(user)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
-                        >
-                          View
-                        </button>
-                      </div>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                        {user.name}
+                      </h3>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 truncate mt-0.5">
+                        {user.email}
+                      </p>
                     </div>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${getRoleBadgeColor(user.role)}`}>
+                      {user.role}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-4">
+                      {user.isActive ? (
+                        <span className="inline-flex items-center text-green-600 dark:text-green-400 font-medium">
+                          <span className="h-2 w-2 rounded-full bg-green-400 mr-1.5"></span>
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-gray-500 dark:text-gray-400 font-medium">
+                          <span className="h-2 w-2 rounded-full bg-gray-400 mr-1.5"></span>
+                          Inactive
+                        </span>
+                      )}
+                      {user.company && (
+                        <span className="text-gray-600 dark:text-gray-400 truncate">
+                          {user.company}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleOpenUserDetails(user)}
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+                    >
+                      View
+                    </button>
                   </div>
                 </div>
               ))}
@@ -506,14 +434,6 @@ const UserManagement = () => {
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th scope="col" className="relative w-12 px-3 sm:w-16 sm:px-6">
-                      <input
-                        type="checkbox"
-                        className="absolute left-3 sm:left-4 top-1/2 -mt-2.5 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 cursor-pointer"
-                        checked={selectedUsers.length === users.length && users.length > 0}
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
                     <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Name
                     </th>
@@ -538,18 +458,8 @@ const UserManagement = () => {
                   {users.map((user) => (
                     <tr
                       key={user._id}
-                      className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
-                        selectedUsers.includes(user._id) ? 'bg-primary-50 dark:bg-primary-900/10' : ''
-                      }`}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                     >
-                      <td className="relative w-12 px-3 sm:w-16 sm:px-6">
-                        <input
-                          type="checkbox"
-                          className="absolute left-3 sm:left-4 top-1/2 -mt-2.5 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700 cursor-pointer"
-                          checked={selectedUsers.includes(user._id)}
-                          onChange={() => toggleSelectUser(user._id)}
-                        />
-                      </td>
                       <td className="px-3 sm:px-6 py-4">
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {user.name}

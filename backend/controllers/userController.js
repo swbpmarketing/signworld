@@ -171,6 +171,11 @@ exports.deleteUser = async (req, res) => {
 // @access  Private
 exports.uploadPhoto = async (req, res) => {
   try {
+    console.log('uploadPhoto controller called');
+    console.log('req.file:', req.file ? { s3Url: req.file.s3Url, location: req.file.location } : 'none');
+    console.log('req.params.id:', req.params.id);
+    console.log('req.user:', req.user ? { _id: req.user._id, role: req.user.role } : 'none');
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -179,6 +184,7 @@ exports.uploadPhoto = async (req, res) => {
     }
 
     const user = await User.findById(req.params.id);
+    console.log('User found:', user ? user._id : 'not found');
 
     if (!user) {
       return res.status(404).json({
@@ -188,7 +194,11 @@ exports.uploadPhoto = async (req, res) => {
     }
 
     // Check if user can update this profile
-    if (req.user.id !== req.params.id && req.user.role !== 'admin') {
+    const userIdMatch = req.user._id.toString() === req.params.id;
+    const isAdmin = req.user.role === 'admin';
+    console.log('Auth check:', { userIdMatch, isAdmin, reqUserId: req.user._id.toString(), paramId: req.params.id });
+
+    if (!userIdMatch && !isAdmin) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to update this profile',
@@ -196,16 +206,33 @@ exports.uploadPhoto = async (req, res) => {
     }
 
     // Update user with image URL (will be set by upload middleware)
-    user.profileImage = req.file.location || req.file.path;
-    await user.save();
+    const imageUrl = req.file.s3Url || req.file.location || req.file.path;
+    console.log('Image URL:', imageUrl);
+
+    if (!imageUrl) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to get uploaded file URL',
+      });
+    }
+
+    // Use findByIdAndUpdate to avoid triggering geospatial validation on location field
+    console.log('Updating user with profileImage...');
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { profileImage: imageUrl },
+      { new: true }
+    );
+    console.log('User updated successfully');
 
     res.status(200).json({
       success: true,
       data: {
-        profileImage: user.profileImage,
+        profileImage: updatedUser.profileImage,
       },
     });
   } catch (error) {
+    console.error('uploadPhoto error:', error);
     res.status(500).json({
       success: false,
       error: error.message,
