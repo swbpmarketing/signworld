@@ -6,6 +6,7 @@ const {
   updateUser,
   deleteUser,
   uploadPhoto,
+  getOwnerStats,
 } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
@@ -14,6 +15,9 @@ const router = express.Router();
 
 // All routes require authentication
 router.use(protect);
+
+// Owner stats route (must be before /:id route)
+router.get('/owner-stats', getOwnerStats);
 
 router
   .route('/')

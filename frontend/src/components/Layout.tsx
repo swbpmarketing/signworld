@@ -182,6 +182,21 @@ const Breadcrumb = memo(({ pathname }: { pathname: string }) => {
       );
     }
 
+    // Pending Approval page (sub-page of Library, admin only)
+    if (pathname === '/library/pending') {
+      return (
+        <>
+          <Link to="/library" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+            Library
+          </Link>
+          <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">&gt;</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+            Pending Approval
+          </span>
+        </>
+      );
+    }
+
     // Default page name
     return (
       <span className="font-medium text-gray-900 dark:text-gray-100 truncate">

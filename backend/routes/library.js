@@ -20,8 +20,15 @@ router.get('/', protect, async (req, res) => {
       tags
     } = req.query;
 
-    // Build query - exclude soft deleted files
+    // Build query - exclude soft deleted files and only show approved files
+    // Admin can see all files, others only see approved files
+    const isAdmin = req.user.role === 'admin';
     const query = { isActive: true, deletedAt: null };
+
+    // Non-admin users only see approved files
+    if (!isAdmin) {
+      query.status = 'approved';
+    }
 
     // Filter by category
     if (category && category !== 'all') {
@@ -194,6 +201,239 @@ router.get('/deleted', protect, authorize('admin'), async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Server error fetching deleted files'
+    });
+  }
+});
+
+// @desc    Get pending files for admin review
+// @route   GET /api/library/pending
+// @access  Private (Admin only)
+router.get('/pending', protect, authorize('admin'), async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      sort = '-createdAt'
+    } = req.query;
+
+    // Build query for pending files
+    const query = { status: 'pending', deletedAt: null };
+
+    // Search by title, description, or tags
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } },
+        { fileName: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Execute query with pagination
+    const files = await LibraryFile.find(query)
+      .populate('uploadedBy', 'firstName lastName email role')
+      .sort(sort)
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    // Get total count for pagination
+    const total = await LibraryFile.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: files,
+      files,
+      totalFiles: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching pending files:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error fetching pending files'
+    });
+  }
+});
+
+// @desc    Get my uploads (for owners to see their pending/approved/rejected files)
+// @route   GET /api/library/my-uploads
+// @access  Private (Owner)
+router.get('/my-uploads', protect, authorize('admin', 'owner'), async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      status,
+      search,
+      sort = '-createdAt'
+    } = req.query;
+
+    // Build query for user's own uploads
+    const query = { uploadedBy: req.user._id, deletedAt: null };
+
+    // Filter by status
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    // Search by title, description, or tags
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } },
+        { fileName: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Execute query with pagination
+    const files = await LibraryFile.find(query)
+      .populate('uploadedBy', 'firstName lastName email')
+      .populate('reviewedBy', 'firstName lastName')
+      .sort(sort)
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    // Get total count for pagination
+    const total = await LibraryFile.countDocuments(query);
+
+    // Get counts by status for the user
+    const statusCounts = await LibraryFile.aggregate([
+      { $match: { uploadedBy: req.user._id, deletedAt: null } },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    const counts = {
+      pending: 0,
+      approved: 0,
+      rejected: 0
+    };
+    statusCounts.forEach(s => {
+      counts[s._id] = s.count;
+    });
+
+    res.json({
+      success: true,
+      data: files,
+      files,
+      counts,
+      totalFiles: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching my uploads:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error fetching your uploads'
+    });
+  }
+});
+
+// @desc    Approve a pending file
+// @route   PUT /api/library/:id/approve
+// @access  Private (Admin only)
+router.put('/:id/approve', protect, authorize('admin'), async (req, res) => {
+  try {
+    const file = await LibraryFile.findById(req.params.id);
+
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        error: 'File not found'
+      });
+    }
+
+    if (file.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only pending files can be approved'
+      });
+    }
+
+    // Approve the file
+    file.status = 'approved';
+    file.reviewedBy = req.user._id;
+    file.reviewedAt = new Date();
+    file.rejectionReason = undefined;
+    await file.save();
+
+    // Populate uploader info for response
+    await file.populate('uploadedBy', 'firstName lastName email');
+    await file.populate('reviewedBy', 'firstName lastName');
+
+    res.json({
+      success: true,
+      data: file,
+      message: 'File approved successfully'
+    });
+  } catch (error) {
+    console.error('Error approving file:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error approving file'
+    });
+  }
+});
+
+// @desc    Reject a pending file
+// @route   PUT /api/library/:id/reject
+// @access  Private (Admin only)
+router.put('/:id/reject', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    const file = await LibraryFile.findById(req.params.id);
+
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        error: 'File not found'
+      });
+    }
+
+    if (file.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only pending files can be rejected'
+      });
+    }
+
+    // Reject the file
+    file.status = 'rejected';
+    file.reviewedBy = req.user._id;
+    file.reviewedAt = new Date();
+    file.rejectionReason = reason || 'No reason provided';
+    await file.save();
+
+    // Populate uploader info for response
+    await file.populate('uploadedBy', 'firstName lastName email');
+    await file.populate('reviewedBy', 'firstName lastName');
+
+    res.json({
+      success: true,
+      data: file,
+      message: 'File rejected'
+    });
+  } catch (error) {
+    console.error('Error rejecting file:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error rejecting file'
     });
   }
 });
@@ -442,8 +682,8 @@ router.get('/:id', protect, async (req, res) => {
 
 // @desc    Upload new file
 // @route   POST /api/library
-// @access  Private (Admin only)
-router.post('/', protect, authorize('admin'), upload.single('file'), async (req, res) => {
+// @access  Private (Admin and Owner - Owner uploads go to pending)
+router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -453,6 +693,11 @@ router.post('/', protect, authorize('admin'), upload.single('file'), async (req,
     }
 
     const { title, description, category, tags } = req.body;
+
+    // Determine status based on user role
+    // Admin uploads are auto-approved, owner uploads go to pending
+    const isAdmin = req.user.role === 'admin';
+    const status = isAdmin ? 'approved' : 'pending';
 
     // Create file record
     const fileData = {
@@ -464,14 +709,16 @@ router.post('/', protect, authorize('admin'), upload.single('file'), async (req,
       fileSize: req.file.size,
       category: category || 'other',
       tags: tags ? tags.split(',').map(t => t.trim()) : [],
-      uploadedBy: req.user._id
+      uploadedBy: req.user._id,
+      status
     };
 
     const libraryFile = await LibraryFile.create(fileData);
 
     res.status(201).json({
       success: true,
-      data: libraryFile
+      data: libraryFile,
+      message: isAdmin ? 'File uploaded successfully' : 'File uploaded and pending admin approval'
     });
   } catch (error) {
     console.error('Error uploading file:', error);
@@ -484,8 +731,8 @@ router.post('/', protect, authorize('admin'), upload.single('file'), async (req,
 
 // @desc    Update file metadata
 // @route   PUT /api/library/:id
-// @access  Private (Admin only)
-router.put('/:id', protect, authorize('admin'), async (req, res) => {
+// @access  Private (Admin can update any, Owner can update their own)
+router.put('/:id', protect, authorize('admin', 'owner'), async (req, res) => {
   try {
     const { title, description, category, tags, isActive } = req.body;
 
@@ -498,12 +745,24 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
       });
     }
 
+    // Check ownership for non-admin users
+    const isAdmin = req.user.role === 'admin';
+    const isOwner = file.uploadedBy.toString() === req.user._id.toString();
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        error: 'You can only edit files you uploaded'
+      });
+    }
+
     // Update fields
     if (title) file.title = title;
     if (description !== undefined) file.description = description;
     if (category) file.category = category;
     if (tags) file.tags = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim());
-    if (isActive !== undefined) file.isActive = isActive;
+    // Only admin can change isActive status
+    if (isActive !== undefined && isAdmin) file.isActive = isActive;
 
     await file.save();
 
@@ -522,8 +781,8 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
 
 // @desc    Soft delete file (move to recently deleted)
 // @route   DELETE /api/library/:id
-// @access  Private (Admin only)
-router.delete('/:id', protect, authorize('admin'), async (req, res) => {
+// @access  Private (Admin can delete any, Owner can delete their own)
+router.delete('/:id', protect, authorize('admin', 'owner'), async (req, res) => {
   try {
     const file = await LibraryFile.findById(req.params.id);
 
@@ -531,6 +790,17 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'File not found'
+      });
+    }
+
+    // Check ownership for non-admin users
+    const isAdmin = req.user.role === 'admin';
+    const isOwner = file.uploadedBy.toString() === req.user._id.toString();
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        error: 'You can only delete files you uploaded'
       });
     }
 

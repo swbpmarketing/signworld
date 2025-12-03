@@ -213,6 +213,17 @@ router.post('/', protect, ...forumFiles, async (req, res) => {
     // Populate author info
     await thread.populate('author', 'name email role');
 
+    // Emit real-time event for new thread
+    const io = req.app.get('io');
+    if (io) {
+      io.to('forum').emit('thread:new', {
+        thread: {
+          ...thread.toObject(),
+          replyCount: 0
+        }
+      });
+    }
+
     res.status(201).json({
       success: true,
       data: thread
@@ -361,9 +372,29 @@ router.post('/:id/replies', protect, async (req, res) => {
     await thread.save();
     await thread.populate('replies.author', 'name email role');
 
+    const newReply = thread.replies[thread.replies.length - 1];
+
+    // Emit real-time event for new reply
+    const io = req.app.get('io');
+    if (io) {
+      // Emit to thread room for real-time update
+      io.to(`thread:${req.params.id}`).emit('thread:reply', {
+        threadId: req.params.id,
+        reply: newReply,
+        replyCount: thread.replies.length
+      });
+      // Also emit to forum room to update reply count in thread list and stats
+      io.to('forum').emit('thread:update', {
+        threadId: req.params.id,
+        replyCount: thread.replies.length,
+        lastReplyAt: thread.lastReplyAt,
+        newReplyAdded: true // Flag for stats update
+      });
+    }
+
     res.status(201).json({
       success: true,
-      data: thread.replies[thread.replies.length - 1]
+      data: newReply
     });
   } catch (error) {
     console.error('Error adding reply:', error);
@@ -512,6 +543,21 @@ router.post('/:id/like', protect, async (req, res) => {
 
     await thread.save();
 
+    // Emit real-time event for thread like
+    const io = req.app.get('io');
+    if (io) {
+      const likeData = {
+        threadId: req.params.id,
+        likesCount: thread.likes.length,
+        userId: req.user._id.toString(),
+        isLiked: likeIndex === -1
+      };
+      // Emit to thread room for detail page
+      io.to(`thread:${req.params.id}`).emit('thread:like', likeData);
+      // Also emit to forum room for listing page
+      io.to('forum').emit('thread:like', likeData);
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -562,6 +608,18 @@ router.post('/:threadId/replies/:replyId/like', protect, async (req, res) => {
     }
 
     await thread.save();
+
+    // Emit real-time event for reply like
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`thread:${req.params.threadId}`).emit('reply:like', {
+        threadId: req.params.threadId,
+        replyId: req.params.replyId,
+        likesCount: reply.likes.length,
+        userId: req.user._id.toString(),
+        isLiked: likeIndex === -1
+      });
+    }
 
     res.status(200).json({
       success: true,

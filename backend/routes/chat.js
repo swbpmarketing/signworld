@@ -228,6 +228,25 @@ router.post('/conversations/:id/messages', protect, async (req, res) => {
     // Populate sender info
     await message.populate('sender', 'name email role avatar');
 
+    // Emit real-time event for new message
+    const io = req.app.get('io');
+    if (io) {
+      // Emit to the conversation room
+      io.to(`conversation:${req.params.id}`).emit('message:new', {
+        conversationId: req.params.id,
+        message: message
+      });
+      // Also emit to all participants' chat rooms for sidebar updates
+      conversation.participants.forEach(participantId => {
+        io.to(`chat:${participantId.toString()}`).emit('conversation:update', {
+          conversationId: req.params.id,
+          lastMessage: message.content,
+          lastMessageAt: message.createdAt,
+          senderId: req.user._id.toString()
+        });
+      });
+    }
+
     res.status(201).json({
       success: true,
       data: message,
@@ -307,6 +326,25 @@ router.post('/conversations/:id/messages/upload', protect, upload.single('file')
 
     // Populate sender info
     await message.populate('sender', 'name email role avatar');
+
+    // Emit real-time event for new message with attachment
+    const io = req.app.get('io');
+    if (io) {
+      // Emit to the conversation room
+      io.to(`conversation:${req.params.id}`).emit('message:new', {
+        conversationId: req.params.id,
+        message: message
+      });
+      // Also emit to all participants' chat rooms for sidebar updates
+      conversation.participants.forEach(participantId => {
+        io.to(`chat:${participantId.toString()}`).emit('conversation:update', {
+          conversationId: req.params.id,
+          lastMessage: message.content,
+          lastMessageAt: message.createdAt,
+          senderId: req.user._id.toString()
+        });
+      });
+    }
 
     res.status(201).json({
       success: true,

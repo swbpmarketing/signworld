@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import socketService from '../services/socketService';
 import {
   MagnifyingGlassIcon,
   PaperAirplaneIcon,
@@ -48,6 +49,7 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'owner' | 'partner'>('all');
   const [showSidebar, setShowSidebar] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -68,17 +70,113 @@ const Chat = () => {
     fetchConversations();
   }, []);
 
-  // Polling for new messages every 5 seconds
+  // Polling for new messages as a fallback (less frequent since we have sockets)
   useEffect(() => {
     const interval = setInterval(() => {
       if (selectedContact?.conversationId) {
         fetchMessagesQuietly(selectedContact.conversationId);
       }
       fetchConversationsQuietly();
-    }, 5000);
+    }, 15000); // Reduced to 15 seconds since we have real-time socket updates
 
     return () => clearInterval(interval);
   }, [selectedContact]);
+
+  // Socket.io real-time updates for chat
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    // Connect to socket and join user's chat room
+    socketService.connect();
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.emit('join:chat', currentUserId);
+    }
+
+    // Handle new message event
+    const handleNewMessage = (data: { conversationId: string; message: Message }) => {
+      console.log('New message received:', data);
+
+      // If we're viewing this conversation, add the message
+      if (selectedContact?.conversationId === data.conversationId) {
+        setMessages(prevMessages => {
+          // Check if message already exists
+          if (prevMessages.some(m => m._id === data.message._id)) {
+            return prevMessages;
+          }
+          return [...prevMessages, data.message];
+        });
+      }
+
+      // Update contact list with new message
+      setContacts(prevContacts =>
+        prevContacts.map(contact => {
+          if (contact.conversationId === data.conversationId) {
+            return {
+              ...contact,
+              lastMessage: data.message.content,
+              lastMessageTime: new Date(data.message.createdAt),
+              unreadCount: selectedContact?.conversationId === data.conversationId
+                ? contact.unreadCount
+                : contact.unreadCount + 1
+            };
+          }
+          return contact;
+        })
+      );
+    };
+
+    // Handle conversation update event (for sidebar updates)
+    const handleConversationUpdate = (data: { conversationId: string; lastMessage: string; lastMessageAt: string; senderId: string }) => {
+      console.log('Conversation update received:', data);
+      // Only update if this message is from someone else
+      if (data.senderId !== currentUserId) {
+        setContacts(prevContacts =>
+          prevContacts.map(contact => {
+            if (contact.conversationId === data.conversationId) {
+              return {
+                ...contact,
+                lastMessage: data.lastMessage,
+                lastMessageTime: new Date(data.lastMessageAt),
+                unreadCount: selectedContact?.conversationId === data.conversationId
+                  ? 0
+                  : contact.unreadCount + 1
+              };
+            }
+            return contact;
+          })
+        );
+      }
+    };
+
+    // Subscribe to events
+    socketService.on('message:new', handleNewMessage);
+    socketService.on('conversation:update', handleConversationUpdate);
+
+    // Cleanup on unmount
+    return () => {
+      socketService.off('message:new', handleNewMessage);
+      socketService.off('conversation:update', handleConversationUpdate);
+      if (socket) {
+        socket.emit('leave:chat', currentUserId);
+      }
+    };
+  }, [currentUserId, selectedContact?.conversationId]);
+
+  // Join/leave conversation room when selected contact changes
+  useEffect(() => {
+    const socket = socketService.getSocket();
+
+    if (selectedContact?.conversationId && socket) {
+      socket.emit('join:conversation', selectedContact.conversationId);
+    }
+
+    return () => {
+      if (selectedContact?.conversationId && socket) {
+        socket.emit('leave:conversation', selectedContact.conversationId);
+      }
+    };
+  }, [selectedContact?.conversationId]);
 
   const fetchConversations = async () => {
     try {
@@ -401,10 +499,16 @@ const Chat = () => {
     return `${date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} @ ${timeStr}`;
   };
 
-  const filteredContacts = contacts.filter(contact =>
-    contact.name.toLowerCase().includes(searchInput.toLowerCase()) ||
-    contact.role.toLowerCase().includes(searchInput.toLowerCase())
-  );
+  const filteredContacts = contacts.filter(contact => {
+    // Search filter
+    const matchesSearch = contact.name.toLowerCase().includes(searchInput.toLowerCase()) ||
+      contact.role.toLowerCase().includes(searchInput.toLowerCase());
+
+    // Role filter
+    const matchesRole = roleFilter === 'all' || contact.role.toLowerCase() === roleFilter;
+
+    return matchesSearch && matchesRole;
+  });
 
   if (loading) {
     return (
@@ -441,6 +545,39 @@ const Chat = () => {
               title="New Chat"
             >
               <PlusIcon className="h-5 w-5" />
+            </button>
+          </div>
+          {/* Role Filter Pills */}
+          <div className="flex justify-end gap-2 mt-3">
+            <button
+              onClick={() => setRoleFilter('all')}
+              className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                roleFilter === 'all'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 ring-1 ring-green-500/50'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setRoleFilter('owner')}
+              className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                roleFilter === 'owner'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 ring-1 ring-green-500/50'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              Owners
+            </button>
+            <button
+              onClick={() => setRoleFilter('partner')}
+              className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                roleFilter === 'partner'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 ring-1 ring-green-500/50'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              Partners
             </button>
           </div>
         </div>

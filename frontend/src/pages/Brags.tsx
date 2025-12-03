@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   TrophyIcon,
   ChartBarIcon,
@@ -24,8 +24,10 @@ import {
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import {
   getBrags,
+  getBragById,
   toggleLike,
   getPublicStats,
+  getMyStats,
   createBrag,
   addComment,
   moderateBrag,
@@ -39,6 +41,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import toast from 'react-hot-toast';
 import CustomSelect from '../components/CustomSelect';
+import socketService from '../services/socketService';
 
 const categories = [
   { name: 'All Stories', count: 0 },
@@ -128,11 +131,17 @@ const Brags = () => {
   const [loadingPending, setLoadingPending] = useState(false);
   const [moderatingId, setModeratingId] = useState<string | null>(null);
 
-  // Fetch statistics (public endpoint)
+  // Fetch statistics (owner-specific for owner role, public for others)
   const fetchStats = async () => {
     try {
-      const response = await getPublicStats();
-      setStats(response.data);
+      // Use owner-specific stats for owner role
+      if (user?.role === 'owner') {
+        const response = await getMyStats();
+        setStats(response.data);
+      } else {
+        const response = await getPublicStats();
+        setStats(response.data);
+      }
     } catch (err) {
       console.error('Error fetching stats:', err);
     }
@@ -372,11 +381,122 @@ const Brags = () => {
     }
   }, [selectedCategory, searchQuery, sortBy]);
 
+  // Socket.io real-time updates
+  useEffect(() => {
+    // Connect to socket
+    socketService.connect();
+    socketService.joinRoom('brags');
+
+    // Handle real-time like updates
+    const handleLikeUpdate = (data: { storyId: string; likesCount: number; userId: string; isLiked: boolean }) => {
+      console.log('Real-time like update:', data);
+
+      // Update stories list
+      setStories(prevStories =>
+        prevStories.map(story =>
+          story._id === data.storyId
+            ? { ...story, likesCount: data.likesCount }
+            : story
+        )
+      );
+
+      // Update selected story if viewing
+      setSelectedStory(prev => {
+        if (prev && prev._id === data.storyId) {
+          return { ...prev, likesCount: data.likesCount };
+        }
+        return prev;
+      });
+
+      // Update my stories if viewing
+      setMyStories(prev =>
+        prev.map(story =>
+          story._id === data.storyId
+            ? { ...story, likesCount: data.likesCount }
+            : story
+        )
+      );
+    };
+
+    // Handle real-time comment updates
+    const handleCommentUpdate = (data: { storyId: string; comment: any; commentsCount: number }) => {
+      console.log('Real-time comment update:', data);
+
+      // Update stories list
+      setStories(prevStories =>
+        prevStories.map(story =>
+          story._id === data.storyId
+            ? {
+                ...story,
+                commentsCount: data.commentsCount,
+                comments: [...(story.comments || []), data.comment]
+              }
+            : story
+        )
+      );
+
+      // Update selected story if viewing
+      setSelectedStory(prev => {
+        if (prev && prev._id === data.storyId) {
+          // Check if comment already exists (to avoid duplicates from own action)
+          const commentExists = prev.comments?.some(c => c._id === data.comment._id);
+          if (!commentExists) {
+            return {
+              ...prev,
+              commentsCount: data.commentsCount,
+              comments: [...(prev.comments || []), data.comment]
+            };
+          }
+        }
+        return prev;
+      });
+
+      // Update my stories if viewing
+      setMyStories(prev =>
+        prev.map(story =>
+          story._id === data.storyId
+            ? { ...story, commentsCount: data.commentsCount }
+            : story
+        )
+      );
+    };
+
+    // Handle new story (when approved)
+    const handleNewStory = (data: { story: Brag }) => {
+      console.log('Real-time new story:', data);
+
+      // Add new story to the top of the list (if not already there)
+      setStories(prevStories => {
+        const exists = prevStories.some(s => s._id === data.story._id);
+        if (!exists) {
+          return [data.story, ...prevStories];
+        }
+        return prevStories;
+      });
+
+      // Update stats
+      fetchStats();
+    };
+
+    // Subscribe to events
+    socketService.on('brag:like', handleLikeUpdate);
+    socketService.on('brag:comment', handleCommentUpdate);
+    socketService.on('brag:new', handleNewStory);
+
+    // Cleanup on unmount
+    return () => {
+      socketService.off('brag:like', handleLikeUpdate);
+      socketService.off('brag:comment', handleCommentUpdate);
+      socketService.off('brag:new', handleNewStory);
+      socketService.leaveRoom('brags');
+    };
+  }, []);
+
   // Handle like/unlike
   const handleLike = async (storyId: string) => {
     if (!user) {
       // Show login prompt or redirect
-      alert('Please log in to like stories');
+      toast.error('Please log in to like stories');
       return;
     }
 
@@ -414,7 +534,7 @@ const Brags = () => {
       }
     } catch (err: any) {
       console.error('Error toggling like:', err);
-      alert(err.response?.data?.error || 'Failed to like story');
+      toast.error(err.response?.data?.error || 'Failed to like story');
     }
   };
 
@@ -431,19 +551,21 @@ const Brags = () => {
     }
   };
 
-  // Format date
+  // Format date as MM/DD/YYYY HH:MM AM/PM
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
 
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-    return date.toLocaleDateString();
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 should be 12
+    const formattedHours = String(hours).padStart(2, '0');
+
+    return `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
   };
 
   // Get initials from name
@@ -457,9 +579,26 @@ const Brags = () => {
   };
 
   // Handle open story detail
-  const handleOpenStory = (story: Brag) => {
+  const handleOpenStory = async (story: Brag) => {
+    // Set the story immediately for a responsive UI
     setSelectedStory(story);
     setShowDetailModal(true);
+
+    try {
+      // Fetch the full story data from API (this also increments view count)
+      const response = await getBragById(story._id);
+      setSelectedStory(response.data);
+
+      // Also update the story in the stories list with the new view count
+      setStories(prevStories =>
+        prevStories.map(s =>
+          s._id === story._id ? { ...s, views: response.data.views } : s
+        )
+      );
+    } catch (err) {
+      console.error('Error fetching story details:', err);
+      // Keep showing the local data if API fails
+    }
   };
 
   // Handle close story detail
@@ -670,28 +809,36 @@ const Brags = () => {
           <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {stats?.publishedStories || pagination.total || 0}
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Success Stories</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {user?.role === 'owner' ? 'My Stories' : 'Success Stories'}
+          </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <ChartBarIcon className="h-8 w-8 text-green-500 mx-auto mb-2" />
           <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {(stats?.totalViews || 0).toLocaleString()}
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Views</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {user?.role === 'owner' ? 'My Views' : 'Total Views'}
+          </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <HeartIcon className="h-8 w-8 text-red-500 mx-auto mb-2" />
           <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {(stats?.totalLikes || 0).toLocaleString()}
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Likes</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {user?.role === 'owner' ? 'My Likes' : 'Total Likes'}
+          </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
           <ChatBubbleLeftIcon className="h-8 w-8 text-blue-500 mx-auto mb-2" />
           <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {(stats?.totalComments || 0).toLocaleString()}
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Comments</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {user?.role === 'owner' ? 'My Comments' : 'Total Comments'}
+          </p>
         </div>
       </div>
 

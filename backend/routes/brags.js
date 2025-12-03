@@ -239,6 +239,52 @@ router.get('/user/my-stories', protect, async (req, res) => {
   }
 });
 
+// @desc    Get user's own success stories statistics
+// @route   GET /api/brags/user/my-stats
+// @access  Private
+router.get('/user/my-stats', protect, async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+
+    // Count user's stories (published only)
+    const publishedStories = await Brag.countDocuments({
+      author: userId,
+      isPublished: true,
+      status: 'approved'
+    });
+
+    // Get total views, likes, and comments for user's stories
+    const stats = await Brag.aggregate([
+      { $match: { author: userId, isPublished: true, status: 'approved' } },
+      {
+        $group: {
+          _id: null,
+          totalViews: { $sum: '$views' },
+          totalLikes: { $sum: { $size: '$likes' } },
+          totalComments: { $sum: { $size: '$comments' } }
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        publishedStories,
+        totalViews: stats[0]?.totalViews || 0,
+        totalLikes: stats[0]?.totalLikes || 0,
+        totalComments: stats[0]?.totalComments || 0
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch your statistics'
+    });
+  }
+});
+
 // @desc    Get single success story by ID
 // @route   GET /api/brags/:id
 // @access  Public (only published stories) / Admin can see all
@@ -482,6 +528,17 @@ router.post('/:id/like', protect, async (req, res) => {
 
     await brag.save();
 
+    // Emit real-time like update
+    const io = req.app.get('io');
+    if (io) {
+      io.to('brags').emit('brag:like', {
+        storyId: brag._id,
+        likesCount: brag.likes.length,
+        userId: req.user.id,
+        isLiked: likeIndex === -1
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -534,6 +591,16 @@ router.post('/:id/comment', protect, async (req, res) => {
 
     // Get the newly added comment
     const newComment = brag.comments[brag.comments.length - 1];
+
+    // Emit real-time comment update
+    const io = req.app.get('io');
+    if (io) {
+      io.to('brags').emit('brag:comment', {
+        storyId: brag._id,
+        comment: newComment,
+        commentsCount: brag.comments.length
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -636,6 +703,20 @@ router.put('/:id/moderate', protect, authorize('admin'), async (req, res) => {
     await brag.save();
     await brag.populate('author', 'name email role location company');
     await brag.populate('moderatedBy', 'name email');
+    await brag.populate('likes', 'name');
+    await brag.populate('comments.user', 'name email');
+
+    // Emit real-time update when story is approved (new story for everyone)
+    const io = req.app.get('io');
+    if (io && status === 'approved') {
+      io.to('brags').emit('brag:new', {
+        story: {
+          ...brag.toObject(),
+          likesCount: brag.likes?.length || 0,
+          commentsCount: brag.comments?.length || 0
+        }
+      });
+    }
 
     res.status(200).json({
       success: true,

@@ -20,6 +20,7 @@ import {
   EllipsisVerticalIcon,
   ArchiveBoxIcon,
   TrashIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
 import { FolderIcon as FolderSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
@@ -85,6 +86,8 @@ const categoryMeta: { [key: string]: { name: string; icon: string; color: string
 const Library = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const isOwner = user?.role === 'owner';
+  const canUpload = isAdmin || isOwner;
 
   // State
   const [files, setFiles] = useState<LibraryFile[]>([]);
@@ -380,15 +383,21 @@ const Library = () => {
         setUploadDescription('');
         setUploadCategory('other');
         setUploadTags('');
+        // Show appropriate message based on user role
+        if (isOwner) {
+          toast.success('File uploaded! It will be visible after admin approval.');
+        } else {
+          toast.success('File uploaded successfully!');
+        }
         fetchFiles();
         fetchStats();
         fetchCategories();
       } else {
-        alert(data.error || 'Failed to upload file');
+        toast.error(data.error || 'Failed to upload file');
       }
     } catch (err) {
       console.error('Error uploading file:', err);
-      alert('Failed to upload file');
+      toast.error('Failed to upload file');
     } finally {
       setUploading(false);
     }
@@ -494,7 +503,7 @@ const Library = () => {
                 Access and manage all your Sign Company resources in one place
               </p>
             </div>
-            {isAdmin && (
+            {canUpload && (
               <button
                 onClick={() => setShowUploadModal(true)}
                 className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
@@ -657,7 +666,7 @@ const Library = () => {
                 <div className="text-center py-12">
                   <FolderIcon className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-600" />
                   <p className="mt-4 text-gray-500 dark:text-gray-400">No files found</p>
-                  {isAdmin && (
+                  {canUpload && (
                     <button
                       onClick={() => setShowUploadModal(true)}
                       className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
@@ -971,6 +980,13 @@ const Library = () => {
           {isAdmin && (
             <div className="space-y-2">
               <Link
+                to="/library/pending"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-400 rounded-xl transition-colors duration-200"
+              >
+                <ClipboardDocumentListIcon className="h-5 w-5" />
+                <span className="font-medium">Pending Approval</span>
+              </Link>
+              <Link
                 to="/archive"
                 className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 text-amber-700 dark:text-amber-400 rounded-xl transition-colors duration-200"
               >
@@ -1003,6 +1019,13 @@ const Library = () => {
               </button>
             </div>
             <form onSubmit={handleUpload} className="space-y-4">
+              {isOwner && (
+                <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Your uploaded files will be reviewed by an admin before appearing in the library.
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   File

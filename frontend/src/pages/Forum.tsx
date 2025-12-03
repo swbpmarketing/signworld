@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
+import socketService from '../services/socketService';
 import {
   ChatBubbleLeftRightIcon,
   FireIcon,
@@ -430,6 +431,85 @@ const Forum = () => {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Socket.io real-time updates
+  useEffect(() => {
+    // Connect to socket and join forum room
+    socketService.connect();
+    socketService.joinRoom('forum');
+
+    // Handle new thread event
+    const handleNewThread = (data: { thread: ForumThread }) => {
+      console.log('New thread received:', data);
+      setThreads(prevThreads => {
+        // Check if thread already exists
+        if (prevThreads.some(t => t._id === data.thread._id)) {
+          return prevThreads;
+        }
+        // Add new thread to the beginning
+        return [data.thread, ...prevThreads];
+      });
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        totalThreads: prev.totalThreads + 1,
+        todayThreads: prev.todayThreads + 1
+      }));
+    };
+
+    // Handle thread update event (reply count, last reply, etc.)
+    const handleThreadUpdate = (data: { threadId: string; replyCount?: number; lastReplyAt?: string; newReplyAdded?: boolean }) => {
+      console.log('Thread update received:', data);
+      setThreads(prevThreads =>
+        prevThreads.map(thread =>
+          thread._id === data.threadId
+            ? {
+                ...thread,
+                replyCount: data.replyCount ?? thread.replyCount,
+                lastActivity: data.lastReplyAt ?? thread.lastActivity
+              }
+            : thread
+        )
+      );
+      // Update total replies stat if a new reply was added
+      if (data.newReplyAdded) {
+        setStats(prev => ({
+          ...prev,
+          totalReplies: prev.totalReplies + 1
+        }));
+      }
+    };
+
+    // Handle thread like event
+    const handleThreadLike = (data: { threadId: string; likesCount: number; userId: string; isLiked: boolean }) => {
+      console.log('Thread like received:', data);
+      setThreads(prevThreads =>
+        prevThreads.map(thread =>
+          thread._id === data.threadId
+            ? {
+                ...thread,
+                likes: data.isLiked
+                  ? [...(thread.likes || []), data.userId]
+                  : (thread.likes || []).filter((id: string) => id !== data.userId)
+              }
+            : thread
+        )
+      );
+    };
+
+    // Subscribe to events
+    socketService.on('thread:new', handleNewThread);
+    socketService.on('thread:update', handleThreadUpdate);
+    socketService.on('thread:like', handleThreadLike);
+
+    // Cleanup on unmount
+    return () => {
+      socketService.off('thread:new', handleNewThread);
+      socketService.off('thread:update', handleThreadUpdate);
+      socketService.off('thread:like', handleThreadLike);
+      socketService.leaveRoom('forum');
+    };
+  }, []);
 
   // Handle open thread detail
   const handleOpenThread = (thread: ForumThread) => {

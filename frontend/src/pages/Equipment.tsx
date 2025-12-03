@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   ShoppingBagIcon,
@@ -22,11 +23,17 @@ import {
   TrashIcon,
   PlusIcon,
   MinusIcon,
+  CalculatorIcon,
+  ChatBubbleLeftRightIcon,
+  DocumentTextIcon,
+  ArrowsRightLeftIcon,
+  PaperAirplaneIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon, HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
 import { getEquipment, getEquipmentStats } from '../services/equipmentService';
 import type { Equipment as EquipmentType } from '../services/equipmentService';
+import toast from 'react-hot-toast';
 
 // Category configuration with icons
 const categoryConfig: { [key: string]: { name: string; icon: React.ComponentType<{ className?: string }> } } = {
@@ -52,12 +59,18 @@ interface CartItem {
 }
 
 // Helper functions to load from localStorage with user-specific keys
+// New users automatically start with empty cart/wishlist since their unique
+// MongoDB _id won't match any existing localStorage keys
 const loadCartFromStorage = (userId: string | undefined): CartItem[] => {
   if (!userId) return [];
   try {
     const stored = localStorage.getItem(`equipment-cart-${userId}`);
-    return stored ? JSON.parse(stored) : [];
+    if (!stored) return []; // New user or no saved data - start fresh
+    const parsed = JSON.parse(stored);
+    // Validate that it's an array to prevent corrupted data issues
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
+    // If parsing fails, start fresh
     return [];
   }
 };
@@ -66,14 +79,20 @@ const loadFavoritesFromStorage = (userId: string | undefined): Set<string> => {
   if (!userId) return new Set();
   try {
     const stored = localStorage.getItem(`equipment-favorites-${userId}`);
-    return stored ? new Set(JSON.parse(stored)) : new Set();
+    if (!stored) return new Set(); // New user or no saved data - start fresh
+    const parsed = JSON.parse(stored);
+    // Validate that it's an array before converting to Set
+    return Array.isArray(parsed) ? new Set(parsed) : new Set();
   } catch {
+    // If parsing fails, start fresh
     return new Set();
   }
 };
 
 const Equipment = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const userId = user?._id || user?.id;
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,6 +100,7 @@ const Equipment = () => {
   const [sortBy, setSortBy] = useState('featured');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [isInitialized, setIsInitialized] = useState(false);
   const [page, setPage] = useState(1);
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
 
@@ -89,30 +109,53 @@ const Equipment = () => {
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [showWishlistDrawer, setShowWishlistDrawer] = useState(false);
 
+  // New modal states
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [showFinancingCalculator, setShowFinancingCalculator] = useState(false);
+  const [showComparisonModal, setShowComparisonModal] = useState(false);
+  const [comparisonItems, setComparisonItems] = useState<EquipmentType[]>([]);
+  const [quoteForm, setQuoteForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    message: '',
+  });
+  const [submittingQuote, setSubmittingQuote] = useState(false);
+
+  // Financing calculator state
+  const [financingForm, setFinancingForm] = useState({
+    amount: 10000,
+    term: 36,
+    interestRate: 5.9,
+  });
+
   // Load cart and favorites when user changes
   useEffect(() => {
-    if (user?.id) {
-      setCartItems(loadCartFromStorage(user.id));
-      setFavorites(loadFavoritesFromStorage(user.id));
+    if (userId) {
+      setCartItems(loadCartFromStorage(userId));
+      setFavorites(loadFavoritesFromStorage(userId));
     } else {
       setCartItems([]);
       setFavorites(new Set());
     }
-  }, [user?.id]);
+    // Mark as initialized after loading (even if userId is undefined)
+    setIsInitialized(true);
+  }, [userId]);
 
-  // Persist cart to localStorage with user-specific key
+  // Persist cart to localStorage with user-specific key (only after initial load)
   useEffect(() => {
-    if (user?.id) {
-      localStorage.setItem(`equipment-cart-${user.id}`, JSON.stringify(cartItems));
+    if (userId && isInitialized) {
+      localStorage.setItem(`equipment-cart-${userId}`, JSON.stringify(cartItems));
     }
-  }, [cartItems, user?.id]);
+  }, [cartItems, userId, isInitialized]);
 
-  // Persist favorites to localStorage with user-specific key
+  // Persist favorites to localStorage with user-specific key (only after initial load)
   useEffect(() => {
-    if (user?.id) {
-      localStorage.setItem(`equipment-favorites-${user.id}`, JSON.stringify(Array.from(favorites)));
+    if (userId && isInitialized) {
+      localStorage.setItem(`equipment-favorites-${userId}`, JSON.stringify(Array.from(favorites)));
     }
-  }, [favorites, user?.id]);
+  }, [favorites, userId, isInitialized]);
 
   // Fetch equipment from API
   const { data: equipmentData, isLoading: equipmentLoading } = useQuery({
@@ -208,6 +251,74 @@ const Equipment = () => {
   const isInCart = (equipmentId: string) => {
     return cartItems.some(item => item.equipment._id === equipmentId);
   };
+
+  // Toggle item for comparison
+  const toggleComparisonItem = (item: EquipmentType) => {
+    setComparisonItems(prev => {
+      const exists = prev.find(i => i._id === item._id);
+      if (exists) {
+        return prev.filter(i => i._id !== item._id);
+      }
+      if (prev.length >= 4) {
+        toast.error('You can compare up to 4 items at a time');
+        return prev;
+      }
+      return [...prev, item];
+    });
+  };
+
+  const isInComparison = (equipmentId: string) => {
+    return comparisonItems.some(item => item._id === equipmentId);
+  };
+
+  // Calculate monthly payment for financing
+  const calculateMonthlyPayment = () => {
+    const principal = financingForm.amount;
+    const monthlyRate = financingForm.interestRate / 100 / 12;
+    const numPayments = financingForm.term;
+
+    if (monthlyRate === 0) {
+      return principal / numPayments;
+    }
+
+    const payment = principal * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
+                   (Math.pow(1 + monthlyRate, numPayments) - 1);
+    return payment;
+  };
+
+  // Handle quote submission
+  const handleSubmitQuote = async () => {
+    if (!quoteForm.name || !quoteForm.email) {
+      toast.error('Please fill in your name and email');
+      return;
+    }
+
+    setSubmittingQuote(true);
+    try {
+      // Simulate API call - in production, this would send to backend
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      toast.success('Quote request submitted successfully! We\'ll contact you within 24 hours.');
+      setShowQuoteModal(false);
+      setQuoteForm({ name: '', email: '', phone: '', company: '', message: '' });
+      setShowCartDrawer(false);
+    } catch {
+      toast.error('Failed to submit quote request. Please try again.');
+    } finally {
+      setSubmittingQuote(false);
+    }
+  };
+
+  // Pre-fill quote form with user data
+  useEffect(() => {
+    if (user && showQuoteModal) {
+      setQuoteForm(prev => ({
+        ...prev,
+        name: user.name || prev.name,
+        email: user.email || prev.email,
+      }));
+    }
+  }, [user, showQuoteModal]);
 
   const equipmentList = equipmentData?.data || [];
   const stats = statsData?.data;
@@ -477,7 +588,11 @@ const Equipment = () => {
                     <span className="font-bold text-gray-900 dark:text-gray-100">${cartTotal.toLocaleString()}</span>
                   </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Shipping and taxes calculated at checkout.</p>
-                  <button className="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors">
+                  <button
+                    onClick={() => setShowQuoteModal(true)}
+                    className="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <DocumentTextIcon className="h-5 w-5" />
                     Request Quote
                   </button>
                   <button
@@ -586,12 +701,423 @@ const Equipment = () => {
     );
   };
 
+  // Quote Request Modal
+  const QuoteRequestModal = () => {
+    if (!showQuoteModal) return null;
+
+    return createPortal(
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowQuoteModal(false)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-6">
+            <button
+              onClick={() => setShowQuoteModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <XMarkIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-primary-100 dark:bg-primary-900/30 rounded-xl">
+                <DocumentTextIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Request a Quote</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">We'll respond within 24 hours</p>
+              </div>
+            </div>
+
+            {/* Cart Items Summary */}
+            {cartItems.length > 0 && (
+              <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Items in your quote:</p>
+                <ul className="space-y-1">
+                  {cartItems.map(item => (
+                    <li key={item.equipment._id} className="text-sm text-gray-600 dark:text-gray-400 flex justify-between">
+                      <span>{item.equipment.name} x{item.quantity}</span>
+                      <span>{item.equipment.price}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="border-t border-gray-200 dark:border-gray-600 mt-2 pt-2 flex justify-between font-semibold text-gray-900 dark:text-gray-100">
+                  <span>Estimated Total:</span>
+                  <span>${cartTotal.toLocaleString()}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
+                  <input
+                    type="text"
+                    value={quoteForm.name}
+                    onChange={(e) => setQuoteForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                    placeholder="Your name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    value={quoteForm.email}
+                    onChange={(e) => setQuoteForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                    placeholder="your@email.com"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    value={quoteForm.phone}
+                    onChange={(e) => setQuoteForm(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
+                  <input
+                    type="text"
+                    value={quoteForm.company}
+                    onChange={(e) => setQuoteForm(prev => ({ ...prev, company: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                    placeholder="Company name"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message</label>
+                <textarea
+                  value={quoteForm.message}
+                  onChange={(e) => setQuoteForm(prev => ({ ...prev, message: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
+                  placeholder="Any specific questions or requirements?"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowQuoteModal(false)}
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitQuote}
+                disabled={submittingQuote}
+                className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {submittingQuote ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <PaperAirplaneIcon className="h-5 w-5" />
+                    Submit Request
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
+  // Financing Calculator Modal
+  const FinancingCalculatorModal = () => {
+    if (!showFinancingCalculator) return null;
+
+    const monthlyPayment = calculateMonthlyPayment();
+    const totalPayment = monthlyPayment * financingForm.term;
+    const totalInterest = totalPayment - financingForm.amount;
+
+    return createPortal(
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowFinancingCalculator(false)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-6">
+            <button
+              onClick={() => setShowFinancingCalculator(false)}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <XMarkIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                <CalculatorIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Financing Calculator</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Estimate your monthly payments</p>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Loan Amount: ${financingForm.amount.toLocaleString()}
+                </label>
+                <input
+                  type="range"
+                  min="1000"
+                  max="500000"
+                  step="1000"
+                  value={financingForm.amount}
+                  onChange={(e) => setFinancingForm(prev => ({ ...prev, amount: parseInt(e.target.value) }))}
+                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <span>$1,000</span>
+                  <span>$500,000</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Term: {financingForm.term} months ({(financingForm.term / 12).toFixed(1)} years)
+                </label>
+                <input
+                  type="range"
+                  min="12"
+                  max="84"
+                  step="12"
+                  value={financingForm.term}
+                  onChange={(e) => setFinancingForm(prev => ({ ...prev, term: parseInt(e.target.value) }))}
+                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <span>12 mo</span>
+                  <span>84 mo</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Interest Rate: {financingForm.interestRate}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="20"
+                  step="0.1"
+                  value={financingForm.interestRate}
+                  onChange={(e) => setFinancingForm(prev => ({ ...prev, interestRate: parseFloat(e.target.value) }))}
+                  className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <span>0%</span>
+                  <span>20%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Results */}
+            <div className="mt-6 p-4 bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-xl border border-primary-200 dark:border-primary-800">
+              <div className="text-center mb-4">
+                <p className="text-sm text-primary-700 dark:text-primary-300">Estimated Monthly Payment</p>
+                <p className="text-4xl font-bold text-primary-900 dark:text-primary-100">
+                  ${monthlyPayment.toFixed(2)}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="text-center p-2 bg-white/50 dark:bg-gray-800/50 rounded-lg">
+                  <p className="text-gray-500 dark:text-gray-400">Total Payment</p>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">${totalPayment.toFixed(2)}</p>
+                </div>
+                <div className="text-center p-2 bg-white/50 dark:bg-gray-800/50 rounded-lg">
+                  <p className="text-gray-500 dark:text-gray-400">Total Interest</p>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">${totalInterest.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4">
+              * This is an estimate. Actual rates may vary based on credit approval.
+            </p>
+
+            <button
+              onClick={() => {
+                setShowFinancingCalculator(false);
+                setShowQuoteModal(true);
+              }}
+              className="w-full mt-4 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              Apply for Financing
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
+  // Equipment Comparison Modal
+  const ComparisonModal = () => {
+    if (!showComparisonModal) return null;
+
+    return createPortal(
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowComparisonModal(false)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <ArrowsRightLeftIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Compare Equipment</h2>
+              </div>
+              <button
+                onClick={() => setShowComparisonModal(false)}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto p-6">
+              {comparisonItems.length === 0 ? (
+                <div className="text-center py-12">
+                  <ArrowsRightLeftIcon className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No items to compare</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">Add items using the compare button on equipment cards</p>
+                  <button
+                    onClick={() => setShowComparisonModal(false)}
+                    className="text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    Browse Equipment
+                  </button>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-tl-lg">Feature</th>
+                      {comparisonItems.map((item) => (
+                        <th key={item._id} className="py-3 px-4 bg-gray-50 dark:bg-gray-700/50 last:rounded-tr-lg">
+                          <div className="relative">
+                            <button
+                              onClick={() => toggleComparisonItem(item)}
+                              className="absolute -top-1 -right-1 p-1 bg-red-100 dark:bg-red-900/30 rounded-full hover:bg-red-200 dark:hover:bg-red-800/50"
+                            >
+                              <XMarkIcon className="h-4 w-4 text-red-600 dark:text-red-400" />
+                            </button>
+                            <img
+                              src={item.image || 'https://via.placeholder.com/100'}
+                              alt={item.name}
+                              className="w-24 h-24 object-cover rounded-lg mx-auto mb-2"
+                            />
+                            <p className="font-medium text-gray-900 dark:text-gray-100 text-sm line-clamp-2">{item.name}</p>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t border-gray-200 dark:border-gray-700">
+                      <td className="py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Brand</td>
+                      {comparisonItems.map((item) => (
+                        <td key={item._id} className="py-3 px-4 text-center text-sm text-gray-900 dark:text-gray-100">{item.brand}</td>
+                      ))}
+                    </tr>
+                    <tr className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/25">
+                      <td className="py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Price</td>
+                      {comparisonItems.map((item) => (
+                        <td key={item._id} className="py-3 px-4 text-center text-sm font-bold text-primary-600 dark:text-primary-400">{item.price}</td>
+                      ))}
+                    </tr>
+                    <tr className="border-t border-gray-200 dark:border-gray-700">
+                      <td className="py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Rating</td>
+                      {comparisonItems.map((item) => (
+                        <td key={item._id} className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <StarSolidIcon className="h-4 w-4 text-yellow-400" />
+                            <span className="text-sm text-gray-900 dark:text-gray-100">{item.rating}</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">({item.reviews})</span>
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+                    <tr className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/25">
+                      <td className="py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Availability</td>
+                      {comparisonItems.map((item) => (
+                        <td key={item._id} className="py-3 px-4 text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            item.availability === 'in-stock'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {item.availability === 'in-stock' ? 'In Stock' : 'Out of Stock'}
+                          </span>
+                        </td>
+                      ))}
+                    </tr>
+                    <tr className="border-t border-gray-200 dark:border-gray-700">
+                      <td className="py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Warranty</td>
+                      {comparisonItems.map((item) => (
+                        <td key={item._id} className="py-3 px-4 text-center text-sm text-gray-900 dark:text-gray-100">{item.warranty}</td>
+                      ))}
+                    </tr>
+                    <tr className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/25">
+                      <td className="py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Lead Time</td>
+                      {comparisonItems.map((item) => (
+                        <td key={item._id} className="py-3 px-4 text-center text-sm text-gray-900 dark:text-gray-100">{item.leadTime}</td>
+                      ))}
+                    </tr>
+                    <tr className="border-t border-gray-200 dark:border-gray-700">
+                      <td className="py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</td>
+                      {comparisonItems.map((item) => (
+                        <td key={item._id} className="py-3 px-4 text-center">
+                          <button
+                            onClick={() => {
+                              addToCart(item);
+                              toast.success('Added to cart!');
+                            }}
+                            disabled={item.availability !== 'in-stock'}
+                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              item.availability === 'in-stock'
+                                ? 'bg-primary-600 text-white hover:bg-primary-700'
+                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                            }`}
+                          >
+                            Add to Cart
+                          </button>
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
   return (
     <div className="space-y-8">
       {/* Modals */}
       <EquipmentDetailModal />
       <CartDrawer />
       <WishlistDrawer />
+      <QuoteRequestModal />
+      <FinancingCalculatorModal />
+      <ComparisonModal />
 
       {/* Header Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
@@ -799,20 +1325,60 @@ const Equipment = () => {
           <div className="bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-xl p-6 border border-primary-200 dark:border-primary-800">
             <h3 className="text-lg font-semibold text-primary-900 dark:text-primary-100 mb-3">Need Help?</h3>
             <div className="space-y-2">
-              <button className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium">
-                Equipment Comparison Tool →
+              <button
+                onClick={() => setShowComparisonModal(true)}
+                className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium flex items-center gap-2"
+              >
+                <ArrowsRightLeftIcon className="h-4 w-4" />
+                Equipment Comparison Tool {comparisonItems.length > 0 && `(${comparisonItems.length})`} →
               </button>
-              <button className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium">
+              <button
+                onClick={() => setShowFinancingCalculator(true)}
+                className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium flex items-center gap-2"
+              >
+                <CalculatorIcon className="h-4 w-4" />
                 Financing Calculator →
               </button>
-              <button className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium">
+              <button
+                onClick={() => setShowQuoteModal(true)}
+                className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium flex items-center gap-2"
+              >
+                <DocumentTextIcon className="h-4 w-4" />
                 Request a Quote →
               </button>
-              <button className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium">
+              <button
+                onClick={() => navigate('/chat')}
+                className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium flex items-center gap-2"
+              >
+                <ChatBubbleLeftRightIcon className="h-4 w-4" />
                 Live Chat Support →
               </button>
             </div>
           </div>
+
+          {/* Comparison Badge - Shows when items are selected for comparison */}
+          {comparisonItems.length > 0 && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  {comparisonItems.length} item{comparisonItems.length !== 1 ? 's' : ''} to compare
+                </span>
+                <button
+                  onClick={() => setComparisonItems([])}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Clear all
+                </button>
+              </div>
+              <button
+                onClick={() => setShowComparisonModal(true)}
+                className="w-full py-2 px-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <ArrowsRightLeftIcon className="h-4 w-4" />
+                Compare Now
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Equipment Grid/List */}
@@ -924,6 +1490,17 @@ const Equipment = () => {
 
                     <div className="flex flex-col sm:flex-row gap-2">
                       <button
+                        onClick={() => toggleComparisonItem(item)}
+                        className={`p-2 border rounded-lg transition-colors ${
+                          isInComparison(item._id)
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                            : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                        title={isInComparison(item._id) ? 'Remove from comparison' : 'Add to comparison'}
+                      >
+                        <ArrowsRightLeftIcon className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => setSelectedEquipment(item)}
                         className="flex-1 inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 text-xs sm:text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                       >
@@ -1019,12 +1596,24 @@ const Equipment = () => {
                             <button
                               onClick={() => toggleFavorite(item._id)}
                               className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                              title={favorites.has(item._id) ? 'Remove from wishlist' : 'Add to wishlist'}
                             >
                               {favorites.has(item._id) ? (
                                 <HeartSolidIcon className="h-5 w-5 text-red-500" />
                               ) : (
                                 <HeartIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                               )}
+                            </button>
+                            <button
+                              onClick={() => toggleComparisonItem(item)}
+                              className={`p-2 border rounded-lg transition-colors ${
+                                isInComparison(item._id)
+                                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'
+                              }`}
+                              title={isInComparison(item._id) ? 'Remove from comparison' : 'Add to comparison'}
+                            >
+                              <ArrowsRightLeftIcon className="h-5 w-5" />
                             </button>
                             <button
                               onClick={() => setSelectedEquipment(item)}

@@ -50,7 +50,8 @@
     "node-fetch": "^2.7.0",
     "nodemailer": "^7.0.10",
     "redis": "^4.6.11",
-    "resend": "^6.5.2"
+    "resend": "^6.5.2",
+    "socket.io": "^4.8.1"
   },
   "devDependencies": {
     "concurrently": "^8.2.1",

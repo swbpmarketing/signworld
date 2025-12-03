@@ -2,6 +2,8 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 
 // Load env vars - override any existing environment variables
@@ -79,6 +81,102 @@ connectDB().then(() => {
 });
 
 const app = express();
+
+// Create HTTP server for Socket.io
+const server = http.createServer(app);
+
+// Initialize Socket.io with CORS
+const io = new Server(server, {
+  cors: {
+    origin: [
+      process.env.CLIENT_URL || 'http://localhost:5173',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:5175',
+      'http://localhost:5176',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+      'http://127.0.0.1:5175',
+      'http://127.0.0.1:5176',
+      'https://sign-company.onrender.com',
+      'https://customadesign.github.io'
+    ],
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// Make io accessible to routes
+app.set('io', io);
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('🔌 User connected:', socket.id);
+
+  // Join brags room for real-time updates
+  socket.on('join:brags', () => {
+    socket.join('brags');
+    console.log(`📢 Socket ${socket.id} joined brags room`);
+  });
+
+  // Leave brags room
+  socket.on('leave:brags', () => {
+    socket.leave('brags');
+    console.log(`📢 Socket ${socket.id} left brags room`);
+  });
+
+  // Join forum room for real-time updates
+  socket.on('join:forum', () => {
+    socket.join('forum');
+    console.log(`📢 Socket ${socket.id} joined forum room`);
+  });
+
+  // Leave forum room
+  socket.on('leave:forum', () => {
+    socket.leave('forum');
+    console.log(`📢 Socket ${socket.id} left forum room`);
+  });
+
+  // Join specific forum thread room
+  socket.on('join:thread', (threadId) => {
+    socket.join(`thread:${threadId}`);
+    console.log(`📢 Socket ${socket.id} joined thread:${threadId} room`);
+  });
+
+  // Leave specific forum thread room
+  socket.on('leave:thread', (threadId) => {
+    socket.leave(`thread:${threadId}`);
+    console.log(`📢 Socket ${socket.id} left thread:${threadId} room`);
+  });
+
+  // Join chat room for real-time messages (user-specific room)
+  socket.on('join:chat', (userId) => {
+    socket.join(`chat:${userId}`);
+    console.log(`📢 Socket ${socket.id} joined chat:${userId} room`);
+  });
+
+  // Leave chat room
+  socket.on('leave:chat', (userId) => {
+    socket.leave(`chat:${userId}`);
+    console.log(`📢 Socket ${socket.id} left chat:${userId} room`);
+  });
+
+  // Join specific conversation room
+  socket.on('join:conversation', (conversationId) => {
+    socket.join(`conversation:${conversationId}`);
+    console.log(`📢 Socket ${socket.id} joined conversation:${conversationId} room`);
+  });
+
+  // Leave specific conversation room
+  socket.on('leave:conversation', (conversationId) => {
+    socket.leave(`conversation:${conversationId}`);
+    console.log(`📢 Socket ${socket.id} left conversation:${conversationId} room`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('🔌 User disconnected:', socket.id);
+  });
+});
 
 // Body parser middleware
 app.use(express.json());
@@ -259,12 +357,13 @@ if (process.env.NODE_ENV === 'production') {
 const PORT = process.env.PORT || 5000;
 
 // Start server immediately - don't wait for database
-const server = app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(50));
   console.log(`✅ Server successfully started on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
   console.log(`🌐 API available at: http://localhost:${PORT}/api`);
+  console.log(`🔌 Socket.io ready for real-time connections`);
   console.log('='.repeat(50));
 });
 

@@ -300,5 +300,18 @@ export const getMyBrags = async (): Promise<{ success: boolean; data: Brag[] }> 
   return response.data;
 };
 
+/**
+ * Get user's own success stories statistics
+ */
+export const getMyStats = async (): Promise<{ success: boolean; data: {
+  publishedStories: number;
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+} }> => {
+  const response = await bragsAPI.get('/user/my-stats');
+  return response.data;
+};
+
 // Export the axios instance for custom requests if needed
 export default bragsAPI;

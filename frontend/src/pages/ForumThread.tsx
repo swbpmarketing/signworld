@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
 import ToastContainer from '../components/ToastContainer';
+import socketService from '../services/socketService';
 import {
   ChatBubbleLeftRightIcon,
   ChevronLeftIcon,
@@ -241,6 +242,91 @@ const ForumThread = () => {
   // Fetch thread data
   useEffect(() => {
     fetchThread();
+  }, [id]);
+
+  // Socket.io real-time updates for thread
+  useEffect(() => {
+    if (!id) return;
+
+    // Connect to socket and join thread room
+    socketService.connect();
+    socketService.joinRoom('forum');
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.emit('join:thread', id);
+    }
+
+    // Handle new reply event
+    const handleNewReply = (data: { threadId: string; reply: any; replyCount: number }) => {
+      console.log('New reply received:', data);
+      if (data.threadId === id) {
+        setThread(prev => {
+          if (!prev) return prev;
+          // Check if reply already exists
+          if (prev.replies?.some((r: any) => r._id === data.reply._id)) {
+            return prev;
+          }
+          return {
+            ...prev,
+            replies: [...(prev.replies || []), data.reply]
+          };
+        });
+      }
+    };
+
+    // Handle thread like event
+    const handleThreadLike = (data: { threadId: string; likesCount: number; userId: string; isLiked: boolean }) => {
+      console.log('Thread like received:', data);
+      if (data.threadId === id) {
+        setThread(prev => {
+          if (!prev) return prev;
+          const currentLikes = prev.likes || [];
+          const newLikes = data.isLiked
+            ? [...currentLikes, data.userId]
+            : currentLikes.filter((l: string) => l !== data.userId);
+          return { ...prev, likes: newLikes };
+        });
+      }
+    };
+
+    // Handle reply like event
+    const handleReplyLike = (data: { threadId: string; replyId: string; likesCount: number; userId: string; isLiked: boolean }) => {
+      console.log('Reply like received:', data);
+      if (data.threadId === id) {
+        setThread(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            replies: prev.replies?.map((reply: any) =>
+              reply._id === data.replyId
+                ? {
+                    ...reply,
+                    likes: data.isLiked
+                      ? [...(reply.likes || []), data.userId]
+                      : (reply.likes || []).filter((l: string) => l !== data.userId)
+                  }
+                : reply
+            )
+          };
+        });
+      }
+    };
+
+    // Subscribe to events
+    socketService.on('thread:reply', handleNewReply);
+    socketService.on('thread:like', handleThreadLike);
+    socketService.on('reply:like', handleReplyLike);
+
+    // Cleanup on unmount
+    return () => {
+      socketService.off('thread:reply', handleNewReply);
+      socketService.off('thread:like', handleThreadLike);
+      socketService.off('reply:like', handleReplyLike);
+      if (socket) {
+        socket.emit('leave:thread', id);
+      }
+      socketService.leaveRoom('forum');
+    };
   }, [id]);
 
   const fetchThread = async () => {

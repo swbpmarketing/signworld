@@ -35,6 +35,7 @@ const Calendar = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedEventType, setSelectedEventType] = useState<Event['type'] | 'all'>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -47,6 +48,54 @@ const Calendar = () => {
     description: '',
     isOnline: false,
   });
+
+  // Reset form to initial state
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      date: '',
+      time: '',
+      endTime: '',
+      category: '' as Event['type'],
+      location: '',
+      description: '',
+      isOnline: false,
+    });
+    setEditingEvent(null);
+  };
+
+  // Open edit modal with event data
+  const handleEditEvent = (event: Event) => {
+    // Parse time from the time string (e.g., "9:00 AM - 10:00 AM")
+    const timeParts = event.time.split(' - ');
+    const startTime = timeParts[0] || '';
+    const endTime = timeParts[1] || '';
+
+    // Convert 12h format to 24h for input
+    const convertTo24h = (time12h: string): string => {
+      if (!time12h) return '';
+      const [time, modifier] = time12h.trim().split(' ');
+      if (!time || !modifier) return '';
+      let [hours, minutes] = time.split(':').map(Number);
+      if (modifier.toLowerCase() === 'pm' && hours !== 12) hours += 12;
+      if (modifier.toLowerCase() === 'am' && hours === 12) hours = 0;
+      return `${hours.toString().padStart(2, '0')}:${(minutes || 0).toString().padStart(2, '0')}`;
+    };
+
+    setFormData({
+      title: event.title,
+      date: format(event.date, 'yyyy-MM-dd'),
+      time: convertTo24h(startTime),
+      endTime: convertTo24h(endTime),
+      category: event.type,
+      location: event.location === 'Online' ? '' : event.location,
+      description: event.description,
+      isOnline: event.isOnline || false,
+    });
+    setEditingEvent(event);
+    setSelectedEvent(null);
+    setShowAddModal(true);
+  };
 
   // Convert CalendarEvent to Event format
   const mapCalendarEventToEvent = (calendarEvent: CalendarEvent): Event => {
@@ -112,8 +161,8 @@ const Calendar = () => {
     }));
   };
 
-  // Handle form submission
-  const handleCreateEvent = async (e: React.FormEvent) => {
+  // Handle form submission (create or update)
+  const handleSubmitEvent = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
@@ -138,35 +187,45 @@ const Calendar = () => {
         isPublished: true,
       };
 
-      // Create event via API
-      await calendarService.createEvent(eventData);
+      if (editingEvent) {
+        // Update existing event
+        await calendarService.updateEvent(editingEvent.id, eventData);
+        toast.success('Event updated successfully!');
+      } else {
+        // Create new event
+        await calendarService.createEvent(eventData);
+        toast.success('Event created successfully!');
+      }
 
-      // Show success message
-      toast.success('Event created successfully!');
-
-      // Reset form
-      setFormData({
-        title: '',
-        date: '',
-        time: '',
-        endTime: '',
-        category: '' as Event['type'],
-        location: '',
-        description: '',
-        isOnline: false,
-      });
-
-      // Close modal
+      // Reset form and close modal
+      resetForm();
       setShowAddModal(false);
 
       // Refresh events list
       await fetchEvents();
 
     } catch (err) {
-      console.error('Error creating event:', err);
-      toast.error('Failed to create event. Please try again.');
+      console.error('Error saving event:', err);
+      toast.error(editingEvent ? 'Failed to update event. Please try again.' : 'Failed to create event. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle delete event
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!window.confirm('Are you sure you want to delete this event?')) {
+      return;
+    }
+
+    try {
+      await calendarService.deleteEvent(eventId);
+      toast.success('Event deleted successfully!');
+      setSelectedEvent(null);
+      await fetchEvents();
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      toast.error('Failed to delete event. Please try again.');
     }
   };
 
@@ -649,10 +708,16 @@ const Calendar = () => {
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <button
-                onClick={() => toast.success('Edit functionality coming soon!')}
+                onClick={() => handleEditEvent(selectedEvent)}
                 className="flex-1 px-5 py-3 text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-lg transition-all duration-200 border-2 border-primary-200 dark:border-primary-800 hover:border-primary-300 dark:hover:border-primary-700 text-center font-semibold"
               >
                 Edit Event
+              </button>
+              <button
+                onClick={() => handleDeleteEvent(selectedEvent.id)}
+                className="flex-1 px-5 py-3 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-all duration-200 border-2 border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700 text-center font-semibold"
+              >
+                Delete Event
               </button>
               <button
                 onClick={() => toast.success('Joined event successfully!')}
@@ -678,12 +743,17 @@ const Calendar = () => {
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h3 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 dark:from-primary-400 dark:to-primary-600 bg-clip-text text-transparent">
-                  Create New Event
+                  {editingEvent ? 'Edit Event' : 'Create New Event'}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Add a new event to your calendar</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {editingEvent ? 'Update your event details' : 'Add a new event to your calendar'}
+                </p>
               </div>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  resetForm();
+                  setShowAddModal(false);
+                }}
                 className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <XMarkIcon className="h-6 w-6" />
@@ -691,7 +761,7 @@ const Calendar = () => {
             </div>
 
             <form
-              onSubmit={handleCreateEvent}
+              onSubmit={handleSubmitEvent}
               className="space-y-5"
             >
               <div>
@@ -791,7 +861,10 @@ const Calendar = () => {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    resetForm();
+                    setShowAddModal(false);
+                  }}
                   disabled={isSubmitting}
                   className="flex-1 px-5 py-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-all duration-200 text-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -805,10 +878,10 @@ const Calendar = () => {
                   {isSubmitting ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Creating...
+                      {editingEvent ? 'Updating...' : 'Creating...'}
                     </>
                   ) : (
-                    'Create Event'
+                    editingEvent ? 'Update Event' : 'Create Event'
                   )}
                 </button>
               </div>

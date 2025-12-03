@@ -18,6 +18,7 @@ const Brags = lazy(() => import('./pages/Brags'));
 const Forum = lazy(() => import('./pages/Forum'));
 const ForumThread = lazy(() => import('./pages/ForumThread'));
 const Library = lazy(() => import('./pages/Library'));
+const PendingApproval = lazy(() => import('./pages/PendingApproval'));
 const Archive = lazy(() => import('./pages/Archive'));
 const RecentlyDeleted = lazy(() => import('./pages/RecentlyDeleted'));
 const Resources = lazy(() => import('./pages/Resources'));
@@ -28,7 +29,7 @@ const Partners = lazy(() => import('./pages/Partners'));
 const Videos = lazy(() => import('./pages/Videos'));
 const Equipment = lazy(() => import('./pages/Equipment'));
 const FAQs = lazy(() => import('./pages/FAQs'));
-const Reports = lazy(() => import('./pages/Reports'));
+const ReportsRouter = lazy(() => import('./pages/ReportsRouter'));
 const UserProfile = lazy(() => import('./pages/UserProfile'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Billing = lazy(() => import('./pages/Billing'));
@@ -78,7 +79,7 @@ function App() {
                 {/* Protected routes with Layout */}
                 <Route element={<Layout />}>
                   <Route path="dashboard" element={<DashboardRouter />} />
-                  <Route path="reports" element={<Reports />} />
+                  <Route path="reports" element={<ReportsRouter />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="calendar" element={<Calendar />} />
                   <Route path="convention" element={<Convention />} />
@@ -87,7 +88,7 @@ function App() {
                   <Route path="forum/thread/:id" element={<ForumThread />} />
                   <Route path="chat" element={<Chat />} />
                   <Route path="library" element={<Library />} />
-                  <Route path="library/*" element={<Library />} />
+                  <Route path="library/pending" element={<PendingApproval />} />
                   <Route path="archive" element={<Archive />} />
                   <Route path="recently-deleted" element={<RecentlyDeleted />} />
                   <Route path="resources" element={<Resources />} />

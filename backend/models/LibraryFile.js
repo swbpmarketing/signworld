@@ -58,6 +58,22 @@ const libraryFileSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved',
+  },
+  rejectionReason: {
+    type: String,
+    trim: true,
+  },
+  reviewedBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+  },
+  reviewedAt: {
+    type: Date,
+  },
   deletedAt: {
     type: Date,
     default: null,
