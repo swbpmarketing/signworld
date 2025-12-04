@@ -7,6 +7,7 @@ import CalendarShareSection from '../components/calendar/CalendarShareSection';
 import calendarService, { type CalendarEvent } from '../services/calendarService';
 import toast from 'react-hot-toast';
 import CustomSelect from '../components/CustomSelect';
+import { useAuth } from '../context/AuthContext';
 
 // Map backend CalendarEvent to frontend Event interface
 interface Event {
@@ -22,9 +23,13 @@ interface Event {
   isOnline?: boolean;
   onlineLink?: string;
   organizer?: string;
+  organizerId?: string; // ID of the user who created the event
 }
 
 const Calendar = () => {
+  const { user, isAdmin } = useAuth();
+  const currentUserId = user?._id || user?.id;
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
@@ -125,7 +130,8 @@ const Calendar = () => {
       color: calendarEvent.color,
       isOnline: calendarEvent.isOnline,
       onlineLink: calendarEvent.onlineLink,
-      organizer: calendarEvent.organizer?.name
+      organizer: calendarEvent.organizer?.name,
+      organizerId: calendarEvent.organizer?._id
     };
   };
 
@@ -707,18 +713,27 @@ const Calendar = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <button
-                onClick={() => handleEditEvent(selectedEvent)}
-                className="flex-1 px-5 py-3 text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-lg transition-all duration-200 border-2 border-primary-200 dark:border-primary-800 hover:border-primary-300 dark:hover:border-primary-700 text-center font-semibold"
-              >
-                Edit Event
-              </button>
-              <button
-                onClick={() => handleDeleteEvent(selectedEvent.id)}
-                className="flex-1 px-5 py-3 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-all duration-200 border-2 border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700 text-center font-semibold"
-              >
-                Delete Event
-              </button>
+              {/* Only show Edit/Delete buttons if the user created the event or is an admin */}
+              {(isAdmin || currentUserId === selectedEvent.organizerId) ? (
+                <>
+                  <button
+                    onClick={() => handleEditEvent(selectedEvent)}
+                    className="flex-1 px-5 py-3 text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-lg transition-all duration-200 border-2 border-primary-200 dark:border-primary-800 hover:border-primary-300 dark:hover:border-primary-700 text-center font-semibold"
+                  >
+                    Edit Event
+                  </button>
+                  <button
+                    onClick={() => handleDeleteEvent(selectedEvent.id)}
+                    className="flex-1 px-5 py-3 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-all duration-200 border-2 border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700 text-center font-semibold"
+                  >
+                    Delete Event
+                  </button>
+                </>
+              ) : (
+                <div className="flex-1 px-5 py-3 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/20 rounded-lg text-center text-sm">
+                  Created by {selectedEvent.organizer || 'Unknown'}
+                </div>
+              )}
               <button
                 onClick={() => toast.success('Joined event successfully!')}
                 className="flex-1 px-5 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg hover:shadow-lg transition-all duration-200 text-center font-semibold transform hover:-translate-y-0.5"

@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const ForumThread = require('../models/ForumThread');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { protect } = require('../middleware/auth');
 const { forumFiles } = require('../middleware/upload');
 
@@ -224,6 +226,31 @@ router.post('/', protect, ...forumFiles, async (req, res) => {
       });
     }
 
+    // Create notifications for all users about new forum post
+    try {
+      const authorName = req.user.name || req.user.firstName || 'Someone';
+      const allUsers = await User.find({
+        _id: { $ne: req.user._id },
+        isActive: true,
+        role: { $in: ['admin', 'owner'] } // Only notify admins and owners for forum posts
+      }).select('_id');
+
+      for (const user of allUsers) {
+        await Notification.createAndEmit(io, {
+          recipient: user._id,
+          sender: req.user._id,
+          type: 'forum_post',
+          title: 'New Forum Thread',
+          message: `${authorName} started a new discussion: "${thread.title}"`,
+          referenceType: 'ForumThread',
+          referenceId: thread._id,
+          link: `/forum?thread=${thread._id}`,
+        });
+      }
+    } catch (notifError) {
+      console.error('Error creating forum thread notifications:', notifError);
+    }
+
     res.status(201).json({
       success: true,
       data: thread
@@ -390,6 +417,48 @@ router.post('/:id/replies', protect, async (req, res) => {
         lastReplyAt: thread.lastReplyAt,
         newReplyAdded: true // Flag for stats update
       });
+    }
+
+    // Create notifications for thread author and subscribers
+    try {
+      const replierName = req.user.name || req.user.firstName || 'Someone';
+      const replyPreview = content.length > 50
+        ? content.substring(0, 50) + '...'
+        : content;
+
+      // Notify thread author if not the replier
+      if (thread.author.toString() !== req.user._id.toString()) {
+        await Notification.createAndEmit(io, {
+          recipient: thread.author,
+          sender: req.user._id,
+          type: 'forum_reply',
+          title: 'New Reply to Your Thread',
+          message: `${replierName} replied to your thread "${thread.title}": "${replyPreview}"`,
+          referenceType: 'ForumThread',
+          referenceId: thread._id,
+          link: `/forum?thread=${thread._id}`,
+        });
+      }
+
+      // Notify subscribers (excluding the replier and thread author who already got notified)
+      const notifiedUsers = new Set([req.user._id.toString(), thread.author.toString()]);
+      for (const subscriberId of thread.subscribers) {
+        if (!notifiedUsers.has(subscriberId.toString())) {
+          notifiedUsers.add(subscriberId.toString());
+          await Notification.createAndEmit(io, {
+            recipient: subscriberId,
+            sender: req.user._id,
+            type: 'forum_reply',
+            title: 'New Reply in Subscribed Thread',
+            message: `${replierName} replied in "${thread.title}": "${replyPreview}"`,
+            referenceType: 'ForumThread',
+            referenceId: thread._id,
+            link: `/forum?thread=${thread._id}`,
+          });
+        }
+      }
+    } catch (notifError) {
+      console.error('Error creating forum reply notifications:', notifError);
     }
 
     res.status(201).json({

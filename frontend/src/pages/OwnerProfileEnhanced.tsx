@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import {
   PhoneIcon,
   EnvelopeIcon,
@@ -94,11 +95,11 @@ const OwnerProfileEnhanced = () => {
       // Reset form and close modal
       setReviewForm({ rating: 5, comment: '' });
       setShowReviewModal(false);
-      
-      // Show success message (you could use a toast notification here)
-      alert('Review submitted successfully! It will appear after moderation.');
+
+      // Show success message
+      toast.success('Review submitted successfully! It will appear after moderation.');
     } catch (err) {
-      alert('Failed to submit review. Please try again.');
+      toast.error('Failed to submit review. Please try again.');
       console.error('Error submitting review:', err);
     } finally {
       setSubmittingReview(false);

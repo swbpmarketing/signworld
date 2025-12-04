@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import socketService from '../services/socketService';
@@ -91,6 +92,11 @@ const forumCategories = [
 const Forum = () => {
   const { user } = useAuth();
   const { canEditItem, canDeleteItem, canManage } = usePermissions();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Ref to track current user ID for socket handlers (avoids stale closure)
+  const userIdRef = useRef<string | undefined>();
+  userIdRef.current = user?._id;
 
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [searchInput, setSearchInput] = useState('');
@@ -483,17 +489,25 @@ const Forum = () => {
     // Handle thread like event
     const handleThreadLike = (data: { threadId: string; likesCount: number; userId: string; isLiked: boolean }) => {
       console.log('Thread like received:', data);
+      // Skip if this is the current user's own action (API response already handled it)
+      if (userIdRef.current && data.userId === userIdRef.current) {
+        console.log('Skipping socket update for own action');
+        return;
+      }
       setThreads(prevThreads =>
-        prevThreads.map(thread =>
-          thread._id === data.threadId
-            ? {
-                ...thread,
-                likes: data.isLiked
-                  ? [...(thread.likes || []), data.userId]
-                  : (thread.likes || []).filter((id: string) => id !== data.userId)
-              }
-            : thread
-        )
+        prevThreads.map(thread => {
+          if (thread._id !== data.threadId) return thread;
+          const currentLikes = thread.likes || [];
+          // Prevent duplicate: check if user already in likes array
+          if (data.isLiked && currentLikes.includes(data.userId)) return thread;
+          if (!data.isLiked && !currentLikes.includes(data.userId)) return thread;
+          return {
+            ...thread,
+            likes: data.isLiked
+              ? [...currentLikes, data.userId]
+              : currentLikes.filter((id: string) => id !== data.userId)
+          };
+        })
       );
     };
 
@@ -523,7 +537,46 @@ const Forum = () => {
     setShowDetailModal(false);
     setSelectedThread(null);
     setNewReply('');
+    // Clear the thread query param if present
+    if (searchParams.has('thread')) {
+      searchParams.delete('thread');
+      setSearchParams(searchParams);
+    }
   };
+
+  // Check for thread query param from notification and open modal
+  useEffect(() => {
+    const threadId = searchParams.get('thread');
+    if (threadId && !showDetailModal) {
+      // Fetch and open the thread modal
+      const openThreadFromParam = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(`/api/forum/${threadId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          const data = await response.json();
+          if (data.success && data.data) {
+            setSelectedThread(data.data);
+            setShowDetailModal(true);
+          } else {
+            toast.error('Thread not found');
+            // Clear invalid thread param
+            searchParams.delete('thread');
+            setSearchParams(searchParams);
+          }
+        } catch (err) {
+          console.error('Error fetching thread from notification:', err);
+          toast.error('Failed to load thread');
+          searchParams.delete('thread');
+          setSearchParams(searchParams);
+        }
+      };
+      openThreadFromParam();
+    }
+  }, [searchParams]);
 
   // Handle image selection
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

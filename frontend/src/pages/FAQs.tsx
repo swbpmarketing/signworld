@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   QuestionMarkCircleIcon,
@@ -66,6 +67,7 @@ const defaultPopularSearches = [
 
 const FAQs = () => {
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchInput, setSearchInput] = useState('');
@@ -465,7 +467,10 @@ const FAQs = () => {
                   Add FAQ
                 </button>
               )}
-              <button className="inline-flex items-center px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200 border border-white/30">
+              <button
+                onClick={() => navigate('/chat?support=true')}
+                className="inline-flex items-center px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200 border border-white/30"
+              >
                 <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
                 Contact Support
               </button>
@@ -761,7 +766,10 @@ const FAQs = () => {
                               </button>
                             </div>
                           </div>
-                          <button className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
+                          <button
+                            onClick={() => navigate('/chat?support=true')}
+                            className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+                          >
                             Contact Support →
                           </button>
                         </div>
@@ -777,7 +785,10 @@ const FAQs = () => {
             <div className="text-center py-12">
               <QuestionMarkCircleIcon className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
               <p className="text-gray-600 dark:text-gray-400 mb-4">No FAQs found matching your search</p>
-              <button className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors">
+              <button
+                onClick={() => navigate('/chat?support=true')}
+                className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+              >
                 Contact Support
               </button>
             </div>

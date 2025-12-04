@@ -4,6 +4,7 @@ const multer = require('multer');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { protect } = require('../middleware/auth');
 const { uploadToS3 } = require('../utils/s3');
 
@@ -247,6 +248,31 @@ router.post('/conversations/:id/messages', protect, async (req, res) => {
       });
     }
 
+    // Create notifications for other participants
+    const senderName = req.user.name || req.user.firstName || 'Someone';
+    const messagePreview = content.trim().length > 50
+      ? content.trim().substring(0, 50) + '...'
+      : content.trim();
+
+    for (const participantId of conversation.participants) {
+      if (participantId.toString() !== req.user._id.toString()) {
+        try {
+          await Notification.createAndEmit(io, {
+            recipient: participantId,
+            sender: req.user._id,
+            type: 'chat_message',
+            title: 'New Message',
+            message: `${senderName}: ${messagePreview}`,
+            referenceType: 'Message',
+            referenceId: message._id,
+            link: `/chat?contact=${req.user._id}`,
+          });
+        } catch (notifError) {
+          console.error('Error creating chat notification:', notifError);
+        }
+      }
+    }
+
     res.status(201).json({
       success: true,
       data: message,
@@ -344,6 +370,31 @@ router.post('/conversations/:id/messages/upload', protect, upload.single('file')
           senderId: req.user._id.toString()
         });
       });
+    }
+
+    // Create notifications for other participants
+    const senderName = req.user.name || req.user.firstName || 'Someone';
+    const notifMessage = file
+      ? `${senderName} sent a file: ${file.originalname}`
+      : `${senderName}: ${messageContent.substring(0, 50)}${messageContent.length > 50 ? '...' : ''}`;
+
+    for (const participantId of conversation.participants) {
+      if (participantId.toString() !== req.user._id.toString()) {
+        try {
+          await Notification.createAndEmit(io, {
+            recipient: participantId,
+            sender: req.user._id,
+            type: 'chat_message',
+            title: 'New Message',
+            message: notifMessage,
+            referenceType: 'Message',
+            referenceId: message._id,
+            link: `/chat?contact=${req.user._id}`,
+          });
+        } catch (notifError) {
+          console.error('Error creating chat notification:', notifError);
+        }
+      }
     }
 
     res.status(201).json({

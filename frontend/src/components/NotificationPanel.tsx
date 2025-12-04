@@ -1,10 +1,27 @@
 import React, { useRef, useEffect } from 'react';
-import { XMarkIcon, CheckIcon, BellIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom';
+import { XMarkIcon, CheckIcon, BellIcon, ClockIcon, TrashIcon } from '@heroicons/react/24/outline';
+import {
+  ChatBubbleLeftRightIcon,
+  TrophyIcon,
+  ChatBubbleBottomCenterTextIcon,
+  ArrowUturnLeftIcon,
+  WrenchScrewdriverIcon,
+  HeartIcon,
+  ChatBubbleOvalLeftIcon,
+  VideoCameraIcon,
+  CalendarIcon,
+  BuildingOfficeIcon,
+  BellAlertIcon,
+  AtSymbolIcon,
+  InformationCircleIcon,
+} from '@heroicons/react/24/solid';
 import { formatDistanceToNow } from 'date-fns';
-import type { EventNotification } from '../hooks/useEventNotifications';
+import type { Notification, NotificationType } from '../services/notificationService';
+import { formatSenderName, getNotificationRoute, getNotificationColor } from '../services/notificationService';
 
 interface NotificationPanelProps {
-  notifications: EventNotification[];
+  notifications: Notification[];
   unreadCount: number;
   isOpen: boolean;
   onClose: () => void;
@@ -12,7 +29,28 @@ interface NotificationPanelProps {
   onMarkAllAsRead: () => void;
   onDismiss: (notificationId: string) => void;
   onClearAll: () => void;
+  loading?: boolean;
 }
+
+// Get icon component based on notification type
+const getNotificationIconComponent = (type: NotificationType) => {
+  const iconMap: Record<NotificationType, React.ElementType> = {
+    chat_message: ChatBubbleLeftRightIcon,
+    brag_post: TrophyIcon,
+    forum_post: ChatBubbleBottomCenterTextIcon,
+    forum_reply: ArrowUturnLeftIcon,
+    equipment_listing: WrenchScrewdriverIcon,
+    like: HeartIcon,
+    comment: ChatBubbleOvalLeftIcon,
+    new_video: VideoCameraIcon,
+    new_event: CalendarIcon,
+    new_convention: BuildingOfficeIcon,
+    event_reminder: BellAlertIcon,
+    mention: AtSymbolIcon,
+    system: InformationCircleIcon,
+  };
+  return iconMap[type] || BellIcon;
+};
 
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({
   notifications,
@@ -23,28 +61,29 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
   onMarkAllAsRead,
   onDismiss,
   onClearAll,
+  loading = false,
 }) => {
+  const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Close panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-        onClose();
+      // Don't close if clicking inside the panel
+      if (panelRef.current && panelRef.current.contains(event.target as Node)) {
+        return;
       }
+      onClose();
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      // Use click instead of mousedown to allow button clicks to fire first
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-
-  const getNotificationIcon = (type: '24h' | '1h') => {
-    return type === '24h' ? '📅' : '⏰';
-  };
 
   return (
     <div
@@ -77,14 +116,24 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
         <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
           {unreadCount > 0 && (
             <button
-              onClick={onMarkAllAsRead}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('Mark all as read button clicked');
+                onMarkAllAsRead();
+              }}
               className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
             >
               Mark all as read
             </button>
           )}
           <button
-            onClick={onClearAll}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('Clear all button clicked');
+              onClearAll();
+            }}
             className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium transition-colors ml-auto"
           >
             Clear all
@@ -94,7 +143,12 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
 
       {/* Notifications List */}
       <div className="flex-1 overflow-y-auto">
-        {notifications.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">Loading notifications...</p>
+          </div>
+        ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
               <BellIcon className="h-8 w-8 text-gray-400 dark:text-gray-500" />
@@ -103,86 +157,116 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
               No notifications
             </p>
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-              You'll receive reminders for upcoming events here
+              You're all caught up!
             </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
-                  !notification.isRead ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''
-                }`}
-              >
-                <div className="flex gap-3">
-                  {/* Icon */}
-                  <div className="flex-shrink-0">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                        notification.type === '24h'
-                          ? 'bg-blue-100 dark:bg-blue-900/30'
-                          : 'bg-orange-100 dark:bg-orange-900/30'
-                      }`}
-                    >
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                  </div>
+            {notifications.map((notification) => {
+              const IconComponent = getNotificationIconComponent(notification.type);
+              const colorClass = getNotificationColor(notification.type);
+              const route = getNotificationRoute(notification);
+              const senderName = formatSenderName(notification.sender);
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p
-                          className={`text-sm font-medium ${
-                            notification.isRead
-                              ? 'text-gray-700 dark:text-gray-300'
-                              : 'text-gray-900 dark:text-white'
-                          }`}
-                        >
-                          {notification.message}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <ClockIcon className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatDistanceToNow(notification.createdAt, {
-                              addSuffix: true,
-                            })}
+              return (
+                <div
+                  key={notification._id}
+                  onClick={() => {
+                    console.log('Notification clicked:', notification._id);
+                    onDismiss(notification._id);
+                    onClose();
+                    navigate(route);
+                  }}
+                  className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer ${
+                    !notification.isRead ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''
+                  }`}
+                >
+                  <div className="flex gap-3">
+                    {/* Icon */}
+                    <div className="flex-shrink-0">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center ${colorClass}`}
+                      >
+                        <IconComponent className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p
+                            className={`text-sm font-medium ${
+                              notification.isRead
+                                ? 'text-gray-700 dark:text-gray-300'
+                                : 'text-gray-900 dark:text-white'
+                            }`}
+                          >
+                            {notification.title}
                           </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                            {notification.message}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <ClockIcon className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {notification.timeAgo || formatDistanceToNow(new Date(notification.createdAt), {
+                                addSuffix: true,
+                              })}
+                            </p>
+                            {notification.sender && (
+                              <>
+                                <span className="text-gray-300 dark:text-gray-600">·</span>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  from {senderName}
+                                </p>
+                              </>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Unread indicator */}
+                        {!notification.isRead && (
+                          <div className="flex-shrink-0">
+                            <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Unread indicator */}
-                      {!notification.isRead && (
-                        <div className="flex-shrink-0">
-                          <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-3 mt-3">
-                      {!notification.isRead && (
+                      {/* Actions */}
+                      <div className="flex items-center gap-3 mt-3">
+                        {!notification.isRead && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log('Mark as read clicked for:', notification._id);
+                              onMarkAsRead(notification._id);
+                            }}
+                            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-medium transition-colors flex items-center gap-1"
+                          >
+                            <CheckIcon className="h-3.5 w-3.5" />
+                            Mark as read
+                          </button>
+                        )}
                         <button
-                          onClick={() => onMarkAsRead(notification.id)}
-                          className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors flex items-center gap-1"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            console.log('Dismiss clicked for:', notification._id);
+                            onDismiss(notification._id);
+                          }}
+                          className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-medium transition-colors flex items-center gap-1"
                         >
-                          <CheckIcon className="h-3.5 w-3.5" />
-                          Mark as read
+                          <TrashIcon className="h-3.5 w-3.5" />
+                          Dismiss
                         </button>
-                      )}
-                      <button
-                        onClick={() => onDismiss(notification.id)}
-                        className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-medium transition-colors flex items-center gap-1"
-                      >
-                        <XMarkIcon className="h-3.5 w-3.5" />
-                        Dismiss
-                      </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

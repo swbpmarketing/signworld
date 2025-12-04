@@ -173,6 +173,54 @@ io.on('connection', (socket) => {
     console.log(`📢 Socket ${socket.id} left conversation:${conversationId} room`);
   });
 
+  // Join user-specific room for notifications
+  socket.on('join:user', (userId) => {
+    socket.join(`user:${userId}`);
+    console.log(`🔔 Socket ${socket.id} joined user:${userId} room for notifications`);
+  });
+
+  // Leave user-specific room
+  socket.on('leave:user', (userId) => {
+    socket.leave(`user:${userId}`);
+    console.log(`🔔 Socket ${socket.id} left user:${userId} room`);
+  });
+
+  // Join equipment room for real-time updates
+  socket.on('join:equipment', () => {
+    socket.join('equipment');
+    console.log(`📢 Socket ${socket.id} joined equipment room`);
+  });
+
+  // Leave equipment room
+  socket.on('leave:equipment', () => {
+    socket.leave('equipment');
+    console.log(`📢 Socket ${socket.id} left equipment room`);
+  });
+
+  // Join videos room for real-time updates
+  socket.on('join:videos', () => {
+    socket.join('videos');
+    console.log(`📢 Socket ${socket.id} joined videos room`);
+  });
+
+  // Leave videos room
+  socket.on('leave:videos', () => {
+    socket.leave('videos');
+    console.log(`📢 Socket ${socket.id} left videos room`);
+  });
+
+  // Join events room for real-time updates
+  socket.on('join:events', () => {
+    socket.join('events');
+    console.log(`📢 Socket ${socket.id} joined events room`);
+  });
+
+  // Leave events room
+  socket.on('leave:events', () => {
+    socket.leave('events');
+    console.log(`📢 Socket ${socket.id} left events room`);
+  });
+
   socket.on('disconnect', () => {
     console.log('🔌 User disconnected:', socket.id);
   });
@@ -302,6 +350,7 @@ app.use('/api/search', require('./routes/search'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/email', require('./routes/email'));
 app.use('/api/chat', require('./routes/chat'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Add API route debugging
 app.use('/api/*', (req, res, next) => {

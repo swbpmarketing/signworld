@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Convention = require('../models/Convention');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
@@ -84,6 +86,35 @@ router.get('/:id', async (req, res) => {
 router.post('/', protect, authorize('admin'), async (req, res) => {
   try {
     const convention = await Convention.create(req.body);
+
+    // Create notifications for all users about new convention
+    const io = req.app.get('io');
+    try {
+      const allUsers = await User.find({
+        _id: { $ne: req.user.id },
+        isActive: true
+      }).select('_id');
+
+      for (const user of allUsers) {
+        await Notification.createAndEmit(io, {
+          recipient: user._id,
+          sender: req.user.id,
+          type: 'new_convention',
+          title: 'New Convention Announced',
+          message: `A new convention has been announced: "${convention.name}"`,
+          referenceType: 'Convention',
+          referenceId: convention._id,
+          link: `/conventions/${convention._id}`,
+        });
+      }
+
+      // Emit to events room for real-time updates
+      if (io) {
+        io.to('events').emit('convention:new', convention);
+      }
+    } catch (notifError) {
+      console.error('Error creating convention notifications:', notifError);
+    }
 
     res.status(201).json({
       success: true,

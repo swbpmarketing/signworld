@@ -355,7 +355,10 @@ const Partners = () => {
                   Add Partner
                 </button>
               )}
-              <button className="inline-flex items-center px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200 border border-white/30">
+              <button
+                onClick={() => navigate('/chat?support=true')}
+                className="inline-flex items-center px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200 border border-white/30"
+              >
                 <PhoneIcon className="h-5 w-5 mr-2" />
                 Contact Support
               </button>

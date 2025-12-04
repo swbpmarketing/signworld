@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   TrophyIcon,
   ChartBarIcon,
@@ -57,6 +58,7 @@ const categories = [
 const Brags = () => {
   const { user } = useAuth();
   const { canManage, canEditItem, canDeleteItem } = usePermissions();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState('All Stories');
   const [stories, setStories] = useState<Brag[]>([]);
   const [searchInput, setSearchInput] = useState('');
@@ -606,7 +608,40 @@ const Brags = () => {
     setShowDetailModal(false);
     setSelectedStory(null);
     setNewComment('');
+    // Clear the view query param if present
+    if (searchParams.has('view')) {
+      searchParams.delete('view');
+      setSearchParams(searchParams);
+    }
   };
+
+  // Check for view query param from notification and open modal
+  useEffect(() => {
+    const bragId = searchParams.get('view');
+    if (bragId && !showDetailModal) {
+      // Fetch and open the brag modal
+      const openBragFromParam = async () => {
+        try {
+          const response = await getBragById(bragId);
+          if (response.success && response.data) {
+            setSelectedStory(response.data);
+            setShowDetailModal(true);
+          } else {
+            toast.error('Story not found');
+            // Clear invalid view param
+            searchParams.delete('view');
+            setSearchParams(searchParams);
+          }
+        } catch (err) {
+          console.error('Error fetching story from notification:', err);
+          toast.error('Failed to load story');
+          searchParams.delete('view');
+          setSearchParams(searchParams);
+        }
+      };
+      openBragFromParam();
+    }
+  }, [searchParams]);
 
   // Handle create story
   const handleCreateStory = async () => {

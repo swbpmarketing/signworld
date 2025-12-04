@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Event = require('../models/Event');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 const ical = require('ical-generator');
 const { protect } = require('../middleware/auth');
 
@@ -347,10 +349,39 @@ router.post('/', protect, async (req, res) => {
       ...req.body,
       organizer: req.user.id
     };
-    
+
     const event = await Event.create(eventData);
     await event.populate('organizer', 'name email');
-    
+
+    // Create notifications for all users about new event
+    const io = req.app.get('io');
+    try {
+      const allUsers = await User.find({
+        _id: { $ne: req.user.id },
+        isActive: true
+      }).select('_id');
+
+      for (const user of allUsers) {
+        await Notification.createAndEmit(io, {
+          recipient: user._id,
+          sender: req.user.id,
+          type: 'new_event',
+          title: 'New Event Added',
+          message: `A new event has been scheduled: "${event.title}"`,
+          referenceType: 'Event',
+          referenceId: event._id,
+          link: `/events`,
+        });
+      }
+
+      // Emit to events room for real-time updates
+      if (io) {
+        io.to('events').emit('event:new', event);
+      }
+    } catch (notifError) {
+      console.error('Error creating event notifications:', notifError);
+    }
+
     res.status(201).json({
       success: true,
       data: event

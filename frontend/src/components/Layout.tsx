@@ -28,7 +28,7 @@ import {
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import AISearchModal from "./AISearchModal";
 import { NotificationPanel } from "./NotificationPanel";
-import { useEventNotifications } from "../hooks/useEventNotifications";
+import { useNotifications } from "../hooks/useNotifications";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['admin', 'owner', 'vendor'] },
@@ -227,7 +227,7 @@ const Layout = () => {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
 
-  // Event notifications hook
+  // Notifications hook
   const {
     notifications,
     unreadCount,
@@ -235,7 +235,8 @@ const Layout = () => {
     markAllAsRead,
     dismissNotification,
     clearAll,
-  } = useEventNotifications();
+    loading: notificationsLoading,
+  } = useNotifications();
 
   // Set page title for dashboard
   useEffect(() => {
@@ -386,7 +387,10 @@ const Layout = () => {
                       type="button"
                       className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
                       title="Notifications"
-                      onClick={handleNotificationToggle}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNotificationToggle();
+                      }}
                     >
                       <BellIcon className="h-4 w-4" />
                       {unreadCount > 0 && (
@@ -405,6 +409,7 @@ const Layout = () => {
                       onMarkAllAsRead={markAllAsRead}
                       onDismiss={dismissNotification}
                       onClearAll={clearAll}
+                      loading={notificationsLoading}
                     />
                   </div>
 
@@ -467,7 +472,10 @@ const Layout = () => {
                       type="button"
                       className="relative p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                       title="Notifications"
-                      onClick={handleNotificationToggle}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNotificationToggle();
+                      }}
                     >
                       <BellIcon className="h-5 w-5" />
                       {unreadCount > 0 && (
@@ -486,6 +494,7 @@ const Layout = () => {
                       onMarkAllAsRead={markAllAsRead}
                       onDismiss={dismissNotification}
                       onClearAll={clearAll}
+                      loading={notificationsLoading}
                     />
                   </div>
 

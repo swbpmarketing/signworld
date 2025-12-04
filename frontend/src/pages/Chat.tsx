@@ -185,6 +185,13 @@ const Chat = () => {
       const formattedContacts = data.map(conv => formatConversationToContact(conv));
       setContacts(formattedContacts);
 
+      // Handle support request - connect to admin
+      const supportRequest = searchParams.get('support');
+      if (supportRequest === 'true') {
+        await handleSupportRequest();
+        return;
+      }
+
       // Handle deep linking from URL
       const contactId = searchParams.get('contact');
       if (contactId) {
@@ -196,6 +203,24 @@ const Chat = () => {
       toast.error('Failed to load conversations');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSupportRequest = async () => {
+    try {
+      // Fetch available users and find an admin
+      const users = await getChatUsers();
+      const adminUser = users.find(u => u.role === 'admin');
+
+      if (adminUser) {
+        await handleDeepLink(adminUser._id);
+        toast.success('Connected to support. How can we help you?');
+      } else {
+        toast.error('No support staff available. Please try again later.');
+      }
+    } catch (error) {
+      console.error('Failed to connect to support:', error);
+      toast.error('Failed to connect to support');
     }
   };
 

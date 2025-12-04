@@ -83,6 +83,7 @@ const Videos = () => {
   const [selectedVideo, setSelectedVideo] = useState<VideoUI | null>(null);
   const [sortBy, setSortBy] = useState('newest');
   const [bookmarkedVideos, setBookmarkedVideos] = useState<Set<string>>(new Set());
+  const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
 
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -278,7 +279,7 @@ const Videos = () => {
   };
 
   // Transform API data to UI format
-  const videos: VideoUI[] = (videosData?.data || []).map((video: VideoType) => ({
+  const allVideos: VideoUI[] = (videosData?.data || []).map((video: VideoType) => ({
     ...video,
     isBookmarked: bookmarkedVideos.has(video._id),
     isNew: new Date(video.createdAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000,
@@ -287,7 +288,26 @@ const Videos = () => {
     uploadDate: new Date(video.publishedAt || video.createdAt).toLocaleDateString(),
   }));
 
-  const featuredVideo = videos.find(v => v.isFeatured) || videos[0];
+  // Filter by playlist if one is selected
+  const videos: VideoUI[] = selectedPlaylist
+    ? allVideos.filter(video =>
+        selectedPlaylist.videos.some(pv => pv._id === video._id)
+      )
+    : allVideos;
+
+  const featuredVideo = allVideos.find(v => v.isFeatured) || allVideos[0];
+
+  // Handle playlist selection
+  const handlePlaylistSelect = (playlist: Playlist) => {
+    if (selectedPlaylist?._id === playlist._id) {
+      setSelectedPlaylist(null); // Deselect if clicking same playlist
+    } else {
+      setSelectedPlaylist(playlist);
+      setSelectedCategory('All Videos'); // Reset category filter
+      setSearchQuery(''); // Clear search
+      setSearchInput('');
+    }
+  };
   const stats = statsData?.data;
 
   // Use permissions hook for role-based access
@@ -439,27 +459,53 @@ const Videos = () => {
 
           {/* Playlists */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Popular Playlists</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Popular Playlists</h3>
+              {selectedPlaylist && (
+                <button
+                  onClick={() => setSelectedPlaylist(null)}
+                  className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+                >
+                  Clear filter
+                </button>
+              )}
+            </div>
             <div className="space-y-3">
               {playlistsData?.data && playlistsData.data.length > 0 ? (
-                playlistsData.data.map((playlist: Playlist) => (
-                  <button
-                    key={playlist._id}
-                    className="w-full text-left p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
-                          {playlist.name}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          {playlist.videoCount} videos • {playlist.duration}
-                        </p>
+                playlistsData.data.map((playlist: Playlist) => {
+                  const isSelected = selectedPlaylist?._id === playlist._id;
+                  return (
+                    <button
+                      key={playlist._id}
+                      onClick={() => handlePlaylistSelect(playlist)}
+                      className={`w-full text-left p-3 rounded-lg transition-colors group ${
+                        isSelected
+                          ? 'bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className={`text-sm font-medium ${
+                            isSelected
+                              ? 'text-primary-700 dark:text-primary-400'
+                              : 'text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400'
+                          }`}>
+                            {playlist.name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {playlist.videoCount} videos • {playlist.duration}
+                          </p>
+                        </div>
+                        <ChevronRightIcon className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
+                          isSelected
+                            ? 'text-primary-600 dark:text-primary-400'
+                            : 'text-gray-400 dark:text-gray-500 group-hover:text-primary-600 dark:group-hover:text-primary-400'
+                        }`} />
                       </div>
-                      <ChevronRightIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 flex-shrink-0 mt-0.5" />
-                    </div>
-                  </button>
-                ))
+                    </button>
+                  );
+                })
               ) : (
                 <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
                   No playlists available yet
@@ -471,8 +517,33 @@ const Videos = () => {
 
         {/* Video Grid */}
         <div className="lg:col-span-3">
+          {/* Playlist Selection Indicator */}
+          {selectedPlaylist && (
+            <div className="mb-6 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl border border-primary-200 dark:border-primary-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-primary-700 dark:text-primary-300">
+                    Viewing playlist
+                  </p>
+                  <h3 className="text-lg font-bold text-primary-900 dark:text-primary-100">
+                    {selectedPlaylist.name}
+                  </h3>
+                  <p className="text-sm text-primary-600 dark:text-primary-400 mt-1">
+                    {videos.length} video{videos.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedPlaylist(null)}
+                  className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  Show All Videos
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Featured Video */}
-          {!searchQuery && selectedCategory === 'All Videos' && featuredVideo && (
+          {!searchQuery && selectedCategory === 'All Videos' && !selectedPlaylist && featuredVideo && (
             <div className="mb-8">
               <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Featured Video</h3>
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">

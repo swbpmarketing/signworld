@@ -25,9 +25,17 @@ router.get('/', protect, async (req, res) => {
     const isAdmin = req.user.role === 'admin';
     const query = { isActive: true, deletedAt: null };
 
-    // Non-admin users only see approved files
+    // Use $and to combine multiple conditions properly
+    const andConditions = [];
+
+    // Non-admin users only see approved files (or files without status field - legacy files)
     if (!isAdmin) {
-      query.status = 'approved';
+      andConditions.push({
+        $or: [
+          { status: 'approved' },
+          { status: { $exists: false } } // Include legacy files without status field
+        ]
+      });
     }
 
     // Filter by category
@@ -48,12 +56,19 @@ router.get('/', protect, async (req, res) => {
 
     // Search by title, description, or tags
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { tags: { $regex: search, $options: 'i' } },
-        { fileName: { $regex: search, $options: 'i' } }
-      ];
+      andConditions.push({
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+          { tags: { $regex: search, $options: 'i' } },
+          { fileName: { $regex: search, $options: 'i' } }
+        ]
+      });
+    }
+
+    // Add $and conditions if any exist
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
     }
 
     // Execute query with pagination

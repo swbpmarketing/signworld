@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Equipment = require('../models/Equipment');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { protect, authorize } = require('../middleware/auth');
 
 // @desc    Get equipment statistics
@@ -229,6 +231,31 @@ router.post('/', protect, authorize('admin', 'vendor'), async (req, res) => {
     }
 
     const equipment = await Equipment.create(equipmentData);
+
+    // Create notifications for all users about new equipment listing
+    const io = req.app.get('io');
+    try {
+      const sellerName = req.user.name || req.user.firstName || 'A vendor';
+      const allUsers = await User.find({
+        _id: { $ne: req.user.id },
+        isActive: true
+      }).select('_id');
+
+      for (const user of allUsers) {
+        await Notification.createAndEmit(io, {
+          recipient: user._id,
+          sender: req.user.id,
+          type: 'equipment_listing',
+          title: 'New Equipment Listed',
+          message: `${sellerName} listed new equipment: "${equipment.name}"`,
+          referenceType: 'Equipment',
+          referenceId: equipment._id,
+          link: `/equipment/${equipment._id}`,
+        });
+      }
+    } catch (notifError) {
+      console.error('Error creating equipment listing notifications:', notifError);
+    }
 
     res.status(201).json({
       success: true,

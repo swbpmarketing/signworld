@@ -2,19 +2,19 @@ const User = require('../models/User');
 const { sendWelcomeEmail } = require('../utils/emailService');
 
 // Import models for stats aggregation
-let SuccessStory, ForumPost, ForumReply, Event;
+let Brag, ForumThread, Event, Message;
 try {
-  SuccessStory = require('../models/SuccessStory');
-} catch (e) { SuccessStory = null; }
+  Brag = require('../models/Brag');
+} catch (e) { Brag = null; }
 try {
-  ForumPost = require('../models/ForumPost');
-} catch (e) { ForumPost = null; }
-try {
-  ForumReply = require('../models/ForumReply');
-} catch (e) { ForumReply = null; }
+  ForumThread = require('../models/ForumThread');
+} catch (e) { ForumThread = null; }
 try {
   Event = require('../models/Event');
 } catch (e) { Event = null; }
+try {
+  Message = require('../models/Message');
+} catch (e) { Message = null; }
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -325,60 +325,66 @@ exports.getOwnerStats = async (req, res) => {
       stats.engagement.profileViews = user.stats?.profileViews || Math.floor(Math.random() * 200) + 50;
     }
 
-    // Get success stories stats if model exists
-    if (SuccessStory) {
+    // Get brags (success stories) stats if model exists
+    if (Brag) {
       try {
-        const stories = await SuccessStory.find({
+        const brags = await Brag.find({
           author: userId,
           createdAt: { $gte: startDate },
         });
-        stats.activity.postsCreated = stories.length;
+        stats.activity.postsCreated = brags.length;
 
-        // Count total likes and comments on user's stories
+        // Count total likes and comments on user's brags
         let totalLikes = 0;
         let totalComments = 0;
-        stories.forEach(story => {
-          totalLikes += story.likes?.length || 0;
-          totalComments += story.comments?.length || 0;
+        brags.forEach(brag => {
+          totalLikes += brag.likes?.length || 0;
+          totalComments += brag.comments?.length || 0;
         });
         stats.activity.likesReceived = totalLikes;
         stats.activity.commentsReceived = totalComments;
 
-        // Add recent activity from stories
-        const recentStories = stories.slice(0, 2).map(s => ({
-          id: s._id.toString(),
+        // Add recent activity from brags
+        const recentBrags = brags.slice(0, 2).map(b => ({
+          id: b._id.toString(),
           type: 'post',
-          message: `You posted "${s.title?.substring(0, 30)}..."`,
-          time: getTimeAgo(s.createdAt),
+          message: `You posted "${b.title?.substring(0, 30)}${b.title?.length > 30 ? '...' : ''}"`,
+          time: getTimeAgo(b.createdAt),
         }));
-        stats.recentActivity.push(...recentStories);
+        stats.recentActivity.push(...recentBrags);
       } catch (e) {
-        console.log('Error fetching success stories:', e.message);
+        console.log('Error fetching brags:', e.message);
       }
     }
 
-    // Get forum stats if models exist
-    if (ForumPost) {
+    // Get forum stats if model exists
+    if (ForumThread) {
       try {
-        const forumPosts = await ForumPost.countDocuments({
+        // Count threads created by user
+        const forumThreads = await ForumThread.find({
           author: userId,
           createdAt: { $gte: startDate },
         });
-        stats.activity.forumThreads = forumPosts;
-      } catch (e) {
-        console.log('Error fetching forum posts:', e.message);
-      }
-    }
+        stats.activity.forumThreads = forumThreads.length;
 
-    if (ForumReply) {
-      try {
-        const forumReplies = await ForumReply.countDocuments({
-          author: userId,
-          createdAt: { $gte: startDate },
+        // Count replies by user across all threads
+        const allThreads = await ForumThread.find({
+          'replies.author': userId,
+          'replies.createdAt': { $gte: startDate },
         });
-        stats.activity.forumReplies = forumReplies;
+
+        let replyCount = 0;
+        allThreads.forEach(thread => {
+          thread.replies?.forEach(reply => {
+            if (reply.author?.toString() === userId.toString() &&
+                new Date(reply.createdAt) >= startDate) {
+              replyCount++;
+            }
+          });
+        });
+        stats.activity.forumReplies = replyCount;
       } catch (e) {
-        console.log('Error fetching forum replies:', e.message);
+        console.log('Error fetching forum threads:', e.message);
       }
     }
 
@@ -400,10 +406,23 @@ exports.getOwnerStats = async (req, res) => {
       }
     }
 
-    // Generate some reasonable mock data for stats we can't calculate
+    // Get chat message stats if model exists
+    if (Message) {
+      try {
+        const chatMessages = await Message.countDocuments({
+          sender: userId,
+          createdAt: { $gte: startDate },
+        });
+        stats.participation.chatMessages = chatMessages;
+      } catch (e) {
+        console.log('Error fetching chat messages:', e.message);
+        stats.participation.chatMessages = 0;
+      }
+    }
+
+    // Generate placeholder data for stats we can't easily calculate without analytics tracking
     stats.engagement.inquiriesReceived = Math.floor(Math.random() * 15) + 3;
     stats.engagement.contactClicks = Math.floor(Math.random() * 50) + 10;
-    stats.participation.chatMessages = Math.floor(Math.random() * 100) + 20;
     stats.participation.resourcesDownloaded = Math.floor(Math.random() * 30) + 5;
 
     // Equipment stats from localStorage would be client-side

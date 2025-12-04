@@ -43,7 +43,13 @@ class SocketService {
       // Join any pending rooms
       this.pendingRooms.forEach(room => {
         console.log(`Joining pending room: ${room}`);
-        this.socket?.emit(`join:${room}`);
+        // Handle parameterized rooms like "user:123"
+        const [roomType, roomId] = room.includes(':') ? room.split(':') : [room, null];
+        if (roomId) {
+          this.socket?.emit(`join:${roomType}`, roomId);
+        } else {
+          this.socket?.emit(`join:${room}`);
+        }
       });
       this.pendingRooms = [];
     });
@@ -78,11 +84,21 @@ class SocketService {
     return this.connected && this.socket?.connected === true;
   }
 
-  // Join a room
+  // Join a room - supports both simple rooms (brags, forum) and parameterized rooms (user:123)
   joinRoom(room: string): void {
+    // Check if this is a parameterized room like "user:123" or "conversation:456"
+    const [roomType, roomId] = room.includes(':') ? room.split(':') : [room, null];
+
     if (this.socket?.connected) {
-      this.socket.emit(`join:${room}`);
-      console.log(`Joined room: ${room}`);
+      if (roomId) {
+        // For parameterized rooms, send the ID as a parameter
+        this.socket.emit(`join:${roomType}`, roomId);
+        console.log(`Joined room: ${roomType} with id ${roomId}`);
+      } else {
+        // For simple rooms, just emit the join event
+        this.socket.emit(`join:${room}`);
+        console.log(`Joined room: ${room}`);
+      }
     } else {
       // Queue the room join for when connection is established
       console.log(`Queueing room join: ${room}`);
@@ -92,11 +108,19 @@ class SocketService {
     }
   }
 
-  // Leave a room
+  // Leave a room - supports both simple rooms and parameterized rooms
   leaveRoom(room: string): void {
+    // Check if this is a parameterized room like "user:123" or "conversation:456"
+    const [roomType, roomId] = room.includes(':') ? room.split(':') : [room, null];
+
     if (this.socket) {
-      this.socket.emit(`leave:${room}`);
-      console.log(`Left room: ${room}`);
+      if (roomId) {
+        this.socket.emit(`leave:${roomType}`, roomId);
+        console.log(`Left room: ${roomType} with id ${roomId}`);
+      } else {
+        this.socket.emit(`leave:${room}`);
+        console.log(`Left room: ${room}`);
+      }
     }
     // Remove from pending if it was there
     this.pendingRooms = this.pendingRooms.filter(r => r !== room);

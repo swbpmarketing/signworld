@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Video = require('../models/Video');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const { deleteFromS3 } = require('../utils/s3');
@@ -194,6 +196,31 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
 
     const video = await Video.create(videoData);
 
+    // Create notifications for all users about new video
+    const io = req.app.get('io');
+    try {
+      const allUsers = await User.find({
+        _id: { $ne: req.user.id },
+        isActive: true,
+        role: { $in: ['admin', 'owner'] } // Only notify admins and owners
+      }).select('_id');
+
+      for (const user of allUsers) {
+        await Notification.createAndEmit(io, {
+          recipient: user._id,
+          sender: req.user.id,
+          type: 'new_video',
+          title: 'New Video Posted',
+          message: `A new video has been posted: "${video.title}"`,
+          referenceType: 'Video',
+          referenceId: video._id,
+          link: `/videos/${video._id}`,
+        });
+      }
+    } catch (notifError) {
+      console.error('Error creating video notifications:', notifError);
+    }
+
     res.status(201).json({
       success: true,
       data: video
@@ -255,6 +282,31 @@ router.post('/upload', protect, authorize('admin'), upload.videoFiles, async (re
     }
 
     const video = await Video.create(videoData);
+
+    // Create notifications for all users about new video
+    const io = req.app.get('io');
+    try {
+      const allUsers = await User.find({
+        _id: { $ne: req.user.id },
+        isActive: true,
+        role: { $in: ['admin', 'owner'] } // Only notify admins and owners
+      }).select('_id');
+
+      for (const user of allUsers) {
+        await Notification.createAndEmit(io, {
+          recipient: user._id,
+          sender: req.user.id,
+          type: 'new_video',
+          title: 'New Video Posted',
+          message: `A new video has been posted: "${video.title}"`,
+          referenceType: 'Video',
+          referenceId: video._id,
+          link: `/videos/${video._id}`,
+        });
+      }
+    } catch (notifError) {
+      console.error('Error creating video upload notifications:', notifError);
+    }
 
     res.status(201).json({
       success: true,

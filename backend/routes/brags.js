@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Brag = require('../models/Brag');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { protect, authorize, optionalProtect } = require('../middleware/auth');
 const { bragFiles } = require('../middleware/upload');
 
@@ -539,6 +541,25 @@ router.post('/:id/like', protect, async (req, res) => {
       });
     }
 
+    // Create notification for post author when someone likes their post (only if liking, not unliking)
+    if (likeIndex === -1 && brag.author.toString() !== req.user.id) {
+      try {
+        const likerName = req.user.name || req.user.firstName || 'Someone';
+        await Notification.createAndEmit(io, {
+          recipient: brag.author,
+          sender: req.user.id,
+          type: 'like',
+          title: 'New Like',
+          message: `${likerName} liked your success story "${brag.title}"`,
+          referenceType: 'Brag',
+          referenceId: brag._id,
+          link: `/brags?view=${brag._id}`,
+        });
+      } catch (notifError) {
+        console.error('Error creating like notification:', notifError);
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -600,6 +621,28 @@ router.post('/:id/comment', protect, async (req, res) => {
         comment: newComment,
         commentsCount: brag.comments.length
       });
+    }
+
+    // Create notification for post author when someone comments (if not commenting on own post)
+    if (brag.author.toString() !== req.user.id) {
+      try {
+        const commenterName = req.user.name || req.user.firstName || 'Someone';
+        const commentPreview = text.trim().length > 50
+          ? text.trim().substring(0, 50) + '...'
+          : text.trim();
+        await Notification.createAndEmit(io, {
+          recipient: brag.author,
+          sender: req.user.id,
+          type: 'comment',
+          title: 'New Comment',
+          message: `${commenterName} commented on your success story: "${commentPreview}"`,
+          referenceType: 'Brag',
+          referenceId: brag._id,
+          link: `/brags?view=${brag._id}`,
+        });
+      } catch (notifError) {
+        console.error('Error creating comment notification:', notifError);
+      }
     }
 
     res.status(201).json({
@@ -716,6 +759,32 @@ router.put('/:id/moderate', protect, authorize('admin'), async (req, res) => {
           commentsCount: brag.comments?.length || 0
         }
       });
+    }
+
+    // Create notifications for all users when a new story is approved
+    if (status === 'approved') {
+      try {
+        const authorName = brag.author?.name || 'Someone';
+        const allUsers = await User.find({
+          _id: { $ne: brag.author._id },
+          isActive: true
+        }).select('_id');
+
+        for (const user of allUsers) {
+          await Notification.createAndEmit(io, {
+            recipient: user._id,
+            sender: brag.author._id,
+            type: 'brag_post',
+            title: 'New Success Story',
+            message: `${authorName} shared a new success story: "${brag.title}"`,
+            referenceType: 'Brag',
+            referenceId: brag._id,
+            link: `/brags?view=${brag._id}`,
+          });
+        }
+      } catch (notifError) {
+        console.error('Error creating brag approval notifications:', notifError);
+      }
     }
 
     res.status(200).json({

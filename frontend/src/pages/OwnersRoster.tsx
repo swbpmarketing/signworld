@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { getOwners } from '../services/ownerService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getOwners, updateOwnerProfile } from '../services/ownerService';
 import type { Owner } from '../services/ownerService';
 import { useAuth } from '../context/AuthContext';
 import AddOwnerModal from '../components/AddOwnerModal';
@@ -23,6 +23,8 @@ import {
   Squares2X2Icon,
   ListBulletIcon,
   PlusIcon,
+  PencilIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 
@@ -161,8 +163,10 @@ const specialtyFilters = [
 ];
 
 const OwnersRoster = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const currentUserId = user?._id || user?.id;
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTerritory, setSelectedTerritory] = useState('All Territories');
@@ -181,6 +185,73 @@ const OwnersRoster = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingOwner, setEditingOwner] = useState<OwnerDisplay | null>(null);
+  const [editForm, setEditForm] = useState({
+    company: '',
+    phone: '',
+    city: '',
+    state: '',
+    yearsInBusiness: 0,
+    specialties: [] as string[],
+  });
+
+  // Update owner mutation
+  const updateOwnerMutation = useMutation({
+    mutationFn: ({ ownerId, updates }: { ownerId: string; updates: Partial<Owner> }) =>
+      updateOwnerProfile(ownerId, updates),
+    onSuccess: () => {
+      toast.success('Profile updated successfully!');
+      setIsEditModalOpen(false);
+      setEditingOwner(null);
+      queryClient.invalidateQueries({ queryKey: ['owners'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update profile');
+    },
+  });
+
+  const handleEditOwner = (owner: OwnerDisplay, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingOwner(owner);
+    setEditForm({
+      company: owner.company || '',
+      phone: owner.phone || '',
+      city: owner.address?.city || '',
+      state: owner.address?.state || '',
+      yearsInBusiness: owner.yearsInBusiness || 0,
+      specialties: owner.specialties || [],
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingOwner) return;
+
+    const updates: Partial<Owner> = {
+      company: editForm.company,
+      phone: editForm.phone,
+      address: {
+        ...editingOwner.address,
+        city: editForm.city,
+        state: editForm.state,
+      },
+      yearsInBusiness: editForm.yearsInBusiness,
+      specialties: editForm.specialties,
+    };
+
+    updateOwnerMutation.mutate({ ownerId: editingOwner.id, updates });
+  };
+
+  const toggleEditSpecialty = (specialty: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      specialties: prev.specialties.includes(specialty)
+        ? prev.specialties.filter(s => s !== specialty)
+        : [...prev.specialties, specialty],
+    }));
+  };
 
   const handleOpenMessage = (owner: OwnerDisplay) => {
     navigate(`/chat?contact=${owner.id}`);
@@ -635,26 +706,40 @@ const OwnersRoster = () => {
 
                 {/* Actions */}
                 <div className="mt-6 flex flex-col sm:flex-row gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      // Handle email action
-                    }}
-                    className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-xs sm:text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <EnvelopeIcon className="h-4 w-4 mr-1.5 text-gray-400" />
-                    Email
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleOpenMessage(owner);
-                    }}
-                    className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-primary-600 text-xs sm:text-sm font-medium rounded-lg text-white hover:bg-primary-700 transition-colors">
-                    <ChatBubbleLeftIcon className="h-4 w-4 mr-1.5" />
-                    Message
-                  </button>
+                  {/* Edit button - only for the current user's own card */}
+                  {currentUserId === owner.id && (
+                    <button
+                      onClick={(e) => handleEditOwner(owner, e)}
+                      className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-amber-500 text-xs sm:text-sm font-medium rounded-lg text-white hover:bg-amber-600 transition-colors"
+                    >
+                      <PencilIcon className="h-4 w-4 mr-1.5" />
+                      Edit Profile
+                    </button>
+                  )}
+                  {currentUserId !== owner.id && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          // Handle email action
+                        }}
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-xs sm:text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <EnvelopeIcon className="h-4 w-4 mr-1.5 text-gray-400" />
+                        Email
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleOpenMessage(owner);
+                        }}
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-primary-600 text-xs sm:text-sm font-medium rounded-lg text-white hover:bg-primary-700 transition-colors">
+                        <ChatBubbleLeftIcon className="h-4 w-4 mr-1.5" />
+                        Message
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </Link>
@@ -681,7 +766,7 @@ const OwnersRoster = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[140px]">
                     Actions
                   </th>
                 </tr>
@@ -705,8 +790,8 @@ const OwnersRoster = () => {
                       <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{owner.territory}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1 max-w-xs">
-                        {owner.specialties.map((specialty) => (
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {owner.specialties.slice(0, 3).map((specialty) => (
                           <span
                             key={specialty}
                             className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
@@ -714,6 +799,11 @@ const OwnersRoster = () => {
                             {specialty}
                           </span>
                         ))}
+                        {owner.specialties.length > 3 && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400">
+                            +{owner.specialties.length - 3}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -733,17 +823,26 @@ const OwnersRoster = () => {
                         {owner.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex flex-col sm:flex-row gap-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium min-w-[140px]">
+                      <div className="flex flex-row gap-2 justify-end">
                         <Link to={`/owners/${owner.id}`} className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 text-xs sm:text-sm">
                           View Profile
                         </Link>
-                        <button
-                          onClick={() => handleOpenMessage(owner)}
-                          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-xs sm:text-sm"
-                        >
-                          Message
-                        </button>
+                        {currentUserId === owner.id ? (
+                          <button
+                            onClick={(e) => handleEditOwner(owner, e)}
+                            className="text-amber-600 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 text-xs sm:text-sm font-medium"
+                          >
+                            Edit
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleOpenMessage(owner)}
+                            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-xs sm:text-sm"
+                          >
+                            Message
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -757,13 +856,165 @@ const OwnersRoster = () => {
       {/* Load More */}
       {data?.pagination?.hasNext && (
         <div className="text-center">
-          <button 
+          <button
             onClick={() => setPage(prev => prev + 1)}
             disabled={isLoading}
             className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Loading...' : 'Load More Owners'}
           </button>
+        </div>
+      )}
+
+      {/* Edit Owner Modal */}
+      {isEditModalOpen && editingOwner && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/50 transition-opacity"
+              onClick={() => setIsEditModalOpen(false)}
+            />
+
+            {/* Modal */}
+            <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 z-10">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  Edit Your Profile
+                </h2>
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Form */}
+              <div className="space-y-4">
+                {/* Company Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Company Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.company}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, company: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                    placeholder="Enter company name"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                    placeholder="(555) 555-5555"
+                  />
+                </div>
+
+                {/* City and State */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.city}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                      placeholder="City"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      State
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.state}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, state: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                      placeholder="State"
+                    />
+                  </div>
+                </div>
+
+                {/* Years in Business */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Years in Business
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editForm.yearsInBusiness}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, yearsInBusiness: parseInt(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+                  />
+                </div>
+
+                {/* Specialties */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Specialties
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {specialtyFilters.map((specialty) => (
+                      <button
+                        key={specialty}
+                        type="button"
+                        onClick={() => toggleEditSpecialty(specialty)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          editForm.specialties.includes(specialty)
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {specialty}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={updateOwnerMutation.isPending}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {updateOwnerMutation.isPending ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
