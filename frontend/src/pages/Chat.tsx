@@ -817,7 +817,88 @@ const Chat = () => {
                               )}
                               {/* Message Content */}
                               {message.content && !message.content.startsWith('Sent a file:') && (
-                                <p className="text-sm leading-relaxed break-words">{message.content}</p>
+                                message.content.startsWith('📦 Equipment Inquiry') ? (
+                                  // Special rendering for equipment inquiry messages
+                                  (() => {
+                                    // Parse the inquiry message
+                                    const lines = message.content.split('\n').filter((l: string) => l.trim() && !l.includes('━'));
+                                    const productLine = lines.find((l: string) => l.startsWith('Product:'));
+                                    const brandLine = lines.find((l: string) => l.startsWith('Brand:'));
+                                    const priceLine = lines.find((l: string) => l.startsWith('Price:'));
+                                    const contactLine = lines.find((l: string) => l.startsWith('Contact:'));
+                                    const companyLine = lines.find((l: string) => l.startsWith('Company:'));
+
+                                    // Get the actual message (everything that's not a labeled line)
+                                    const inquiryMessage = lines.filter((l: string) =>
+                                      !l.startsWith('📦') &&
+                                      !l.startsWith('Product:') &&
+                                      !l.startsWith('Brand:') &&
+                                      !l.startsWith('Price:') &&
+                                      !l.startsWith('Contact:') &&
+                                      !l.startsWith('Company:')
+                                    ).join(' ').trim();
+
+                                    return (
+                                      <div className={`rounded-lg overflow-hidden ${isOwn ? 'bg-primary-700/50' : 'bg-gray-100 dark:bg-gray-700/50'}`}>
+                                        {/* Header */}
+                                        <div className={`px-3 py-2 ${isOwn ? 'bg-primary-800/50' : 'bg-gray-200 dark:bg-gray-600/50'}`}>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-lg">📦</span>
+                                            <span className={`text-sm font-semibold ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                                              Equipment Inquiry
+                                            </span>
+                                          </div>
+                                        </div>
+                                        {/* Product Details */}
+                                        <div className="px-3 py-2 space-y-1">
+                                          {productLine && (
+                                            <div className="flex justify-between items-center">
+                                              <span className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>Product</span>
+                                              <span className={`text-sm font-medium ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                                                {productLine.replace('Product:', '').trim()}
+                                              </span>
+                                            </div>
+                                          )}
+                                          {brandLine && (
+                                            <div className="flex justify-between items-center">
+                                              <span className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>Brand</span>
+                                              <span className={`text-sm ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                                                {brandLine.replace('Brand:', '').trim()}
+                                              </span>
+                                            </div>
+                                          )}
+                                          {priceLine && (
+                                            <div className="flex justify-between items-center">
+                                              <span className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>Price</span>
+                                              <span className={`text-sm font-semibold ${isOwn ? 'text-green-300' : 'text-green-600 dark:text-green-400'}`}>
+                                                {priceLine.replace('Price:', '').trim()}
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                        {/* Message */}
+                                        {inquiryMessage && (
+                                          <div className={`px-3 py-2 border-t ${isOwn ? 'border-primary-600/50' : 'border-gray-200 dark:border-gray-600/50'}`}>
+                                            <p className={`text-sm ${isOwn ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}>
+                                              "{inquiryMessage}"
+                                            </p>
+                                          </div>
+                                        )}
+                                        {/* Contact Info */}
+                                        {(contactLine || companyLine) && (
+                                          <div className={`px-3 py-2 border-t ${isOwn ? 'border-primary-600/50 bg-primary-800/30' : 'border-gray-200 dark:border-gray-600/50 bg-gray-100 dark:bg-gray-700/30'}`}>
+                                            <div className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                                              {contactLine && <div>{contactLine.replace('Contact:', '').trim()}</div>}
+                                              {companyLine && <div>{companyLine.replace('Company:', '').trim()}</div>}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()
+                                ) : (
+                                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{message.content}</p>
+                                )
                               )}
                               <div className={`flex items-center justify-end gap-1 mt-1 ${
                                 isOwn ? 'text-primary-200' : 'text-gray-400 dark:text-gray-500'

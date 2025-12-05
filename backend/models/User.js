@@ -103,6 +103,11 @@ const userSchema = new mongoose.Schema({
 // Create sparse 2dsphere index - only indexes documents with location coordinates
 userSchema.index({ 'location': '2dsphere' }, { sparse: true });
 
+// Performance indexes
+userSchema.index({ role: 1, isActive: 1 }); // For role-based queries
+userSchema.index({ email: 1 }); // For login/lookup (unique already creates index, but explicit is clearer)
+userSchema.index({ createdAt: -1 }); // For sorting by date
+
 // Encrypt password using bcrypt
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {

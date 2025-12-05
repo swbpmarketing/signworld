@@ -102,4 +102,11 @@ libraryFileSchema.pre('save', function(next) {
   next();
 });
 
+// Performance indexes
+libraryFileSchema.index({ category: 1, status: 1, isActive: 1 }); // Compound index for filtering
+libraryFileSchema.index({ uploadedBy: 1 }); // For user's uploads
+libraryFileSchema.index({ createdAt: -1 }); // For sorting by date
+libraryFileSchema.index({ status: 1 }); // For pending approval queries
+libraryFileSchema.index({ title: 'text', description: 'text' }); // Text search
+
 module.exports = mongoose.model('LibraryFile', libraryFileSchema);

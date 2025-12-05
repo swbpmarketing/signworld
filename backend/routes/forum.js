@@ -92,15 +92,17 @@ router.get('/', async (req, res) => {
 // @access  Private
 router.get('/my-threads', protect, async (req, res) => {
   try {
+    // Use .lean() for better performance on read-only query
     const threads = await ForumThread.find({ author: req.user._id })
       .populate('author', 'name email role')
       .populate('lastReplyBy', 'name email')
-      .sort('-createdAt');
+      .sort('-createdAt')
+      .lean();
 
     res.status(200).json({
       success: true,
       data: threads.map(thread => ({
-        ...thread.toObject(),
+        ...thread,
         replyCount: thread.replies?.length || 0
       }))
     });
@@ -761,12 +763,12 @@ router.get('/stats/overview', async (req, res) => {
       createdAt: { $gte: todayStart }
     });
 
-    // Get total replies
-    const threadsWithReplies = await ForumThread.find({ status: 'active' }).select('replies');
+    // Get total replies - use .lean() for better performance
+    const threadsWithReplies = await ForumThread.find({ status: 'active' }).select('replies').lean();
     const totalReplies = threadsWithReplies.reduce((sum, thread) => sum + thread.replies.length, 0);
 
-    // Get trending tags
-    const allThreads = await ForumThread.find({ status: 'active' }).select('tags');
+    // Get trending tags - use .lean() for better performance
+    const allThreads = await ForumThread.find({ status: 'active' }).select('tags').lean();
     const tagCounts = {};
     allThreads.forEach(thread => {
       thread.tags.forEach(tag => {

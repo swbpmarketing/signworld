@@ -78,6 +78,79 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @route   GET /api/partners/vendor-stats
+// @desc    Get vendor's own statistics for reports
+// @access  Private (Vendor)
+router.get('/vendor-stats', protect, authorize('vendor', 'admin'), async (req, res) => {
+  try {
+    // Get vendor's partner profile
+    const partner = await Partner.findOne({ vendorId: req.user.id });
+
+    if (!partner) {
+      return res.status(404).json({
+        success: false,
+        error: 'Partner profile not found',
+      });
+    }
+
+    // Calculate profile stats
+    const profileStats = {
+      rating: partner.rating || 0,
+      reviewCount: partner.reviewCount || 0,
+      isVerified: partner.isVerified || false,
+      isFeatured: partner.isFeatured || false,
+      specialtiesCount: partner.specialties?.length || 0,
+      benefitsCount: partner.benefits?.length || 0,
+      documentsCount: partner.documents?.length || 0,
+      activeOffersCount: partner.specialOffers?.filter(o => !o.validUntil || new Date(o.validUntil) > new Date()).length || 0,
+      expiredOffersCount: partner.specialOffers?.filter(o => o.validUntil && new Date(o.validUntil) <= new Date()).length || 0,
+    };
+
+    // Get reviews breakdown
+    const reviewsBreakdown = {
+      total: partner.reviews?.length || 0,
+      ratings: {
+        5: partner.reviews?.filter(r => r.rating === 5).length || 0,
+        4: partner.reviews?.filter(r => r.rating === 4).length || 0,
+        3: partner.reviews?.filter(r => r.rating === 3).length || 0,
+        2: partner.reviews?.filter(r => r.rating === 2).length || 0,
+        1: partner.reviews?.filter(r => r.rating === 1).length || 0,
+      },
+      recentReviews: partner.reviews?.slice(-5).reverse() || [],
+    };
+
+    // Get special offers data
+    const specialOffers = partner.specialOffers?.map(offer => ({
+      title: offer.title,
+      description: offer.description,
+      validUntil: offer.validUntil,
+      discountPercent: offer.discountPercent,
+      isActive: !offer.validUntil || new Date(offer.validUntil) > new Date(),
+    })) || [];
+
+    res.json({
+      success: true,
+      data: {
+        profile: {
+          name: partner.name,
+          category: partner.category,
+          country: partner.country,
+          createdAt: partner.createdAt,
+        },
+        profileStats,
+        reviewsBreakdown,
+        specialOffers,
+      },
+    });
+  } catch (err) {
+    console.error('Error fetching vendor stats:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Server Error',
+    });
+  }
+});
+
 // @route   GET /api/partners/my-profile
 // @desc    Get vendor's own partner profile
 // @access  Private (Vendor)

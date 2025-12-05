@@ -4,6 +4,7 @@ const Equipment = require('../models/Equipment');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { protect, authorize } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 // @desc    Get equipment statistics
 // @route   GET /api/equipment/stats
@@ -48,6 +49,198 @@ router.get('/stats', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching equipment stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error fetching equipment statistics'
+    });
+  }
+});
+
+// @desc    Get vendor's equipment statistics for reports
+// @route   GET /api/equipment/vendor-stats
+// @access  Private/Vendor
+router.get('/vendor-stats', protect, authorize('vendor', 'admin'), async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+
+    // Get all vendor's equipment with inquiries
+    const equipment = await Equipment.find({ vendorId });
+
+    // Calculate basic stats
+    const totalListings = equipment.length;
+    const activeListings = equipment.filter(e => e.isActive).length;
+    const inactiveListings = equipment.filter(e => !e.isActive).length;
+    const featuredListings = equipment.filter(e => e.isFeatured).length;
+
+    // Category breakdown
+    const categoryBreakdown = {};
+    equipment.forEach(e => {
+      categoryBreakdown[e.category] = (categoryBreakdown[e.category] || 0) + 1;
+    });
+
+    // Availability breakdown
+    const availabilityBreakdown = {
+      'in-stock': equipment.filter(e => e.availability === 'in-stock').length,
+      'out-of-stock': equipment.filter(e => e.availability === 'out-of-stock').length,
+      'pre-order': equipment.filter(e => e.availability === 'pre-order').length,
+      'discontinued': equipment.filter(e => e.availability === 'discontinued').length,
+    };
+
+    // Inquiry stats
+    let totalInquiries = 0;
+    let newInquiries = 0;
+    let contactedInquiries = 0;
+    let completedInquiries = 0;
+    let cancelledInquiries = 0;
+    const recentInquiries = [];
+
+    // Sales tracking
+    let totalSales = 0;
+    let estimatedRevenue = 0;
+    const salesByMonth = {};
+    const salesByEquipment = {};
+
+    // Helper to parse price string to number
+    const parsePrice = (priceStr) => {
+      if (typeof priceStr === 'number') return priceStr;
+      if (!priceStr) return 0;
+      // Remove currency symbols, commas, and other non-numeric chars except decimal
+      const cleaned = String(priceStr).replace(/[^0-9.]/g, '');
+      return parseFloat(cleaned) || 0;
+    };
+
+    // Get current date for monthly tracking
+    const now = new Date();
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    equipment.forEach(e => {
+      if (e.inquiries && e.inquiries.length > 0) {
+        totalInquiries += e.inquiries.length;
+        const equipmentPrice = parsePrice(e.price);
+
+        e.inquiries.forEach(inq => {
+          switch (inq.status) {
+            case 'new': newInquiries++; break;
+            case 'contacted': contactedInquiries++; break;
+            case 'completed':
+              completedInquiries++;
+              // Track as a sale
+              totalSales++;
+              estimatedRevenue += equipmentPrice;
+
+              // Track sales by month
+              const inquiryDate = new Date(inq.createdAt);
+              if (inquiryDate >= sixMonthsAgo) {
+                const monthKey = `${inquiryDate.getFullYear()}-${String(inquiryDate.getMonth() + 1).padStart(2, '0')}`;
+                if (!salesByMonth[monthKey]) {
+                  salesByMonth[monthKey] = { count: 0, revenue: 0 };
+                }
+                salesByMonth[monthKey].count++;
+                salesByMonth[monthKey].revenue += equipmentPrice;
+              }
+
+              // Track sales by equipment
+              if (!salesByEquipment[e._id]) {
+                salesByEquipment[e._id] = {
+                  _id: e._id,
+                  name: e.name,
+                  category: e.category,
+                  price: equipmentPrice,
+                  salesCount: 0,
+                  revenue: 0,
+                };
+              }
+              salesByEquipment[e._id].salesCount++;
+              salesByEquipment[e._id].revenue += equipmentPrice;
+              break;
+            case 'cancelled': cancelledInquiries++; break;
+          }
+          recentInquiries.push({
+            equipmentId: e._id,
+            equipmentName: e.name,
+            equipmentPrice: equipmentPrice,
+            ...inq.toObject(),
+          });
+        });
+      }
+    });
+
+    // Sort recent inquiries by date and take last 10
+    recentInquiries.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const latestInquiries = recentInquiries.slice(0, 10);
+
+    // Top performing equipment (by inquiry count)
+    const equipmentPerformance = equipment.map(e => ({
+      _id: e._id,
+      name: e.name,
+      category: e.category,
+      inquiryCount: e.inquiries?.length || 0,
+      isActive: e.isActive,
+      createdAt: e.createdAt,
+    })).sort((a, b) => b.inquiryCount - a.inquiryCount).slice(0, 5);
+
+    // Top selling equipment (by completed inquiries / sales)
+    const topSellingEquipment = Object.values(salesByEquipment)
+      .sort((a, b) => b.salesCount - a.salesCount)
+      .slice(0, 5);
+
+    // Calculate conversion rate
+    const conversionRate = totalInquiries > 0
+      ? ((completedInquiries / totalInquiries) * 100).toFixed(1)
+      : 0;
+
+    // Format monthly sales for chart (last 6 months)
+    const monthlySales = [];
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = date.toLocaleString('default', { month: 'short' });
+      monthlySales.push({
+        month: monthName,
+        year: date.getFullYear(),
+        count: salesByMonth[monthKey]?.count || 0,
+        revenue: salesByMonth[monthKey]?.revenue || 0,
+      });
+    }
+
+    // Recent sales (completed inquiries)
+    const recentSales = recentInquiries
+      .filter(inq => inq.status === 'completed')
+      .slice(0, 10);
+
+    res.json({
+      success: true,
+      data: {
+        overview: {
+          totalListings,
+          activeListings,
+          inactiveListings,
+          featuredListings,
+        },
+        categoryBreakdown,
+        availabilityBreakdown,
+        inquiryStats: {
+          total: totalInquiries,
+          new: newInquiries,
+          contacted: contactedInquiries,
+          completed: completedInquiries,
+          cancelled: cancelledInquiries,
+        },
+        recentInquiries: latestInquiries,
+        topEquipment: equipmentPerformance,
+        // Sales statistics
+        salesStats: {
+          totalSales,
+          estimatedRevenue,
+          conversionRate: parseFloat(conversionRate),
+          monthlySales,
+          topSellingEquipment,
+          recentSales,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching vendor equipment stats:', error);
     res.status(500).json({
       success: false,
       error: 'Error fetching equipment statistics'
@@ -205,6 +398,46 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// @desc    Upload equipment image
+// @route   POST /api/equipment/upload-image
+// @access  Private/Admin or Vendor
+router.post('/upload-image', protect, authorize('admin', 'vendor'), upload.single('images'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No image file provided'
+      });
+    }
+
+    // The upload middleware handles S3 upload and adds s3Url to req.file
+    const imageUrl = req.file.s3Url || req.file.location;
+
+    if (!imageUrl) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to upload image'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        url: imageUrl,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      }
+    });
+  } catch (error) {
+    console.error('Error uploading equipment image:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error uploading image'
+    });
+  }
+});
+
 // @desc    Create new equipment
 // @route   POST /api/equipment
 // @access  Private/Admin or Vendor
@@ -255,6 +488,11 @@ router.post('/', protect, authorize('admin', 'vendor'), async (req, res) => {
       }
     } catch (notifError) {
       console.error('Error creating equipment listing notifications:', notifError);
+    }
+
+    // Emit socket event for real-time updates
+    if (io) {
+      io.to('equipment').emit('equipment:created', { equipment });
     }
 
     res.status(201).json({
@@ -317,6 +555,12 @@ router.put('/:id', protect, authorize('admin', 'vendor'), async (req, res) => {
       { new: true, runValidators: true }
     );
 
+    // Emit socket event for real-time updates
+    const io = req.app.get('io');
+    if (io) {
+      io.to('equipment').emit('equipment:updated', { equipment: updatedEquipment });
+    }
+
     res.json({
       success: true,
       data: updatedEquipment
@@ -352,7 +596,14 @@ router.delete('/:id', protect, authorize('admin', 'vendor'), async (req, res) =>
       });
     }
 
+    const equipmentId = equipment._id;
     await Equipment.findByIdAndDelete(req.params.id);
+
+    // Emit socket event for real-time updates
+    const io = req.app.get('io');
+    if (io) {
+      io.to('equipment').emit('equipment:deleted', { equipmentId });
+    }
 
     res.json({
       success: true,
@@ -367,10 +618,13 @@ router.delete('/:id', protect, authorize('admin', 'vendor'), async (req, res) =>
   }
 });
 
-// @desc    Submit inquiry for equipment
+// @desc    Submit inquiry for equipment (creates chat conversation with vendor)
 // @route   POST /api/equipment/:id/inquiry
-// @access  Public (but user info captured if logged in)
-router.post('/:id/inquiry', async (req, res) => {
+// @access  Private (requires authentication to start chat)
+router.post('/:id/inquiry', protect, async (req, res) => {
+  console.log('📨 Inquiry endpoint hit:', req.params.id);
+  console.log('📨 Request body:', req.body);
+  console.log('📨 User:', req.user?.id, req.user?.role);
   try {
     const { name, email, company, phone, message } = req.body;
 
@@ -390,7 +644,25 @@ router.post('/:id/inquiry', async (req, res) => {
       });
     }
 
+    // Check if equipment has a vendor
+    if (!equipment.vendorId) {
+      return res.status(400).json({
+        success: false,
+        error: 'This equipment does not have an associated vendor'
+      });
+    }
+
+    // Don't allow vendor to inquire about their own equipment
+    if (equipment.vendorId.toString() === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        error: 'You cannot send an inquiry for your own equipment'
+      });
+    }
+
+    // Store inquiry in equipment record for tracking
     const inquiry = {
+      user: req.user.id,
       name,
       email,
       company,
@@ -400,17 +672,89 @@ router.post('/:id/inquiry', async (req, res) => {
       createdAt: new Date()
     };
 
-    // Add user ID if authenticated
-    if (req.user) {
-      inquiry.user = req.user.id;
-    }
-
     equipment.inquiries.push(inquiry);
     await equipment.save();
 
+    // Import models needed for chat
+    const Conversation = require('../models/Conversation');
+    const Message = require('../models/Message');
+
+    // Find or create conversation between inquirer and vendor
+    const conversation = await Conversation.findOrCreateDirect(req.user.id, equipment.vendorId);
+
+    // Create formatted message with equipment context (plain text)
+    const priceDisplay = typeof equipment.price === 'number'
+      ? `$${equipment.price.toLocaleString()}`
+      : equipment.price;
+
+    const formattedMessage =
+      `📦 Equipment Inquiry\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `Product: ${equipment.name}\n` +
+      `Brand: ${equipment.brand || 'N/A'}\n` +
+      `Price: ${priceDisplay}\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `${message}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `Contact: ${email}${phone ? ` | ${phone}` : ''}${company ? `\nCompany: ${company}` : ''}`;
+
+    // Create message in conversation
+    const chatMessage = await Message.create({
+      conversation: conversation._id,
+      sender: req.user.id,
+      content: formattedMessage,
+      readBy: [{ user: req.user.id, readAt: new Date() }],
+    });
+
+    // Update conversation's last message
+    await conversation.updateLastMessage(chatMessage);
+
+    // Populate sender info
+    await chatMessage.populate('sender', 'name email role avatar');
+
+    // Get io for real-time updates
+    const io = req.app.get('io');
+
+    // Emit real-time chat events
+    if (io) {
+      // Emit to the conversation room
+      io.to(`conversation:${conversation._id}`).emit('message:new', {
+        conversationId: conversation._id,
+        message: chatMessage
+      });
+      // Emit to vendor's chat room for sidebar updates
+      io.to(`chat:${equipment.vendorId.toString()}`).emit('conversation:update', {
+        conversationId: conversation._id,
+        lastMessage: chatMessage.content,
+        lastMessageAt: chatMessage.createdAt,
+        senderId: req.user.id
+      });
+    }
+
+    // Create notification for vendor
+    const senderName = req.user.name || req.user.firstName || name;
+    try {
+      await Notification.createAndEmit(io, {
+        recipient: equipment.vendorId,
+        sender: req.user.id,
+        type: 'equipment_inquiry',
+        title: 'New Equipment Inquiry',
+        message: `${senderName} sent an inquiry about "${equipment.name}"`,
+        referenceType: 'Equipment',
+        referenceId: equipment._id,
+        link: `/chat?contact=${req.user.id}`,
+      });
+    } catch (notifError) {
+      console.error('Error creating inquiry notification:', notifError);
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Inquiry submitted successfully'
+      message: 'Inquiry submitted successfully',
+      data: {
+        conversationId: conversation._id,
+        vendorId: equipment.vendorId
+      }
     });
   } catch (error) {
     console.error('Error submitting inquiry:', error);

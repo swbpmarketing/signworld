@@ -16,8 +16,8 @@ const router = express.Router();
 // All routes require authentication
 router.use(protect);
 
-// Owner stats route (must be before /:id route)
-router.get('/owner-stats', getOwnerStats);
+// Owner stats route (must be before /:id route) - restricted to admin and owner roles
+router.get('/owner-stats', authorize('admin', 'owner'), getOwnerStats);
 
 router
   .route('/')

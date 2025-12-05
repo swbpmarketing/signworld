@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import axios from '../config/axios';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import {
   ShoppingBagIcon,
@@ -18,6 +19,7 @@ import {
   MagnifyingGlassIcon,
   EyeIcon,
   EyeSlashIcon,
+  CloudArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
@@ -98,6 +100,13 @@ const VendorEquipment = () => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: string | null; name: string }>({
+    show: false,
+    id: null,
+    name: ''
+  });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Fetch vendor's equipment
   const { data: equipmentData, isLoading } = useQuery({
@@ -153,11 +162,12 @@ const VendorEquipment = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendorEquipment'] });
-      setSuccess('Equipment listing deleted successfully!');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Equipment listing deleted successfully!');
+      setDeleteConfirm({ show: false, id: null, name: '' });
     },
     onError: (err: any) => {
-      setError(err.response?.data?.error || 'Failed to delete equipment listing');
+      toast.error(err.response?.data?.error || 'Failed to delete equipment listing');
+      setDeleteConfirm({ show: false, id: null, name: '' });
     },
   });
 
@@ -195,9 +205,14 @@ const VendorEquipment = () => {
         features: equipment.features || [],
         specifications: equipment.specifications || {},
       });
+      // Set image preview if equipment has an image
+      if (equipment.image) {
+        setImagePreview(equipment.image);
+      }
     } else {
       setEditingEquipment(null);
       setFormData(emptyEquipment);
+      setImagePreview(null);
     }
     setShowModal(true);
     setError('');
@@ -216,9 +231,9 @@ const VendorEquipment = () => {
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this equipment listing?')) {
-      deleteMutation.mutate(id);
+  const handleDelete = () => {
+    if (deleteConfirm.id) {
+      deleteMutation.mutate(deleteConfirm.id);
     }
   };
 
@@ -257,6 +272,70 @@ const VendorEquipment = () => {
     const specs = { ...formData.specifications };
     delete specs[key];
     setFormData({ ...formData, specifications: specs });
+  };
+
+  // Handle image file selection and auto-upload
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file (JPG, PNG, GIF, etc.)');
+        return;
+      }
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        setError('Image size must be less than 10MB');
+        return;
+      }
+
+      // Create preview URL immediately for better UX
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      setError('');
+
+      // Auto-upload the image
+      setIsUploadingImage(true);
+
+      try {
+        const formDataUpload = new FormData();
+        formDataUpload.append('images', file);
+
+        const response = await axios.post('/equipment/upload-image', formDataUpload, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        if (response.data.success) {
+          // Set the uploaded image URL in form data
+          setFormData(prev => ({ ...prev, image: response.data.data.url }));
+          toast.success('Image uploaded successfully!');
+        } else {
+          setError(response.data.error || 'Failed to upload image');
+          // Clear preview on error
+          URL.revokeObjectURL(previewUrl);
+          setImagePreview(null);
+        }
+      } catch (err: any) {
+        console.error('Image upload error:', err);
+        setError(err.response?.data?.error || 'Failed to upload image');
+        // Clear preview on error
+        URL.revokeObjectURL(previewUrl);
+        setImagePreview(null);
+      } finally {
+        setIsUploadingImage(false);
+      }
+    }
+  };
+
+  // Clear image
+  const handleClearImage = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+      setImagePreview(null);
+    }
+    setFormData(prev => ({ ...prev, image: '' }));
   };
 
   const getCategoryLabel = (value: string) => {
@@ -479,7 +558,7 @@ const VendorEquipment = () => {
                       <PencilIcon className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(item._id)}
+                      onClick={() => setDeleteConfirm({ show: true, id: item._id, name: item.name })}
                       className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                     >
                       <TrashIcon className="h-4 w-4" />
@@ -511,6 +590,16 @@ const VendorEquipment = () => {
               {/* Modal Body */}
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
                 <div className="space-y-6">
+                  {/* Error Message inside modal */}
+                  {error && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <ExclamationTriangleIcon className="h-5 w-5 text-red-600 dark:text-red-400 mr-2 flex-shrink-0" />
+                        <p className="text-red-800 dark:text-red-400 text-sm">{error}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Basic Info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
@@ -627,21 +716,84 @@ const VendorEquipment = () => {
                     </div>
                   </div>
 
-                  {/* Image & Details */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-3">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Image URL
-                      </label>
-                      <input
-                        type="url"
-                        value={formData.image}
-                        onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
-                        placeholder="https://..."
-                      />
-                    </div>
+                  {/* Image Upload */}
+                  <div className="space-y-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Product Image
+                    </label>
 
+                    {/* Image Preview */}
+                    {(imagePreview || formData.image) && (
+                      <div className="relative w-full h-48 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                        <img
+                          src={imagePreview || formData.image}
+                          alt="Preview"
+                          className={`w-full h-full object-cover ${isUploadingImage ? 'opacity-50' : ''}`}
+                        />
+                        {/* Uploading overlay */}
+                        {isUploadingImage && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <div className="flex flex-col items-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-3 border-white border-t-transparent mb-2" />
+                              <span className="text-white text-sm font-medium">Uploading...</span>
+                            </div>
+                          </div>
+                        )}
+                        {/* Remove button - only show when not uploading */}
+                        {!isUploadingImage && (
+                          <button
+                            type="button"
+                            onClick={handleClearImage}
+                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                        )}
+                        {/* Uploaded badge - show when image is uploaded and not currently uploading */}
+                        {formData.image && !isUploadingImage && (
+                          <div className="absolute bottom-2 left-2 px-2 py-1 bg-green-500 text-white text-xs rounded">
+                            Uploaded
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Upload Area */}
+                    {!imagePreview && !formData.image && (
+                      <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-primary-500 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                        <div className="flex flex-col items-center justify-center py-6">
+                          <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mb-3" />
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <span className="font-medium text-primary-600 dark:text-primary-400">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">PNG, JPG, GIF up to 10MB</p>
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                        />
+                      </label>
+                    )}
+
+                    {/* Change Image Button - show when image is already uploaded and not uploading */}
+                    {formData.image && !isUploadingImage && (
+                      <label className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                        <PhotoIcon className="h-4 w-4 mr-2" />
+                        Change Image
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Other Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Warranty
@@ -762,6 +914,44 @@ const VendorEquipment = () => {
                   className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
                 >
                   {createMutation.isPending || updateMutation.isPending ? 'Saving...' : editingEquipment ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.show && createPortal(
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteConfirm({ show: false, id: null, name: '' })} />
+            <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-2">
+                Delete Equipment Listing?
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+                Are you sure you want to delete "{deleteConfirm.name}"? This action cannot be undone.
+              </p>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => setDeleteConfirm({ show: false, id: null, name: '' })}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>

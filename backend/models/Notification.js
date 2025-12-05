@@ -20,6 +20,7 @@ const notificationSchema = new mongoose.Schema({
       'forum_post',             // New forum post
       'forum_reply',            // Reply to your forum post
       'equipment_listing',      // New equipment listing
+      'equipment_inquiry',      // Inquiry about equipment
       'like',                   // Someone liked your post
       'comment',                // Someone commented on your post
       'new_video',              // New video posted

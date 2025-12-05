@@ -24,6 +24,8 @@ import {
   MoonIcon,
   SunIcon,
   BuildingOffice2Icon,
+  ClipboardDocumentListIcon,
+  BuildingStorefrontIcon,
 } from "@heroicons/react/24/outline";
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import AISearchModal from "./AISearchModal";
@@ -32,7 +34,7 @@ import { useNotifications } from "../hooks/useNotifications";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['admin', 'owner', 'vendor'] },
-  { name: "Reports", href: "/reports", icon: ChartBarIcon, roles: ['admin', 'owner'] },
+  { name: "Reports", href: "/reports", icon: ChartBarIcon, roles: ['admin', 'owner', 'vendor'] },
   { name: "User Management", href: "/users", icon: UsersIcon, roles: ['admin'] },
   { name: "Calendar", href: "/calendar", icon: CalendarIcon, roles: ['admin', 'owner', 'vendor'] },
   { name: "Convention", href: "/convention", icon: BuildingOffice2Icon, roles: ['admin', 'owner', 'vendor'] },
@@ -45,6 +47,8 @@ const navigation = [
   { name: "Partners", href: "/partners", icon: UserGroupIcon, roles: ['admin', 'owner', 'vendor'] },
   { name: "Videos", href: "/videos", icon: VideoCameraIcon, roles: ['admin', 'owner'] },
   { name: "Equipment", href: "/equipment", icon: ShoppingBagIcon, roles: ['admin', 'owner', 'vendor'] },
+  { name: "My Listings", href: "/vendor-equipment", icon: ClipboardDocumentListIcon, roles: ['vendor'] },
+  { name: "My Profile", href: "/vendor-profile", icon: BuildingStorefrontIcon, roles: ['vendor'] },
   { name: "FAQs", href: "/faqs", icon: QuestionMarkCircleIcon, roles: ['admin', 'owner', 'vendor'] },
 ];
 
@@ -73,11 +77,13 @@ const Sidebar = memo(({
       }`}
     >
       <div className="flex h-full flex-col bg-white dark:bg-gray-800">
-        {/* Logo */}
+        {/* Logo - with explicit dimensions to prevent layout shift */}
         <div className="flex h-16 items-center justify-center px-6 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
           <img
             src="https://storage.googleapis.com/msgsndr/DecfA7BjYEDxFe8pqRZs/media/688c08634a3ff3102330f5bf.png"
             alt="Sign Company Logo"
+            width={180}
+            height={40}
             className="h-10 w-auto object-contain"
             style={{
               maxWidth: '180px',
@@ -424,6 +430,9 @@ const Layout = () => {
                         className="h-7 w-7 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
                         src={user.profileImage}
                         alt={user?.name || "User profile"}
+                        width={28}
+                        height={28}
+                        loading="lazy"
                       />
                     ) : (
                       <div className="h-7 w-7 rounded-full bg-primary-600 flex items-center justify-center ring-2 ring-gray-200 dark:ring-gray-700">
@@ -509,6 +518,9 @@ const Layout = () => {
                         className="h-8 w-8 rounded-full object-cover"
                         src={user.profileImage}
                         alt={user?.name || "User profile"}
+                        width={32}
+                        height={32}
+                        loading="lazy"
                       />
                     ) : (
                       <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center">

@@ -116,4 +116,12 @@ forumThreadSchema.pre('save', function(next) {
   next();
 });
 
+// Performance indexes
+forumThreadSchema.index({ category: 1, status: 1 }); // For category filtering
+forumThreadSchema.index({ author: 1 }); // For user's threads
+forumThreadSchema.index({ createdAt: -1 }); // For sorting by date
+forumThreadSchema.index({ lastReplyAt: -1 }); // For sorting by activity
+forumThreadSchema.index({ isPinned: -1, lastReplyAt: -1 }); // For pinned threads first
+forumThreadSchema.index({ title: 'text', content: 'text' }); // Text search
+
 module.exports = mongoose.model('ForumThread', forumThreadSchema);

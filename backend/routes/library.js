@@ -71,12 +71,13 @@ router.get('/', protect, async (req, res) => {
       query.$and = andConditions;
     }
 
-    // Execute query with pagination
+    // Execute query with pagination - use .lean() for better performance on read-only queries
     const files = await LibraryFile.find(query)
       .populate('uploadedBy', 'firstName lastName email')
       .sort(sort)
       .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .skip((page - 1) * limit)
+      .lean();
 
     // Get total count for pagination
     const total = await LibraryFile.countDocuments(query);
@@ -129,12 +130,13 @@ router.get('/archived', protect, authorize('admin'), async (req, res) => {
       ];
     }
 
-    // Execute query with pagination
+    // Execute query with pagination - use .lean() for better performance
     const files = await LibraryFile.find(query)
       .populate('uploadedBy', 'firstName lastName email')
       .sort(sort)
       .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .skip((page - 1) * limit)
+      .lean();
 
     // Get total count for pagination
     const total = await LibraryFile.countDocuments(query);
@@ -187,12 +189,13 @@ router.get('/deleted', protect, authorize('admin'), async (req, res) => {
       ];
     }
 
-    // Execute query with pagination
+    // Execute query with pagination - use .lean() for better performance
     const files = await LibraryFile.find(query)
       .populate('uploadedBy', 'firstName lastName email')
       .sort(sort)
       .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .skip((page - 1) * limit)
+      .lean();
 
     // Get total count for pagination
     const total = await LibraryFile.countDocuments(query);
@@ -245,12 +248,13 @@ router.get('/pending', protect, authorize('admin'), async (req, res) => {
       ];
     }
 
-    // Execute query with pagination
+    // Execute query with pagination - use .lean() for better performance
     const files = await LibraryFile.find(query)
       .populate('uploadedBy', 'firstName lastName email role')
       .sort(sort)
       .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .skip((page - 1) * limit)
+      .lean();
 
     // Get total count for pagination
     const total = await LibraryFile.countDocuments(query);
@@ -309,13 +313,14 @@ router.get('/my-uploads', protect, authorize('admin', 'owner'), async (req, res)
       ];
     }
 
-    // Execute query with pagination
+    // Execute query with pagination - use .lean() for better performance
     const files = await LibraryFile.find(query)
       .populate('uploadedBy', 'firstName lastName email')
       .populate('reviewedBy', 'firstName lastName')
       .sort(sort)
       .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .skip((page - 1) * limit)
+      .lean();
 
     // Get total count for pagination
     const total = await LibraryFile.countDocuments(query);
@@ -596,11 +601,12 @@ router.get('/stats', protect, async (req, res) => {
       { $sort: { count: -1 } }
     ]);
 
-    // Get recent files
+    // Get recent files - use .lean() for better performance
     const recentFiles = await LibraryFile.find({ isActive: true })
       .sort('-createdAt')
       .limit(5)
-      .select('title fileName fileType fileSize createdAt');
+      .select('title fileName fileType fileSize createdAt')
+      .lean();
 
     res.json({
       success: true,
@@ -672,8 +678,10 @@ router.get('/categories', protect, async (req, res) => {
 // @access  Private (all authenticated users)
 router.get('/:id', protect, async (req, res) => {
   try {
+    // Use .lean() for better performance on read-only query
     const file = await LibraryFile.findById(req.params.id)
-      .populate('uploadedBy', 'firstName lastName email');
+      .populate('uploadedBy', 'firstName lastName email')
+      .lean();
 
     if (!file) {
       return res.status(404).json({

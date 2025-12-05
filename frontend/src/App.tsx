@@ -7,6 +7,7 @@ import { DarkModeProvider } from './context/DarkModeContext';
 
 // Only import Layout and contexts eagerly as they're needed immediately
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Lazy load all pages for better code splitting
 const Landing = lazy(() => import('./pages/Landing'));
@@ -38,6 +39,7 @@ const Chat = lazy(() => import('./pages/Chat'));
 const VendorProfile = lazy(() => import('./pages/VendorProfile'));
 const VendorMap = lazy(() => import('./pages/VendorMap'));
 const VendorEquipment = lazy(() => import('./pages/VendorEquipment'));
+const VendorReports = lazy(() => import('./pages/VendorReports'));
 
 // Loading component for Suspense fallback
 const LoadingFallback = () => (
@@ -49,20 +51,25 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Create a client
+// Create a client with optimized settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 1, // 1 minute - better for frequently changing data
+      gcTime: 1000 * 60 * 5, // 5 minutes garbage collection (formerly cacheTime)
       retry: 1,
+      refetchOnWindowFocus: false, // Disable auto-refetch on window focus for better UX
     },
   },
 });
 
 function App() {
-  console.log('App component rendering');
-  console.log('Environment:', import.meta.env.MODE);
-  console.log('API URL:', import.meta.env.VITE_API_URL);
+  // Only log in development mode
+  if (import.meta.env.DEV) {
+    console.log('App component rendering');
+    console.log('Environment:', import.meta.env.MODE);
+    console.log('API URL:', import.meta.env.VITE_API_URL);
+  }
   
   return (
     <QueryClientProvider client={queryClient}>
@@ -79,33 +86,94 @@ function App() {
                 {/* Protected routes with Layout */}
                 <Route element={<Layout />}>
                   <Route path="dashboard" element={<DashboardRouter />} />
-                  <Route path="reports" element={<ReportsRouter />} />
-                  <Route path="users" element={<UserManagement />} />
+                  <Route path="reports" element={
+                    <ProtectedRoute allowedRoles={['admin', 'owner', 'vendor']}>
+                      <ReportsRouter />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="users" element={
+                    <ProtectedRoute adminOnly>
+                      <UserManagement />
+                    </ProtectedRoute>
+                  } />
                   <Route path="calendar" element={<Calendar />} />
                   <Route path="convention" element={<Convention />} />
                   <Route path="brags" element={<Brags />} />
-                  <Route path="forum" element={<Forum />} />
-                  <Route path="forum/thread/:id" element={<ForumThread />} />
+                  <Route path="forum" element={
+                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                      <Forum />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="forum/thread/:id" element={
+                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                      <ForumThread />
+                    </ProtectedRoute>
+                  } />
                   <Route path="chat" element={<Chat />} />
-                  <Route path="library" element={<Library />} />
-                  <Route path="library/pending" element={<PendingApproval />} />
-                  <Route path="archive" element={<Archive />} />
-                  <Route path="recently-deleted" element={<RecentlyDeleted />} />
+                  <Route path="library" element={
+                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                      <Library />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="library/pending" element={
+                    <ProtectedRoute adminOnly>
+                      <PendingApproval />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="archive" element={
+                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                      <Archive />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="recently-deleted" element={
+                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                      <RecentlyDeleted />
+                    </ProtectedRoute>
+                  } />
                   <Route path="resources" element={<Resources />} />
-                  <Route path="owners" element={<OwnersRoster />} />
-                  <Route path="owners/:id" element={<OwnerProfileEnhanced />} />
+                  <Route path="owners" element={
+                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                      <OwnersRoster />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="owners/:id" element={
+                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                      <OwnerProfileEnhanced />
+                    </ProtectedRoute>
+                  } />
                   <Route path="map" element={<MapSearch />} />
                   <Route path="partners" element={<Partners />} />
-                  <Route path="videos" element={<Videos />} />
+                  <Route path="videos" element={
+                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                      <Videos />
+                    </ProtectedRoute>
+                  } />
                   <Route path="equipment" element={<Equipment />} />
                   <Route path="faqs" element={<FAQs />} />
                   <Route path="profile" element={<UserProfile />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="billing" element={<Billing />} />
-                  {/* Vendor-specific routes */}
-                  <Route path="vendor-profile" element={<VendorProfile />} />
-                  <Route path="vendor-map" element={<VendorMap />} />
-                  <Route path="vendor-equipment" element={<VendorEquipment />} />
+                  {/* Vendor-specific routes - accessible to vendors and admins */}
+                  <Route path="vendor-profile" element={
+                    <ProtectedRoute allowedRoles={['admin', 'vendor']}>
+                      <VendorProfile />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="vendor-map" element={
+                    <ProtectedRoute allowedRoles={['admin', 'vendor']}>
+                      <VendorMap />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="vendor-equipment" element={
+                    <ProtectedRoute allowedRoles={['admin', 'vendor']}>
+                      <VendorEquipment />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="vendor-reports" element={
+                    <ProtectedRoute allowedRoles={['admin', 'vendor']}>
+                      <VendorReports />
+                    </ProtectedRoute>
+                  } />
                 </Route>
               </Routes>
             </Suspense>

@@ -19,6 +19,7 @@ interface AuthContextType {
   logout: () => void;
   refreshUser: () => Promise<void>;
   isAdmin: boolean;
+  isOwner: boolean;
   isVendor: boolean;
 }
 
@@ -101,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     refreshUser,
     isAdmin: user?.role === 'admin',
+    isOwner: user?.role === 'owner',
     isVendor: user?.role === 'vendor',
   };
 

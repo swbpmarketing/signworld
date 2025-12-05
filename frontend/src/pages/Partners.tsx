@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import usePermissions from '../hooks/usePermissions';
 import {
@@ -315,7 +316,7 @@ const Partners = () => {
       queryClient.invalidateQueries({ queryKey: ['partnerCategories'] });
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } }; message?: string };
-      alert(err.response?.data?.error || err.message || 'Failed to delete partner');
+      toast.error(err.response?.data?.error || err.message || 'Failed to delete partner');
     } finally {
       setIsDeleting(false);
     }

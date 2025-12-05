@@ -136,7 +136,7 @@ export const rolePermissions: Record<UserRole, RoleConfig> = {
     dashboard: 'vendor',
     features: {
       dashboard: viewOnly,
-      reports: noAccess,
+      reports: viewOnly, // Vendor-specific reports (view only)
       userManagement: noAccess,
       calendar: viewOnly,
       convention: viewOnly,

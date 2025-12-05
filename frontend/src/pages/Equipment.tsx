@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import socketService from '../services/socketService';
 import {
   ShoppingBagIcon,
   CpuChipIcon,
@@ -92,6 +93,7 @@ const loadFavoritesFromStorage = (userId: string | undefined): Set<string> => {
 const Equipment = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const userId = user?._id || user?.id;
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchInput, setSearchInput] = useState('');
@@ -122,6 +124,17 @@ const Equipment = () => {
     message: '',
   });
   const [submittingQuote, setSubmittingQuote] = useState(false);
+
+  // Vendor inquiry modal state
+  const [showInquiryModal, setShowInquiryModal] = useState(false);
+  const [inquiryForm, setInquiryForm] = useState({
+    name: '',
+    email: '',
+    company: '',
+    phone: '',
+    message: '',
+  });
+  const [submittingInquiry, setSubmittingInquiry] = useState(false);
 
   // Financing calculator state
   const [financingForm, setFinancingForm] = useState({
@@ -156,6 +169,58 @@ const Equipment = () => {
       localStorage.setItem(`equipment-favorites-${userId}`, JSON.stringify(Array.from(favorites)));
     }
   }, [favorites, userId, isInitialized]);
+
+  // Socket setup for real-time equipment updates
+  useEffect(() => {
+    // Connect to socket and join equipment room
+    socketService.connect();
+    socketService.joinRoom('equipment');
+
+    // Handler for equipment created
+    const handleEquipmentCreated = (data: { equipment: EquipmentType }) => {
+      console.log('Equipment created:', data.equipment?.name);
+      // Invalidate queries to refetch equipment list
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['equipmentStats'] });
+    };
+
+    // Handler for equipment updated
+    const handleEquipmentUpdated = (data: { equipment: EquipmentType }) => {
+      console.log('Equipment updated:', data.equipment?.name);
+      // Invalidate queries to refetch equipment list
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['equipmentStats'] });
+    };
+
+    // Handler for equipment deleted
+    const handleEquipmentDeleted = (data: { equipmentId: string }) => {
+      console.log('Equipment deleted:', data.equipmentId);
+      // Invalidate queries to refetch equipment list
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['equipmentStats'] });
+
+      // Remove from comparison if it was there
+      setComparisonItems(prev => prev.filter(item => item._id !== data.equipmentId));
+
+      // Close detail modal if viewing the deleted item
+      if (selectedEquipment?._id === data.equipmentId) {
+        setSelectedEquipment(null);
+      }
+    };
+
+    // Subscribe to events
+    socketService.on('equipment:created', handleEquipmentCreated);
+    socketService.on('equipment:updated', handleEquipmentUpdated);
+    socketService.on('equipment:deleted', handleEquipmentDeleted);
+
+    // Cleanup
+    return () => {
+      socketService.off('equipment:created', handleEquipmentCreated);
+      socketService.off('equipment:updated', handleEquipmentUpdated);
+      socketService.off('equipment:deleted', handleEquipmentDeleted);
+      socketService.leaveRoom('equipment');
+    };
+  }, [queryClient, selectedEquipment?._id]);
 
   // Fetch equipment from API
   const { data: equipmentData, isLoading: equipmentLoading } = useQuery({
@@ -320,6 +385,79 @@ const Equipment = () => {
     }
   }, [user, showQuoteModal]);
 
+  // Pre-fill inquiry form with vendor data
+  useEffect(() => {
+    if (user && showInquiryModal) {
+      setInquiryForm(prev => ({
+        ...prev,
+        name: user.name || prev.name,
+        email: user.email || prev.email,
+        company: user.company || prev.company,
+      }));
+    }
+  }, [user, showInquiryModal]);
+
+  // Handle inquiry submission
+  const handleSubmitInquiry = async () => {
+    if (!inquiryForm.name || !inquiryForm.email || !inquiryForm.message) {
+      toast.error('Please fill in your name, email, and message');
+      return;
+    }
+
+    if (!selectedEquipment) {
+      toast.error('No equipment selected');
+      return;
+    }
+
+    setSubmittingInquiry(true);
+    try {
+      const response = await fetch(`/api/equipment/${selectedEquipment._id}/inquiry`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify(inquiryForm),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setShowInquiryModal(false);
+        setSelectedEquipment(null);
+        setInquiryForm({ name: '', email: '', company: '', phone: '', message: '' });
+
+        // Show success toast with option to go to chat
+        const vendorId = data.data?.vendorId;
+        toast.success(
+          (t) => (
+            <div className="flex flex-col gap-2">
+              <span>Inquiry sent! A conversation has been started with the seller.</span>
+              {vendorId && (
+                <button
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    navigate(`/chat?contact=${vendorId}`);
+                  }}
+                  className="bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+                >
+                  Go to Chat
+                </button>
+              )}
+            </div>
+          ),
+          { duration: 6000 }
+        );
+      } else {
+        toast.error(data.error || 'Failed to submit inquiry');
+      }
+    } catch {
+      toast.error('Failed to submit inquiry. Please try again.');
+    } finally {
+      setSubmittingInquiry(false);
+    }
+  };
+
   const equipmentList = equipmentData?.data || [];
   const stats = statsData?.data;
   const pagination = equipmentData?.pagination;
@@ -352,7 +490,8 @@ const Equipment = () => {
 
   // Equipment Detail Modal
   const EquipmentDetailModal = () => {
-    if (!selectedEquipment) return null;
+    // Hide detail modal when inquiry modal is open (but keep selectedEquipment for inquiry)
+    if (!selectedEquipment || showInquiryModal) return null;
 
     return createPortal(
       <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -471,22 +610,35 @@ const Equipment = () => {
                         <HeartIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
                       )}
                     </button>
-                    <button
-                      onClick={() => {
-                        addToCart(selectedEquipment);
-                        setSelectedEquipment(null);
-                        setShowCartDrawer(true);
-                      }}
-                      disabled={selectedEquipment.availability !== 'in-stock'}
-                      className={`flex-1 inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-lg transition-colors ${
-                        selectedEquipment.availability === 'in-stock'
-                          ? 'bg-primary-600 text-white hover:bg-primary-700'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-                      }`}
-                    >
-                      <ShoppingCartIcon className="h-5 w-5 mr-2" />
-                      {isInCart(selectedEquipment._id) ? 'Add Another' : 'Add to Cart'}
-                    </button>
+                    {user?.role !== 'vendor' && (
+                      <button
+                        onClick={() => {
+                          addToCart(selectedEquipment);
+                          setSelectedEquipment(null);
+                          setShowCartDrawer(true);
+                        }}
+                        disabled={selectedEquipment.availability !== 'in-stock'}
+                        className={`flex-1 inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-lg transition-colors ${
+                          selectedEquipment.availability === 'in-stock'
+                            ? 'bg-primary-600 text-white hover:bg-primary-700'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        <ShoppingCartIcon className="h-5 w-5 mr-2" />
+                        {isInCart(selectedEquipment._id) ? 'Add Another' : 'Add to Cart'}
+                      </button>
+                    )}
+                    {(user?.role === 'vendor' || user?.role === 'owner') && (
+                      <button
+                        onClick={() => {
+                          setShowInquiryModal(true);
+                        }}
+                        className="flex-1 inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+                      >
+                        <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
+                        Send Inquiry
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1081,20 +1233,36 @@ const Equipment = () => {
                       <td className="py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</td>
                       {comparisonItems.map((item) => (
                         <td key={item._id} className="py-3 px-4 text-center">
-                          <button
-                            onClick={() => {
-                              addToCart(item);
-                              toast.success('Added to cart!');
-                            }}
-                            disabled={item.availability !== 'in-stock'}
-                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                              item.availability === 'in-stock'
-                                ? 'bg-primary-600 text-white hover:bg-primary-700'
-                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-                            }`}
-                          >
-                            Add to Cart
-                          </button>
+                          <div className="flex flex-col gap-2">
+                            {user?.role !== 'vendor' && (
+                              <button
+                                onClick={() => {
+                                  addToCart(item);
+                                  toast.success('Added to cart!');
+                                }}
+                                disabled={item.availability !== 'in-stock'}
+                                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                  item.availability === 'in-stock'
+                                    ? 'bg-primary-600 text-white hover:bg-primary-700'
+                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                                }`}
+                              >
+                                Add to Cart
+                              </button>
+                            )}
+                            {(user?.role === 'vendor' || user?.role === 'owner') && (
+                              <button
+                                onClick={() => {
+                                  setSelectedEquipment(item);
+                                  setShowComparisonModal(false);
+                                  setShowInquiryModal(true);
+                                }}
+                                className="px-4 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+                              >
+                                Send Inquiry
+                              </button>
+                            )}
+                          </div>
                         </td>
                       ))}
                     </tr>
@@ -1119,6 +1287,131 @@ const Equipment = () => {
       <FinancingCalculatorModal />
       <ComparisonModal />
 
+      {/* Vendor Inquiry Modal - rendered inline to prevent re-mounting on state changes */}
+      {showInquiryModal && selectedEquipment && createPortal(
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowInquiryModal(false); setSelectedEquipment(null); }} />
+            <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-6">
+              <button
+                onClick={() => { setShowInquiryModal(false); setSelectedEquipment(null); }}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                  <ChatBubbleLeftRightIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Send Inquiry</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Contact the seller about this equipment</p>
+                </div>
+              </div>
+
+              {/* Equipment Summary */}
+              <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex gap-4">
+                <img
+                  src={selectedEquipment.image || 'https://via.placeholder.com/80'}
+                  alt={selectedEquipment.name}
+                  className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                />
+                <div className="min-w-0">
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100 text-sm line-clamp-2">{selectedEquipment.name}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{selectedEquipment.brand}</p>
+                  <p className="text-sm font-semibold text-primary-600 dark:text-primary-400 mt-1">{selectedEquipment.price}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
+                    <input
+                      type="text"
+                      value={inquiryForm.name}
+                      onChange={(e) => setInquiryForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500"
+                      placeholder="Your name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email *</label>
+                    <input
+                      type="email"
+                      value={inquiryForm.email}
+                      onChange={(e) => setInquiryForm(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500"
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
+                    <input
+                      type="text"
+                      value={inquiryForm.company}
+                      onChange={(e) => setInquiryForm(prev => ({ ...prev, company: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500"
+                      placeholder="Your company"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                    <input
+                      type="tel"
+                      value={inquiryForm.phone}
+                      onChange={(e) => setInquiryForm(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500"
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message *</label>
+                  <textarea
+                    value={inquiryForm.message}
+                    onChange={(e) => setInquiryForm(prev => ({ ...prev, message: e.target.value }))}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500"
+                    placeholder="I'm interested in this equipment. Please provide more details about..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => { setShowInquiryModal(false); setSelectedEquipment(null); }}
+                  className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitInquiry}
+                  disabled={submittingInquiry}
+                  className="flex-1 py-3 px-4 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {submittingInquiry ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <PaperAirplaneIcon className="h-5 w-5" />
+                      Send Inquiry
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Header Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
         <div className="px-6 py-8 sm:px-8 sm:py-10">
@@ -1133,25 +1426,38 @@ const Equipment = () => {
               </p>
             </div>
             <div className="mt-4 sm:mt-0 flex items-center gap-3">
-              <button
-                onClick={() => setShowCartDrawer(true)}
-                className="relative inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200"
-              >
-                <ShoppingCartIcon className="h-5 w-5 mr-2" />
-                Cart
-                {cartItems.length > 0 && (
-                  <span className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                    {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setShowWishlistDrawer(true)}
-                className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
-              >
-                <HeartIcon className="h-5 w-5 mr-2" />
-                Wishlist ({favorites.size})
-              </button>
+              {/* Vendor-specific: Manage Listings button only */}
+              {user?.role === 'vendor' ? (
+                <button
+                  onClick={() => navigate('/vendor-equipment')}
+                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Manage My Listings
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowCartDrawer(true)}
+                    className="relative inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200"
+                  >
+                    <ShoppingCartIcon className="h-5 w-5 mr-2" />
+                    Cart
+                    {cartItems.length > 0 && (
+                      <span className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowWishlistDrawer(true)}
+                    className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+                  >
+                    <HeartIcon className="h-5 w-5 mr-2" />
+                    Wishlist ({favorites.size})
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1507,18 +1813,20 @@ const Equipment = () => {
                         <InformationCircleIcon className="h-4 w-4 mr-1.5" />
                         View Details
                       </button>
-                      <button
-                        onClick={() => addToCart(item)}
-                        disabled={item.availability !== 'in-stock'}
-                        className={`flex-1 inline-flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
-                          item.availability === 'in-stock'
-                            ? 'bg-primary-600 text-white hover:bg-primary-700'
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                        }`}
-                      >
-                        <ShoppingCartIcon className="h-4 w-4 mr-1.5" />
-                        {isInCart(item._id) ? 'Add More' : 'Add to Cart'}
-                      </button>
+                      {user?.role !== 'vendor' && (
+                        <button
+                          onClick={() => addToCart(item)}
+                          disabled={item.availability !== 'in-stock'}
+                          className={`flex-1 inline-flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
+                            item.availability === 'in-stock'
+                              ? 'bg-primary-600 text-white hover:bg-primary-700'
+                              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                          }`}
+                        >
+                          <ShoppingCartIcon className="h-4 w-4 mr-1.5" />
+                          {isInCart(item._id) ? 'Add More' : 'Add to Cart'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1622,18 +1930,20 @@ const Equipment = () => {
                               <InformationCircleIcon className="h-4 w-4 mr-1.5" />
                               View Details
                             </button>
-                            <button
-                              onClick={() => addToCart(item)}
-                              disabled={item.availability !== 'in-stock'}
-                              className={`flex-1 lg:flex-initial inline-flex items-center justify-center px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
-                                item.availability === 'in-stock'
-                                  ? 'bg-primary-600 text-white hover:bg-primary-700'
-                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                              }`}
-                            >
-                              <ShoppingCartIcon className="h-4 w-4 mr-1.5" />
-                              {isInCart(item._id) ? 'Add More' : 'Add to Cart'}
-                            </button>
+                            {user?.role !== 'vendor' && (
+                              <button
+                                onClick={() => addToCart(item)}
+                                disabled={item.availability !== 'in-stock'}
+                                className={`flex-1 lg:flex-initial inline-flex items-center justify-center px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
+                                  item.availability === 'in-stock'
+                                    ? 'bg-primary-600 text-white hover:bg-primary-700'
+                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                                }`}
+                              >
+                                <ShoppingCartIcon className="h-4 w-4 mr-1.5" />
+                                {isInCart(item._id) ? 'Add More' : 'Add to Cart'}
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

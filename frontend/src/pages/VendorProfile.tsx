@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import {
   BuildingStorefrontIcon,
@@ -129,6 +130,14 @@ const VendorProfile = () => {
     fileType: 'pdf',
   });
 
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    type: 'offer' | 'document' | null;
+    id: string | null;
+    title: string;
+  }>({ show: false, type: null, id: null, title: '' });
+
   useEffect(() => {
     fetchPartnerProfile();
   }, []);
@@ -254,7 +263,7 @@ const VendorProfile = () => {
   };
 
   const handleDeleteOffer = async (offerId: string) => {
-    if (!partner || !confirm('Are you sure you want to delete this offer?')) return;
+    if (!partner) return;
 
     setSaving(true);
     try {
@@ -263,12 +272,12 @@ const VendorProfile = () => {
         specialOffers: offers,
       });
       setPartner(response.data.data);
-      setSuccess('Offer deleted successfully!');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Offer deleted successfully!');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete offer');
+      toast.error(err.response?.data?.error || 'Failed to delete offer');
     } finally {
       setSaving(false);
+      setConfirmModal({ show: false, type: null, id: null, title: '' });
     }
   };
 
@@ -297,7 +306,7 @@ const VendorProfile = () => {
   };
 
   const handleDeleteDocument = async (docId: string) => {
-    if (!partner || !confirm('Are you sure you want to delete this document?')) return;
+    if (!partner) return;
 
     setSaving(true);
     try {
@@ -306,12 +315,21 @@ const VendorProfile = () => {
         documents: documents,
       });
       setPartner(response.data.data);
-      setSuccess('Document deleted successfully!');
-      setTimeout(() => setSuccess(''), 3000);
+      toast.success('Document deleted successfully!');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete document');
+      toast.error(err.response?.data?.error || 'Failed to delete document');
     } finally {
       setSaving(false);
+      setConfirmModal({ show: false, type: null, id: null, title: '' });
+    }
+  };
+
+  // Handle confirmation modal action
+  const handleConfirmDelete = () => {
+    if (confirmModal.type === 'offer' && confirmModal.id) {
+      handleDeleteOffer(confirmModal.id);
+    } else if (confirmModal.type === 'document' && confirmModal.id) {
+      handleDeleteDocument(confirmModal.id);
     }
   };
 
@@ -782,7 +800,12 @@ const VendorProfile = () => {
                             <PencilIcon className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => offer._id && handleDeleteOffer(offer._id)}
+                            onClick={() => offer._id && setConfirmModal({
+                              show: true,
+                              type: 'offer',
+                              id: offer._id,
+                              title: offer.title
+                            })}
                             className="p-1 text-gray-500 hover:text-red-600 dark:hover:text-red-400"
                           >
                             <TrashIcon className="h-4 w-4" />
@@ -840,7 +863,12 @@ const VendorProfile = () => {
                           View
                         </a>
                         <button
-                          onClick={() => doc._id && handleDeleteDocument(doc._id)}
+                          onClick={() => doc._id && setConfirmModal({
+                            show: true,
+                            type: 'document',
+                            id: doc._id,
+                            title: doc.title
+                          })}
                           className="p-1 text-gray-500 hover:text-red-600 dark:hover:text-red-400"
                         >
                           <TrashIcon className="h-4 w-4" />
@@ -1022,6 +1050,44 @@ const VendorProfile = () => {
                   className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Add Document'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal.show && createPortal(
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmModal({ show: false, type: null, id: null, title: '' })} />
+            <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-2">
+                Delete {confirmModal.type === 'offer' ? 'Offer' : 'Document'}?
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+                Are you sure you want to delete "{confirmModal.title}"? This action cannot be undone.
+              </p>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => setConfirmModal({ show: false, type: null, id: null, title: '' })}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={saving}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  {saving ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>

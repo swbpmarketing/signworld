@@ -4,9 +4,16 @@ import { useAuth } from '../context/AuthContext';
 interface ProtectedRouteProps {
   children: React.ReactElement;
   adminOnly?: boolean;
+  ownerOnly?: boolean;
+  allowedRoles?: Array<'admin' | 'owner' | 'vendor'>;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = false }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  adminOnly = false,
+  ownerOnly = false,
+  allowedRoles
+}) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -21,7 +28,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
     return <Navigate to="/login" replace />;
   }
 
+  // Check allowed roles if specified
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!allowedRoles.includes(user.role)) {
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+
+  // Legacy adminOnly check
   if (adminOnly && user.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Owner-only check (allows admin access too)
+  if (ownerOnly && user.role !== 'owner' && user.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
   }
 
