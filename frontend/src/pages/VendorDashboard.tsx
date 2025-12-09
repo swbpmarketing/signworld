@@ -24,6 +24,7 @@ import {
   NewspaperIcon,
   QuestionMarkCircleIcon,
   Cog6ToothIcon,
+  InboxIcon,
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 
@@ -72,6 +73,8 @@ interface DashboardStats {
   profileViewsChange: number;
   activeOffers: number;
   documentsCount: number;
+  totalInquiries: number;
+  newInquiries: number;
 }
 
 const VendorDashboard = () => {
@@ -84,6 +87,8 @@ const VendorDashboard = () => {
     profileViewsChange: 0,
     activeOffers: 0,
     documentsCount: 0,
+    totalInquiries: 0,
+    newInquiries: 0,
   });
 
   useEffect(() => {
@@ -92,17 +97,29 @@ const VendorDashboard = () => {
 
   const fetchPartnerProfile = async () => {
     try {
-      const response = await axios.get('/partners/my-profile');
-      const partnerData = response.data.data;
+      // Fetch partner profile and stats in parallel
+      const [profileResponse, statsResponse, inquiriesResponse] = await Promise.all([
+        axios.get('/partners/my-profile'),
+        axios.get('/partners/vendor-stats').catch(() => null),
+        axios.get('/equipment/vendor-stats').catch(() => null),
+      ]);
+
+      const partnerData = profileResponse.data.data;
       setPartner(partnerData);
       setHasProfile(true);
 
-      // Calculate stats from partner data
+      // Get real stats from vendor-stats endpoint
+      const vendorStats = statsResponse?.data?.data?.profileStats;
+      const inquiryStats = inquiriesResponse?.data?.data?.inquiryStats;
+
+      // Calculate stats from real data
       setStats({
-        profileViews: Math.floor(Math.random() * 500) + 100,
-        profileViewsChange: Math.floor(Math.random() * 20) + 5,
+        profileViews: vendorStats?.profileViews || partnerData.profileViews || 0,
+        profileViewsChange: vendorStats?.viewsChange || 0,
         activeOffers: partnerData.specialOffers?.filter((o: { validUntil: Date }) => new Date(o.validUntil) > new Date()).length || 0,
         documentsCount: partnerData.documents?.length || 0,
+        totalInquiries: inquiryStats?.total || 0,
+        newInquiries: inquiryStats?.new || 0,
       });
     } catch (err: any) {
       // No profile found - that's okay, we'll show a welcome dashboard
@@ -125,12 +142,12 @@ const VendorDashboard = () => {
 
   // Quick actions available to all vendors
   const quickActions = [
-    { name: 'Calendar', href: '/calendar', icon: CalendarDaysIcon, color: 'bg-blue-600', description: 'View upcoming events' },
-    { name: 'Messages', href: '/chat', icon: ChatBubbleLeftRightIcon, color: 'bg-green-600', description: 'Chat with members' },
+    { name: 'My Listings', href: '/vendor-equipment', icon: ShoppingBagIcon, color: 'bg-orange-600', description: 'Manage your listings' },
+    { name: 'Inquiries', href: '/vendor-inquiries', icon: InboxIcon, color: 'bg-green-600', description: 'View buyer inquiries' },
+    { name: 'Messages', href: '/chat', icon: ChatBubbleLeftRightIcon, color: 'bg-blue-600', description: 'Chat with members' },
     { name: 'Find Partners', href: '/map', icon: MapPinIcon, color: 'bg-purple-600', description: 'Locate other partners' },
-    { name: 'Equipment', href: '/equipment', icon: ShoppingBagIcon, color: 'bg-orange-600', description: 'Browse & list equipment' },
     { name: 'Convention', href: '/convention', icon: BuildingStorefrontIcon, color: 'bg-pink-600', description: 'Convention info' },
-    { name: 'Success Stories', href: '/brags', icon: NewspaperIcon, color: 'bg-indigo-600', description: 'View success stories' },
+    { name: 'Calendar', href: '/calendar', icon: CalendarDaysIcon, color: 'bg-indigo-600', description: 'View upcoming events' },
     { name: 'FAQs', href: '/faqs', icon: QuestionMarkCircleIcon, color: 'bg-teal-600', description: 'Get help & answers' },
     { name: 'Settings', href: '/settings', icon: Cog6ToothIcon, color: 'bg-gray-600', description: 'Manage your account' },
   ];
@@ -255,9 +272,18 @@ const VendorDashboard = () => {
       name: 'Profile Views',
       value: stats.profileViews.toLocaleString(),
       icon: EyeIcon,
-      change: `+${stats.profileViewsChange}%`,
-      changeType: 'positive' as const,
+      change: stats.profileViewsChange > 0 ? `+${stats.profileViewsChange}%` : stats.profileViewsChange < 0 ? `${stats.profileViewsChange}%` : 'No change',
+      changeType: stats.profileViewsChange > 0 ? 'positive' as const : 'neutral' as const,
       color: 'bg-blue-500'
+    },
+    {
+      name: 'Inquiries',
+      value: stats.totalInquiries.toString(),
+      icon: InboxIcon,
+      change: stats.newInquiries > 0 ? `${stats.newInquiries} new` : 'None new',
+      changeType: stats.newInquiries > 0 ? 'positive' as const : 'neutral' as const,
+      color: 'bg-green-500',
+      href: '/vendor-inquiries'
     },
     {
       name: 'Average Rating',
@@ -272,14 +298,6 @@ const VendorDashboard = () => {
       value: stats.activeOffers.toString(),
       icon: DocumentTextIcon,
       change: 'View all',
-      changeType: 'neutral' as const,
-      color: 'bg-green-500'
-    },
-    {
-      name: 'Documents',
-      value: stats.documentsCount.toString(),
-      icon: PhotoIcon,
-      change: 'Manage',
       changeType: 'neutral' as const,
       color: 'bg-purple-500'
     },

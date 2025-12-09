@@ -15,6 +15,8 @@ interface AISearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   userRole?: string;
+  userName?: string;
+  userCompany?: string;
 }
 
 interface Message {
@@ -27,12 +29,24 @@ interface Message {
 // Conversation history for AI context
 const conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
-const AISearchModal = ({ isOpen, onClose, userRole }: AISearchModalProps) => {
+const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userCompany }: AISearchModalProps) => {
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Store user info in refs to use in generateAIResponse
+  const userRoleRef = useRef(userRole);
+  const userNameRef = useRef(userName);
+  const userCompanyRef = useRef(userCompany);
+
+  // Update refs when props change
+  useEffect(() => {
+    userRoleRef.current = userRole;
+    userNameRef.current = userName;
+    userCompanyRef.current = userCompany;
+  }, [userRole, userName, userCompany]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,6 +56,20 @@ const AISearchModal = ({ isOpen, onClose, userRole }: AISearchModalProps) => {
     scrollToBottom();
   }, [messages]);
 
+  // Generate personalized welcome message based on user info
+  const getWelcomeMessage = () => {
+    const greeting = userName ? `Hi ${userName}!` : 'Hi there!';
+
+    const roleIntro = {
+      vendor: "I'm your AI assistant. I can help you manage your vendor profile, check inquiries, view your sales stats, and navigate the portal.",
+      owner: "I'm your AI assistant. I can help you navigate the portal, find resources, check reports, connect with vendors, and more.",
+      admin: "I'm your AI assistant. I can help you manage users, moderate content, configure settings, and navigate all portal features."
+    };
+
+    const intro = roleIntro[userRole as keyof typeof roleIntro] || roleIntro.owner;
+    return `${greeting} ${intro} What can I help you with today?`;
+  };
+
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
@@ -49,27 +77,31 @@ const AISearchModal = ({ isOpen, onClose, userRole }: AISearchModalProps) => {
       // Clear conversation history when modal closes
       conversationHistory.length = 0;
     } else {
-      // Welcome message
+      // Personalized welcome message
       setMessages([{
         role: 'assistant',
-        content: "Hi! I'm your AI assistant powered by Claude. I can help you navigate the portal, answer questions about features, or find what you're looking for. What can I help you with today?"
+        content: getWelcomeMessage()
       }]);
     }
-  }, [isOpen]);
+  }, [isOpen, userName, userRole]);
 
   const generateAIResponse = async (userQuery: string): Promise<Message> => {
     try {
       // Add user message to conversation history
       conversationHistory.push({ role: 'user', content: userQuery });
 
-      // Call OpenRouter API
-      const aiResponse = await chatWithAI(conversationHistory);
+      // Call OpenRouter API with user context
+      const aiResponse = await chatWithAI(conversationHistory, {
+        role: userRoleRef.current,
+        name: userNameRef.current,
+        company: userCompanyRef.current
+      });
 
       // Add AI response to conversation history
       conversationHistory.push({ role: 'assistant', content: aiResponse });
 
-      // Extract suggestions from the response
-      const suggestions = extractSuggestions(aiResponse);
+      // Extract suggestions from the response (filtered by user role)
+      const suggestions = extractSuggestions(aiResponse, userRoleRef.current);
 
       return {
         role: 'assistant',
@@ -126,12 +158,32 @@ const AISearchModal = ({ isOpen, onClose, userRole }: AISearchModalProps) => {
     onClose();
   };
 
-  const quickPrompts = [
-    "How do I view reports?",
-    "Where can I find training videos?",
-    "Show me the vendor directory",
-    "How do I check my calendar?"
-  ];
+  // Role-specific quick prompts
+  const getQuickPrompts = () => {
+    const prompts = {
+      vendor: [
+        "How do I update my business profile?",
+        "Where can I see my inquiries?",
+        "How do I view my sales stats?",
+        "What can I do on this portal?"
+      ],
+      owner: [
+        "How do I view reports?",
+        "Where can I find training videos?",
+        "Show me the vendor directory",
+        "How do I connect with other owners?"
+      ],
+      admin: [
+        "How do I manage users?",
+        "Where do I approve vendors?",
+        "How do I moderate content?",
+        "Show me system settings"
+      ]
+    };
+    return prompts[userRole as keyof typeof prompts] || prompts.owner;
+  };
+
+  const quickPrompts = getQuickPrompts();
 
   return (
     <Transition appear show={isOpen} as={Fragment}>

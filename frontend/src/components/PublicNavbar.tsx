@@ -15,7 +15,7 @@ const PublicNavbar = () => {
             className="flex items-center"
           >
             <img
-              src="https://storage.googleapis.com/msgsndr/DecfA7BjYEDxFe8pqRZs/media/688c08634a3ff3102330f5bf.png"
+              src="/logo.png"
               alt="SignWorld Logo"
               className="h-10 w-auto object-contain"
               style={{

@@ -52,7 +52,7 @@ const Login = () => {
           <div className="text-center mb-8">
             <div className="mb-4 p-4 bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-2xl inline-block">
               <img
-                src="https://storage.googleapis.com/msgsndr/DecfA7BjYEDxFe8pqRZs/media/688c08634a3ff3102330f5bf.png"
+                src="/logo.png"
                 alt="Sign Company Logo"
                 className="h-24 w-auto mx-auto drop-shadow-lg"
               />

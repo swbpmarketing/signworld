@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const Partner = require('../models/Partner');
+const upload = require('../middleware/upload');
 
 // @route   GET /api/partners/stats
 router.get('/stats', async (req, res) => {
@@ -93,6 +94,29 @@ router.get('/vendor-stats', protect, authorize('vendor', 'admin'), async (req, r
       });
     }
 
+    // Calculate view change percentage (compare last 7 days to previous 7 days)
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    let recentViews = 0;
+    let previousViews = 0;
+
+    if (partner.viewHistory && partner.viewHistory.length > 0) {
+      partner.viewHistory.forEach(view => {
+        const viewDate = new Date(view.date);
+        if (viewDate >= sevenDaysAgo) {
+          recentViews += view.count;
+        } else if (viewDate >= fourteenDaysAgo && viewDate < sevenDaysAgo) {
+          previousViews += view.count;
+        }
+      });
+    }
+
+    const viewsChange = previousViews > 0
+      ? Math.round(((recentViews - previousViews) / previousViews) * 100)
+      : recentViews > 0 ? 100 : 0;
+
     // Calculate profile stats
     const profileStats = {
       rating: partner.rating || 0,
@@ -104,6 +128,8 @@ router.get('/vendor-stats', protect, authorize('vendor', 'admin'), async (req, r
       documentsCount: partner.documents?.length || 0,
       activeOffersCount: partner.specialOffers?.filter(o => !o.validUntil || new Date(o.validUntil) > new Date()).length || 0,
       expiredOffersCount: partner.specialOffers?.filter(o => o.validUntil && new Date(o.validUntil) <= new Date()).length || 0,
+      profileViews: partner.profileViews || 0,
+      viewsChange: viewsChange,
     };
 
     // Get reviews breakdown
@@ -177,6 +203,51 @@ router.get('/my-profile', protect, authorize('vendor'), async (req, res) => {
   }
 });
 
+// @route   POST /api/partners/:id/view
+// @desc    Track partner profile view
+// @access  Public
+router.post('/:id/view', async (req, res) => {
+  try {
+    const partner = await Partner.findById(req.params.id);
+    if (!partner) {
+      return res.status(404).json({ success: false, error: 'Partner not found' });
+    }
+
+    // Increment total views
+    partner.profileViews = (partner.profileViews || 0) + 1;
+
+    // Track view history by day
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (!partner.viewHistory) {
+      partner.viewHistory = [];
+    }
+
+    const todayEntry = partner.viewHistory.find(v => {
+      const viewDate = new Date(v.date);
+      viewDate.setHours(0, 0, 0, 0);
+      return viewDate.getTime() === today.getTime();
+    });
+
+    if (todayEntry) {
+      todayEntry.count += 1;
+    } else {
+      partner.viewHistory.push({ date: today, count: 1 });
+      // Keep only last 90 days of history
+      if (partner.viewHistory.length > 90) {
+        partner.viewHistory = partner.viewHistory.slice(-90);
+      }
+    }
+
+    await partner.save();
+
+    res.json({ success: true, data: { views: partner.profileViews } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Server Error' });
+  }
+});
+
 // @route   GET /api/partners/:id
 // @desc    Get single partner
 // @access  Public
@@ -220,6 +291,35 @@ router.post('/', protect, authorize('admin', 'vendor'), async (req, res) => {
     res.status(400).json({
       success: false,
       error: err.message || 'Bad Request',
+    });
+  }
+});
+
+// @route   POST /api/partners/upload-logo
+// @desc    Upload partner logo image
+// @access  Private (Vendor)
+router.post('/upload-logo', protect, authorize('vendor', 'admin'), upload.single('logo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No logo file uploaded',
+      });
+    }
+
+    const logoUrl = req.file.s3Url || req.file.location;
+
+    res.json({
+      success: true,
+      data: {
+        logoUrl: logoUrl,
+      },
+    });
+  } catch (err) {
+    console.error('Logo upload error:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Failed to upload logo',
     });
   }
 });

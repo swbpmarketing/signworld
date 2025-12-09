@@ -126,6 +126,15 @@ const partnerSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  // Analytics tracking
+  profileViews: {
+    type: Number,
+    default: 0,
+  },
+  viewHistory: [{
+    date: { type: Date, default: Date.now },
+    count: { type: Number, default: 1 },
+  }],
   createdAt: {
     type: Date,
     default: Date.now,

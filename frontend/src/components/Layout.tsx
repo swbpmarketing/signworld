@@ -26,6 +26,7 @@ import {
   BuildingOffice2Icon,
   ClipboardDocumentListIcon,
   BuildingStorefrontIcon,
+  InboxIcon,
 } from "@heroicons/react/24/outline";
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import AISearchModal from "./AISearchModal";
@@ -48,20 +49,19 @@ const navigation = [
   { name: "Videos", href: "/videos", icon: VideoCameraIcon, roles: ['admin', 'owner'] },
   { name: "Equipment", href: "/equipment", icon: ShoppingBagIcon, roles: ['admin', 'owner', 'vendor'] },
   { name: "My Listings", href: "/vendor-equipment", icon: ClipboardDocumentListIcon, roles: ['vendor'] },
-  { name: "My Profile", href: "/vendor-profile", icon: BuildingStorefrontIcon, roles: ['vendor'] },
+  { name: "My Inquiries", href: "/vendor-inquiries", icon: InboxIcon, roles: ['vendor'] },
+  { name: "Business Profile", href: "/vendor-profile", icon: BuildingStorefrontIcon, roles: ['vendor'] },
   { name: "FAQs", href: "/faqs", icon: QuestionMarkCircleIcon, roles: ['admin', 'owner', 'vendor'] },
 ];
 
 // Memoized Sidebar component - only re-renders when props change
 const Sidebar = memo(({
   sidebarOpen,
-  darkMode,
   userRole,
   currentPath,
   onClose
 }: {
   sidebarOpen: boolean;
-  darkMode: boolean;
   userRole?: string;
   currentPath: string;
   onClose: () => void;
@@ -78,19 +78,11 @@ const Sidebar = memo(({
     >
       <div className="flex h-full flex-col bg-white dark:bg-gray-800">
         {/* Logo - with explicit dimensions to prevent layout shift */}
-        <div className="flex h-16 items-center justify-center px-6 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div className="flex h-16 items-center justify-center px-2 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
           <img
-            src="https://storage.googleapis.com/msgsndr/DecfA7BjYEDxFe8pqRZs/media/688c08634a3ff3102330f5bf.png"
+            src="/logo.png"
             alt="Sign Company Logo"
-            width={180}
-            height={40}
-            className="h-10 w-auto object-contain"
-            style={{
-              maxWidth: '180px',
-              filter: darkMode
-                ? 'brightness(0) invert(1)'
-                : 'invert(32%) sepia(100%) saturate(1500%) hue-rotate(190deg) brightness(65%) contrast(110%)'
-            }}
+            className="w-full max-w-[200px] h-auto object-contain brightness-[0.2] dark:brightness-0 dark:invert"
           />
         </div>
 
@@ -317,7 +309,6 @@ const Layout = () => {
       {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
-        darkMode={darkMode}
         userRole={user?.role}
         currentPath={location.pathname}
         onClose={handleSidebarClose}
@@ -595,6 +586,8 @@ const Layout = () => {
         isOpen={searchModalOpen}
         onClose={handleSearchModalClose}
         userRole={user?.role}
+        userName={user?.name}
+        userCompany={user?.company}
       />
     </div>
   );

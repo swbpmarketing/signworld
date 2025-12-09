@@ -370,6 +370,78 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @desc    Get all inquiries for vendor's equipment
+// @route   GET /api/equipment/vendor-inquiries
+// @access  Private/Vendor
+router.get('/vendor-inquiries', protect, authorize('vendor', 'admin'), async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+
+    // Get all vendor's equipment with inquiries
+    const equipment = await Equipment.find({ vendorId }).select('name price images inquiries');
+
+    // Flatten inquiries with equipment info
+    const allInquiries = [];
+    let stats = { total: 0, new: 0, contacted: 0, completed: 0, cancelled: 0 };
+
+    equipment.forEach(eq => {
+      if (eq.inquiries && eq.inquiries.length > 0) {
+        eq.inquiries.forEach(inq => {
+          // Parse price
+          let price = 0;
+          if (typeof eq.price === 'number') {
+            price = eq.price;
+          } else if (eq.price) {
+            const cleaned = String(eq.price).replace(/[^0-9.]/g, '');
+            price = parseFloat(cleaned) || 0;
+          }
+
+          allInquiries.push({
+            _id: inq._id,
+            equipmentId: eq._id,
+            equipmentName: eq.name,
+            equipmentPrice: price,
+            equipmentImage: eq.images?.[0] || null,
+            user: inq.user,
+            name: inq.name,
+            email: inq.email,
+            company: inq.company,
+            phone: inq.phone,
+            message: inq.message,
+            status: inq.status || 'new',
+            createdAt: inq.createdAt,
+            updatedAt: inq.updatedAt,
+          });
+
+          // Update stats
+          stats.total++;
+          const status = inq.status || 'new';
+          if (stats[status] !== undefined) {
+            stats[status]++;
+          }
+        });
+      }
+    });
+
+    // Sort by newest first
+    allInquiries.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({
+      success: true,
+      data: {
+        inquiries: allInquiries,
+        stats,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching vendor inquiries:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error fetching inquiries'
+    });
+  }
+});
+
 // @desc    Get single equipment
 // @route   GET /api/equipment/:id
 // @access  Public
@@ -618,13 +690,68 @@ router.delete('/:id', protect, authorize('admin', 'vendor'), async (req, res) =>
   }
 });
 
-// @desc    Submit inquiry for equipment (creates chat conversation with vendor)
+// @desc    Update inquiry status
+// @route   PUT /api/equipment/:equipmentId/inquiry/:inquiryId
+// @access  Private/Vendor
+router.put('/:equipmentId/inquiry/:inquiryId', protect, authorize('vendor', 'admin'), async (req, res) => {
+  try {
+    const { equipmentId, inquiryId } = req.params;
+    const { status } = req.body;
+
+    if (!['new', 'contacted', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status. Must be one of: new, contacted, completed, cancelled'
+      });
+    }
+
+    const equipment = await Equipment.findById(equipmentId);
+
+    if (!equipment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Equipment not found'
+      });
+    }
+
+    // Verify ownership
+    if (req.user.role !== 'admin' && equipment.vendorId?.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to update this inquiry'
+      });
+    }
+
+    // Find and update the inquiry
+    const inquiry = equipment.inquiries.id(inquiryId);
+    if (!inquiry) {
+      return res.status(404).json({
+        success: false,
+        error: 'Inquiry not found'
+      });
+    }
+
+    inquiry.status = status;
+    inquiry.updatedAt = new Date();
+    await equipment.save();
+
+    res.json({
+      success: true,
+      data: inquiry,
+    });
+  } catch (error) {
+    console.error('Error updating inquiry status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error updating inquiry status'
+    });
+  }
+});
+
+// @desc    Submit inquiry for equipment (stores inquiry for vendor to review)
 // @route   POST /api/equipment/:id/inquiry
-// @access  Private (requires authentication to start chat)
+// @access  Private (requires authentication)
 router.post('/:id/inquiry', protect, async (req, res) => {
-  console.log('📨 Inquiry endpoint hit:', req.params.id);
-  console.log('📨 Request body:', req.body);
-  console.log('📨 User:', req.user?.id, req.user?.role);
   try {
     const { name, email, company, phone, message } = req.body;
 
@@ -675,63 +802,13 @@ router.post('/:id/inquiry', protect, async (req, res) => {
     equipment.inquiries.push(inquiry);
     await equipment.save();
 
-    // Import models needed for chat
-    const Conversation = require('../models/Conversation');
-    const Message = require('../models/Message');
-
-    // Find or create conversation between inquirer and vendor
-    const conversation = await Conversation.findOrCreateDirect(req.user.id, equipment.vendorId);
-
-    // Create formatted message with equipment context (plain text)
-    const priceDisplay = typeof equipment.price === 'number'
-      ? `$${equipment.price.toLocaleString()}`
-      : equipment.price;
-
-    const formattedMessage =
-      `📦 Equipment Inquiry\n` +
-      `━━━━━━━━━━━━━━━━━━━━\n` +
-      `Product: ${equipment.name}\n` +
-      `Brand: ${equipment.brand || 'N/A'}\n` +
-      `Price: ${priceDisplay}\n` +
-      `━━━━━━━━━━━━━━━━━━━━\n\n` +
-      `${message}\n\n` +
-      `━━━━━━━━━━━━━━━━━━━━\n` +
-      `Contact: ${email}${phone ? ` | ${phone}` : ''}${company ? `\nCompany: ${company}` : ''}`;
-
-    // Create message in conversation
-    const chatMessage = await Message.create({
-      conversation: conversation._id,
-      sender: req.user.id,
-      content: formattedMessage,
-      readBy: [{ user: req.user.id, readAt: new Date() }],
-    });
-
-    // Update conversation's last message
-    await conversation.updateLastMessage(chatMessage);
-
-    // Populate sender info
-    await chatMessage.populate('sender', 'name email role avatar');
+    // Get the saved inquiry with its _id
+    const savedInquiry = equipment.inquiries[equipment.inquiries.length - 1];
 
     // Get io for real-time updates
     const io = req.app.get('io');
 
-    // Emit real-time chat events
-    if (io) {
-      // Emit to the conversation room
-      io.to(`conversation:${conversation._id}`).emit('message:new', {
-        conversationId: conversation._id,
-        message: chatMessage
-      });
-      // Emit to vendor's chat room for sidebar updates
-      io.to(`chat:${equipment.vendorId.toString()}`).emit('conversation:update', {
-        conversationId: conversation._id,
-        lastMessage: chatMessage.content,
-        lastMessageAt: chatMessage.createdAt,
-        senderId: req.user.id
-      });
-    }
-
-    // Create notification for vendor
+    // Create notification for vendor - link goes to inquiries page
     const senderName = req.user.name || req.user.firstName || name;
     try {
       await Notification.createAndEmit(io, {
@@ -742,7 +819,7 @@ router.post('/:id/inquiry', protect, async (req, res) => {
         message: `${senderName} sent an inquiry about "${equipment.name}"`,
         referenceType: 'Equipment',
         referenceId: equipment._id,
-        link: `/chat?contact=${req.user.id}`,
+        link: `/vendor-inquiries`,
       });
     } catch (notifError) {
       console.error('Error creating inquiry notification:', notifError);
@@ -750,9 +827,10 @@ router.post('/:id/inquiry', protect, async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Inquiry submitted successfully',
+      message: 'Inquiry submitted successfully. The vendor will review and respond to your inquiry.',
       data: {
-        conversationId: conversation._id,
+        inquiryId: savedInquiry._id,
+        equipmentId: equipment._id,
         vendorId: equipment.vendorId
       }
     });

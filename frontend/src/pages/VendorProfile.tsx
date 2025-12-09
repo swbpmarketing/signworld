@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import axios from 'axios';
+import axios from '../config/axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -19,6 +19,7 @@ import {
   TagIcon,
   StarIcon,
   ExclamationTriangleIcon,
+  ArrowUpTrayIcon,
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 
@@ -88,6 +89,8 @@ const VendorProfile = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('profile');
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -112,6 +115,7 @@ const VendorProfile = () => {
 
   const [newSpecialty, setNewSpecialty] = useState('');
   const [newBenefit, setNewBenefit] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Modal states
   const [showOfferModal, setShowOfferModal] = useState(false);
@@ -169,12 +173,49 @@ const VendorProfile = () => {
       setError('');
     } catch (err: any) {
       if (err.response?.status === 404) {
-        setError('No partner profile found. Please contact support to create your profile.');
+        // No profile found - allow creating one
+        setIsCreatingProfile(true);
+        // Pre-fill with user info if available
+        setFormData(prev => ({
+          ...prev,
+          name: user?.companyName || '',
+          contact: {
+            ...prev.contact,
+            contactPerson: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : '',
+            email: user?.email || '',
+          },
+        }));
       } else {
         setError(err.response?.data?.error || 'Failed to load partner profile');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateProfile = async () => {
+    if (!formData.name || !formData.category) {
+      setError('Please fill in company name and category');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+
+    try {
+      const response = await axios.post('/partners', {
+        ...formData,
+        logoUrl: formData.logo,
+      });
+      setPartner(response.data.data);
+      setIsCreatingProfile(false);
+      setSuccess('Business profile created successfully!');
+      toast.success('Your business profile has been created!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to create profile');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -192,12 +233,40 @@ const VendorProfile = () => {
       });
       setPartner(response.data.data);
       setSuccess('Profile updated successfully!');
+      setIsEditing(false);
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to update profile');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCancelEdit = () => {
+    // Reset form data to current partner data
+    if (partner) {
+      setFormData({
+        name: partner.name || '',
+        description: partner.description || '',
+        logo: partner.logo || partner.logoUrl || '',
+        category: partner.category || '',
+        country: partner.country || 'USA',
+        contact: {
+          contactPerson: partner.contact?.contactPerson || '',
+          email: partner.contact?.email || '',
+          phone: partner.contact?.phone || '',
+          website: partner.contact?.website || '',
+          address: partner.contact?.address || '',
+        },
+        specialties: partner.specialties || [],
+        benefits: partner.benefits || [],
+        discount: partner.discount || '',
+        yearEstablished: partner.yearEstablished,
+        locations: partner.locations || 1,
+      });
+    }
+    setIsEditing(false);
+    setError('');
   };
 
   const handleAddSpecialty = () => {
@@ -232,6 +301,44 @@ const VendorProfile = () => {
       ...formData,
       benefits: formData.benefits.filter(b => b !== benefit),
     });
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('logo', file);
+
+      const response = await axios.post('/partners/upload-logo', uploadData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.success) {
+        setFormData({ ...formData, logo: response.data.data.logoUrl });
+        toast.success('Logo uploaded successfully!');
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+    }
   };
 
   const handleSaveOffer = async () => {
@@ -344,6 +451,209 @@ const VendorProfile = () => {
     );
   }
 
+  // Show create profile form if no profile exists
+  if (isCreatingProfile && !partner) {
+    return (
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
+          <div className="px-6 py-8 sm:px-8 sm:py-10">
+            <div className="text-center">
+              <div className="mx-auto h-16 w-16 rounded-full bg-white/20 flex items-center justify-center mb-4">
+                <BuildingStorefrontIcon className="h-8 w-8 text-white" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">
+                Create Your Business Profile
+              </h1>
+              <p className="mt-2 text-lg text-primary-100">
+                Set up your partner profile to appear in the Partners directory
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-center">
+              <ExclamationTriangleIcon className="h-5 w-5 text-red-600 dark:text-red-400 mr-2" />
+              <p className="text-red-800 dark:text-red-400">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Create Profile Form */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Company Name *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Your company name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Category *
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Contact Person
+                </label>
+                <input
+                  type="text"
+                  value={formData.contact.contactPerson}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    contact: { ...formData.contact, contactPerson: e.target.value }
+                  })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="John Smith"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={formData.contact.email}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    contact: { ...formData.contact, email: e.target.value }
+                  })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="contact@company.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Country
+                </label>
+                <select
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  {countries.map((country) => (
+                    <option key={country} value={country}>{country}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Company Logo
+                </label>
+                <div className="flex items-center gap-4">
+                  {formData.logo ? (
+                    <img
+                      src={formData.logo}
+                      alt="Logo preview"
+                      className="h-16 w-16 rounded-lg object-cover border border-gray-300 dark:border-gray-600"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center border border-gray-300 dark:border-gray-600">
+                      <PhotoIcon className="h-8 w-8 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                        disabled={uploadingLogo}
+                      />
+                      <span className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer">
+                        {uploadingLogo ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600 mr-2"></div>
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <ArrowUpTrayIcon className="h-5 w-5 mr-2" />
+                            Upload Logo
+                          </>
+                        )}
+                      </span>
+                    </label>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      PNG, JPG up to 5MB
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={4}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Describe your company and what you offer..."
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={handleCreateProfile}
+                disabled={saving}
+                className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon className="h-5 w-5 mr-2" />
+                    Create Business Profile
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
+            <strong>Note:</strong> After creating your profile, you can add more details like specialties, benefits, special offers, and documents.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (error && !partner) {
     return (
       <div className="max-w-2xl mx-auto mt-8">
@@ -351,7 +661,7 @@ const VendorProfile = () => {
           <div className="flex items-start">
             <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-500 flex-shrink-0" />
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-400">Profile Not Found</h3>
+              <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-400">Error Loading Profile</h3>
               <p className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">{error}</p>
             </div>
           </div>
@@ -396,23 +706,45 @@ const VendorProfile = () => {
                 </p>
               </div>
             </div>
-            <button
-              onClick={handleSaveProfile}
-              disabled={saving}
-              className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors disabled:opacity-50"
-            >
-              {saving ? (
+            <div className="flex items-center gap-2">
+              {isEditing ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600 mr-2"></div>
-                  Saving...
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={saving}
+                    className="inline-flex items-center px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
+                  >
+                    <XMarkIcon className="h-5 w-5 mr-2" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={saving}
+                    className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600 mr-2"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckIcon className="h-5 w-5 mr-2" />
+                        Save Changes
+                      </>
+                    )}
+                  </button>
                 </>
               ) : (
-                <>
-                  <CheckIcon className="h-5 w-5 mr-2" />
-                  Save Changes
-                </>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors"
+                >
+                  <PencilIcon className="h-5 w-5 mr-2" />
+                  Edit Profile
+                </button>
               )}
-            </button>
+            </div>
           </div>
         </div>
       </div>
@@ -469,22 +801,58 @@ const VendorProfile = () => {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                     placeholder="Your company name"
                   />
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Logo URL
+                    Company Logo
                   </label>
-                  <input
-                    type="url"
-                    value={formData.logo}
-                    onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="https://..."
-                  />
+                  <div className="flex items-center gap-4">
+                    {formData.logo ? (
+                      <img
+                        src={formData.logo}
+                        alt="Logo preview"
+                        className="h-20 w-20 rounded-lg object-cover border border-gray-300 dark:border-gray-600"
+                      />
+                    ) : (
+                      <div className="h-20 w-20 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center border border-gray-300 dark:border-gray-600">
+                        <PhotoIcon className="h-10 w-10 text-gray-400" />
+                      </div>
+                    )}
+                    {isEditing && (
+                      <div>
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            className="hidden"
+                            disabled={uploadingLogo}
+                          />
+                          <span className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer">
+                            {uploadingLogo ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600 mr-2"></div>
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <ArrowUpTrayIcon className="h-5 w-5 mr-2" />
+                                {formData.logo ? 'Change Logo' : 'Upload Logo'}
+                              </>
+                            )}
+                          </span>
+                        </label>
+                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          PNG, JPG, GIF up to 5MB
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -494,7 +862,8 @@ const VendorProfile = () => {
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
                     <option value="">Select category</option>
                     {categories.map((cat) => (
@@ -510,7 +879,8 @@ const VendorProfile = () => {
                   <select
                     value={formData.country}
                     onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
                     {countries.map((country) => (
                       <option key={country} value={country}>{country}</option>
@@ -526,7 +896,8 @@ const VendorProfile = () => {
                     type="number"
                     value={formData.yearEstablished || ''}
                     onChange={(e) => setFormData({ ...formData, yearEstablished: e.target.value ? parseInt(e.target.value) : undefined })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                     placeholder="2010"
                     min="1900"
                     max={new Date().getFullYear()}
@@ -541,7 +912,8 @@ const VendorProfile = () => {
                     type="number"
                     value={formData.locations}
                     onChange={(e) => setFormData({ ...formData, locations: parseInt(e.target.value) || 1 })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                     min="1"
                   />
                 </div>
@@ -554,8 +926,9 @@ const VendorProfile = () => {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  disabled={!isEditing}
                   rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                   placeholder="Describe your company and what you offer..."
                 />
               </div>
@@ -568,7 +941,8 @@ const VendorProfile = () => {
                   type="text"
                   value={formData.discount}
                   onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  disabled={!isEditing}
+                  className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                   placeholder="e.g., 10% off all orders"
                 />
               </div>
@@ -590,7 +964,8 @@ const VendorProfile = () => {
                       ...formData,
                       contact: { ...formData.contact, contactPerson: e.target.value }
                     })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                     placeholder="John Smith"
                   />
                 </div>
@@ -606,7 +981,8 @@ const VendorProfile = () => {
                       ...formData,
                       contact: { ...formData.contact, email: e.target.value }
                     })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                     placeholder="contact@company.com"
                   />
                 </div>
@@ -622,7 +998,8 @@ const VendorProfile = () => {
                       ...formData,
                       contact: { ...formData.contact, phone: e.target.value }
                     })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                     placeholder="(555) 123-4567"
                   />
                 </div>
@@ -638,7 +1015,8 @@ const VendorProfile = () => {
                       ...formData,
                       contact: { ...formData.contact, website: e.target.value }
                     })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                     placeholder="https://www.company.com"
                   />
                 </div>
@@ -654,8 +1032,9 @@ const VendorProfile = () => {
                     ...formData,
                     contact: { ...formData.contact, address: e.target.value }
                   })}
+                  disabled={!isEditing}
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className={`w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${!isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                   placeholder="123 Main St, City, State 12345"
                 />
               </div>
@@ -669,74 +1048,86 @@ const VendorProfile = () => {
               <div>
                 <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Specialties / Services</h4>
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {formData.specialties.map((specialty, index) => (
+                  {formData.specialties.length > 0 ? formData.specialties.map((specialty, index) => (
                     <span
                       key={index}
                       className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400"
                     >
                       {specialty}
-                      <button
-                        onClick={() => handleRemoveSpecialty(specialty)}
-                        className="ml-2 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
-                      >
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
+                      {isEditing && (
+                        <button
+                          onClick={() => handleRemoveSpecialty(specialty)}
+                          className="ml-2 text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
+                      )}
                     </span>
-                  ))}
+                  )) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No specialties added yet</p>
+                  )}
                 </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newSpecialty}
-                    onChange={(e) => setNewSpecialty(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSpecialty())}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Add a specialty..."
-                  />
-                  <button
-                    onClick={handleAddSpecialty}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                  >
-                    <PlusIcon className="h-5 w-5" />
-                  </button>
-                </div>
+                {isEditing && (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newSpecialty}
+                      onChange={(e) => setNewSpecialty(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSpecialty())}
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Add a specialty..."
+                    />
+                    <button
+                      onClick={handleAddSpecialty}
+                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    >
+                      <PlusIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Benefits */}
               <div>
                 <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Benefits for Members</h4>
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {formData.benefits.map((benefit, index) => (
+                  {formData.benefits.length > 0 ? formData.benefits.map((benefit, index) => (
                     <span
                       key={index}
                       className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
                     >
                       {benefit}
-                      <button
-                        onClick={() => handleRemoveBenefit(benefit)}
-                        className="ml-2 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
-                      >
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
+                      {isEditing && (
+                        <button
+                          onClick={() => handleRemoveBenefit(benefit)}
+                          className="ml-2 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
+                      )}
                     </span>
-                  ))}
+                  )) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No benefits added yet</p>
+                  )}
                 </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newBenefit}
-                    onChange={(e) => setNewBenefit(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddBenefit())}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Add a benefit..."
-                  />
-                  <button
-                    onClick={handleAddBenefit}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <PlusIcon className="h-5 w-5" />
-                  </button>
-                </div>
+                {isEditing && (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newBenefit}
+                      onChange={(e) => setNewBenefit(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddBenefit())}
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Add a benefit..."
+                    />
+                    <button
+                      onClick={handleAddBenefit}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <PlusIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

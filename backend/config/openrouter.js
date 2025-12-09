@@ -12,8 +12,8 @@ module.exports = {
   // OpenRouter API endpoint
   apiUrl: 'https://openrouter.ai/api/v1/chat/completions',
   
-  // Model configuration - using Claude 3.5 Sonnet as requested
-  model: 'anthropic/claude-3.5-sonnet',
+  // Model configuration - using Claude Haiku for better instruction following
+  model: 'anthropic/claude-3-haiku',
   
   // Default parameters for search queries
   defaultParams: {

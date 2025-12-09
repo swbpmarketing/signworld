@@ -471,7 +471,7 @@ const Landing = () => {
         <div className="container mx-auto max-w-7xl">
           <div className="text-center space-y-4">
             <img
-              src="https://storage.googleapis.com/msgsndr/DecfA7BjYEDxFe8pqRZs/media/688c08634a3ff3102330f5bf.png"
+              src="/logo.png"
               alt="SignWorld Logo"
               className="h-12 w-auto mx-auto object-contain opacity-60 dark:opacity-40"
               style={{ maxWidth: '200px' }}

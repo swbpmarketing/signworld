@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../config/axios';
 import socketService from '../services/socketService';
 import {
   ShoppingBagIcon,
@@ -29,6 +30,7 @@ import {
   DocumentTextIcon,
   ArrowsRightLeftIcon,
   PaperAirplaneIcon,
+  ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon, HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
@@ -93,6 +95,7 @@ const loadFavoritesFromStorage = (userId: string | undefined): Set<string> => {
 const Equipment = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const userId = user?._id || user?.id;
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -136,6 +139,9 @@ const Equipment = () => {
   });
   const [submittingInquiry, setSubmittingInquiry] = useState(false);
 
+  // Track where user came from (for back navigation)
+  const [cameFrom, setCameFrom] = useState<string | null>(null);
+
   // Financing calculator state
   const [financingForm, setFinancingForm] = useState({
     amount: 10000,
@@ -155,6 +161,33 @@ const Equipment = () => {
     // Mark as initialized after loading (even if userId is undefined)
     setIsInitialized(true);
   }, [userId]);
+
+  // Handle view query parameter to auto-open equipment detail modal
+  useEffect(() => {
+    const viewId = searchParams.get('view');
+    const fromParam = searchParams.get('from');
+    if (viewId) {
+      // Track where user came from before clearing params
+      if (fromParam) {
+        setCameFrom(fromParam);
+      }
+      // Fetch the equipment and open the modal
+      const fetchEquipment = async () => {
+        try {
+          const response = await api.get(`/equipment/${viewId}`);
+          if (response.data?.data) {
+            setSelectedEquipment(response.data.data);
+          }
+        } catch (error) {
+          console.error('Error fetching equipment:', error);
+          toast.error('Equipment not found');
+        }
+        // Clear the view param from URL
+        setSearchParams({}, { replace: true });
+      };
+      fetchEquipment();
+    }
+  }, [searchParams, setSearchParams]);
 
   // Persist cart to localStorage with user-specific key (only after initial load)
   useEffect(() => {
@@ -496,11 +529,29 @@ const Equipment = () => {
     return createPortal(
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedEquipment(null)} />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setSelectedEquipment(null); setCameFrom(null); }} />
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Back to Inquiries button (when came from inquiries page) */}
+            {cameFrom === 'inquiries' && (
+              <button
+                onClick={() => {
+                  setSelectedEquipment(null);
+                  setCameFrom(null);
+                  navigate('/vendor-inquiries');
+                }}
+                className="absolute top-4 left-4 z-10 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/90 dark:bg-gray-700/90 hover:bg-white dark:hover:bg-gray-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200"
+              >
+                <ArrowLeftIcon className="h-4 w-4" />
+                Back to Inquiries
+              </button>
+            )}
+
             {/* Close button */}
             <button
-              onClick={() => setSelectedEquipment(null)}
+              onClick={() => {
+                setSelectedEquipment(null);
+                setCameFrom(null);
+              }}
               className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/90 dark:bg-gray-700/90 hover:bg-white dark:hover:bg-gray-700 transition-colors"
             >
               <XMarkIcon className="h-6 w-6 text-gray-600 dark:text-gray-300" />
@@ -628,7 +679,7 @@ const Equipment = () => {
                         {isInCart(selectedEquipment._id) ? 'Add Another' : 'Add to Cart'}
                       </button>
                     )}
-                    {(user?.role === 'vendor' || user?.role === 'owner') && (
+                    {(user?.role === 'vendor' || user?.role === 'owner') && selectedEquipment?.vendorId !== userId && (
                       <button
                         onClick={() => {
                           setShowInquiryModal(true);
