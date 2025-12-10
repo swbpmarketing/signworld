@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const LibraryFile = require('../models/LibraryFile');
+const SystemSettings = require('../models/SystemSettings');
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const { deleteFromS3 } = require('../utils/s3');
@@ -705,7 +706,7 @@ router.get('/:id', protect, async (req, res) => {
 
 // @desc    Upload new file
 // @route   POST /api/library
-// @access  Private (Admin and Owner - Owner uploads go to pending)
+// @access  Private (Admin and Owner - Owner uploads go to pending based on settings)
 router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -717,10 +718,17 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
 
     const { title, description, category, tags } = req.body;
 
-    // Determine status based on user role
-    // Admin uploads are auto-approved, owner uploads go to pending
+    // Get system settings to check if library approval is required
+    const settings = await SystemSettings.getSettings();
+
+    // Determine status based on user role and settings
+    // Admin uploads are always auto-approved
+    // Owner uploads: check requireLibraryApproval setting
     const isAdmin = req.user.role === 'admin';
-    const status = isAdmin ? 'approved' : 'pending';
+    let status = 'approved';
+    if (!isAdmin && settings.requireLibraryApproval) {
+      status = 'pending'; // Requires admin approval
+    }
 
     // Create file record
     const fileData = {
@@ -741,7 +749,7 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
     res.status(201).json({
       success: true,
       data: libraryFile,
-      message: isAdmin ? 'File uploaded successfully' : 'File uploaded and pending admin approval'
+      message: status === 'approved' ? 'File uploaded successfully' : 'File uploaded and pending admin approval'
     });
   } catch (error) {
     console.error('Error uploading file:', error);

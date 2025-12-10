@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const SystemSettings = require('../models/SystemSettings');
 const generateToken = require('../utils/generateToken');
 const { sendWelcomeEmail } = require('../utils/emailService');
 
@@ -22,17 +23,29 @@ exports.register = async (req, res) => {
     // Store plain password for email (before it gets hashed by mongoose)
     const plainPassword = password;
 
+    // Get system settings to check auto-approve
+    const settings = await SystemSettings.getSettings();
+    const userRole = role || 'owner';
+
+    // Determine if user should be active based on role and settings
+    // Admins are always active, owners follow the auto-approve setting
+    let isActive = true;
+    if (userRole === 'owner' && !settings.autoApproveOwners) {
+      isActive = false; // Requires admin approval
+    }
+
     // Create user
     const user = await User.create({
       name,
       email,
       password,
-      role: role || 'owner',
+      role: userRole,
       phone,
       company,
       address,
       openDate,
       specialties,
+      isActive,
     });
 
     // Send welcome email with credentials (non-blocking)

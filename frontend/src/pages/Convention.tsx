@@ -3,6 +3,7 @@ import { CalendarDaysIcon, MapPinIcon, ClockIcon, TicketIcon, UserGroupIcon, Spa
 import { StarIcon } from '@heroicons/react/24/solid';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import { useToast } from '../hooks/useToast';
 import ToastContainer from '../components/ToastContainer';
 import CustomSelect from '../components/CustomSelect';
@@ -38,7 +39,9 @@ interface Schedule {
 
 const Convention = () => {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const { getEffectiveRole } = usePreviewMode();
+  const effectiveRole = getEffectiveRole();
+  const isAdmin = effectiveRole === 'admin';
   const toast = useToast();
 
   const [activeTab, setActiveTab] = useState('overview');

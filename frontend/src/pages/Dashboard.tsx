@@ -1,7 +1,9 @@
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import { useQuery } from '@tanstack/react-query';
 import { getDashboardStats, getRecentActivity } from '../services/dashboardService';
 import { useNavigate } from 'react-router-dom';
+import api from '../config/axios';
 import {
   CalendarIcon,
   UserGroupIcon,
@@ -10,11 +12,22 @@ import {
   ChartBarIcon,
   BellIcon,
   FolderIcon,
+  ShieldCheckIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  UsersIcon,
+  Cog6ToothIcon,
+  BuildingStorefrontIcon,
+  DocumentCheckIcon,
 } from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { getEffectiveRole } = usePreviewMode();
   const navigate = useNavigate();
+  const effectiveRole = getEffectiveRole();
+  const isAdmin = effectiveRole === 'admin';
 
   // Fetch dashboard stats
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
@@ -28,6 +41,34 @@ const Dashboard = () => {
     queryKey: ['dashboard-activity'],
     queryFn: () => getRecentActivity(8),
     staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+
+  // Admin-specific: Fetch user statistics
+  const { data: adminStats } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: async () => {
+      const [usersRes, pendingRes] = await Promise.all([
+        api.get('/users', { params: { limit: 1000 } }),
+        api.get('/library/pending', { params: { limit: 1 } }).catch(() => ({ data: { total: 0 } })),
+      ]);
+
+      const users = usersRes.data?.data || [];
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      return {
+        totalUsers: users.length,
+        admins: users.filter((u: any) => u.role === 'admin').length,
+        owners: users.filter((u: any) => u.role === 'owner').length,
+        vendors: users.filter((u: any) => u.role === 'vendor').length,
+        activeUsers: users.filter((u: any) => u.isActive).length,
+        inactiveUsers: users.filter((u: any) => !u.isActive).length,
+        newUsersThisWeek: users.filter((u: any) => new Date(u.createdAt) >= weekAgo).length,
+        pendingApprovals: pendingRes.data?.total || 0,
+      };
+    },
+    enabled: isAdmin,
+    staleTime: 60 * 1000, // 1 minute
   });
 
   // Map stats data to display format
@@ -62,42 +103,197 @@ const Dashboard = () => {
     },
   ] : [];
 
-  const quickActions = [
+  // Quick actions based on role
+  const quickActions = isAdmin ? [
+    {
+      icon: UsersIcon,
+      label: 'Manage Users',
+      path: '/users',
+      color: 'text-purple-600 dark:text-purple-400',
+      bg: 'bg-purple-50 dark:bg-purple-900/30',
+    },
+    {
+      icon: DocumentCheckIcon,
+      label: 'Review Pending Content',
+      path: '/pending-approval',
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-900/30',
+      badge: adminStats?.pendingApprovals || 0,
+    },
+    {
+      icon: BuildingStorefrontIcon,
+      label: 'Manage Partners',
+      path: '/partners',
+      color: 'text-green-600 dark:text-green-400',
+      bg: 'bg-green-50 dark:bg-green-900/30',
+    },
+    {
+      icon: Cog6ToothIcon,
+      label: 'System Settings',
+      path: '/settings',
+      color: 'text-gray-600 dark:text-gray-400',
+      bg: 'bg-gray-50 dark:bg-gray-700',
+    },
+  ] : [
     {
       icon: CalendarIcon,
       label: 'View Upcoming Events',
-      path: '/calendar'
+      path: '/calendar',
+      color: 'text-primary-600 dark:text-primary-400',
+      bg: 'bg-primary-50 dark:bg-primary-900/30',
     },
     {
       icon: VideoCameraIcon,
       label: 'Browse Video Library',
-      path: '/videos'
+      path: '/videos',
+      color: 'text-primary-600 dark:text-primary-400',
+      bg: 'bg-primary-50 dark:bg-primary-900/30',
     },
     {
       icon: UserGroupIcon,
       label: 'Search Owner Directory',
-      path: '/owners'
+      path: '/owners',
+      color: 'text-primary-600 dark:text-primary-400',
+      bg: 'bg-primary-50 dark:bg-primary-900/30',
     },
     {
       icon: FolderIcon,
       label: 'Download Resources',
-      path: '/library'
+      path: '/library',
+      color: 'text-primary-600 dark:text-primary-400',
+      bg: 'bg-primary-50 dark:bg-primary-900/30',
     }
   ];
 
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
+      <div className={`bg-gradient-to-r ${isAdmin ? 'from-purple-600 to-purple-700' : 'from-primary-600 to-primary-700'} rounded-xl shadow-lg overflow-hidden`}>
         <div className="px-6 py-8 sm:px-8 sm:py-10">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">
-            Welcome back, {user?.name}!
-          </h1>
-          <p className="mt-3 text-lg text-primary-100">
-            Here's what's happening in your Sign Company network today.
-          </p>
+          <div className="flex items-center gap-3">
+            {isAdmin && <ShieldCheckIcon className="h-8 w-8 text-white/80" />}
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">
+                {isAdmin ? 'Admin Dashboard' : `Welcome back, ${user?.name}!`}
+              </h1>
+              <p className="mt-2 text-lg text-white/80">
+                {isAdmin
+                  ? `Hello ${user?.name}! Here's your system overview.`
+                  : "Here's what's happening in your Sign Company network today."
+                }
+              </p>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Admin System Stats */}
+      {isAdmin && adminStats && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <UsersIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.totalUsers}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total Users</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <ShieldCheckIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.admins}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Admins</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <UserGroupIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.owners}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Owners</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <BuildingStorefrontIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.vendors}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Vendors</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                <CheckCircleIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.activeUsers}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <ExclamationTriangleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.inactiveUsers}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Inactive</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                <ClockIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.newUsersThisWeek}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">New (7d)</p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => navigate('/pending-approval')}
+            className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 shadow-sm cursor-pointer transition-all hover:shadow-md ${
+              adminStats.pendingApprovals > 0
+                ? 'border-amber-400 dark:border-amber-500'
+                : 'border-gray-200 dark:border-gray-700'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${adminStats.pendingApprovals > 0 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                <DocumentCheckIcon className={`h-5 w-5 ${adminStats.pendingApprovals > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-400'}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.pendingApprovals}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Pending</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -215,8 +411,8 @@ const Dashboard = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-              <ChartBarIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
-              Quick Actions
+              <ChartBarIcon className={`h-5 w-5 mr-2 ${isAdmin ? 'text-purple-600 dark:text-purple-400' : 'text-primary-600 dark:text-primary-400'}`} />
+              {isAdmin ? 'Admin Actions' : 'Quick Actions'}
             </h3>
           </div>
           <div className="p-6">
@@ -225,11 +421,16 @@ const Dashboard = () => {
                 <button
                   key={action.path}
                   onClick={() => navigate(action.path)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 group"
+                  className={`w-full flex items-center justify-between px-4 py-3 ${action.bg || 'bg-gray-50 dark:bg-gray-700/50'} hover:opacity-80 rounded-lg transition-all duration-200 group`}
                 >
                   <span className="flex items-center">
-                    <action.icon className="h-5 w-5 text-primary-600 dark:text-primary-400 mr-3" />
+                    <action.icon className={`h-5 w-5 mr-3 ${action.color || 'text-primary-600 dark:text-primary-400'}`} />
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{action.label}</span>
+                    {'badge' in action && action.badge > 0 && (
+                      <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-amber-500 rounded-full">
+                        {action.badge}
+                      </span>
+                    )}
                   </span>
                   <svg className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

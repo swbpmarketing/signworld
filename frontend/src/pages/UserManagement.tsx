@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
@@ -11,6 +11,10 @@ import {
   CheckCircleIcon,
   NoSymbolIcon,
   UserGroupIcon,
+  FunnelIcon,
+  ShieldCheckIcon,
+  BuildingStorefrontIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import api from '../config/axios';
 import CustomSelect from '../components/CustomSelect';
@@ -33,16 +37,30 @@ const UserManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [limit] = useState(15);
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     setSearchQuery(searchInput);
+    setPage(1);
   };
 
   const handleClearSearch = () => {
     setSearchInput('');
     setSearchQuery('');
+    setPage(1);
   };
+
+  const handleClearFilters = () => {
+    setRoleFilter('all');
+    setStatusFilter('all');
+    setPage(1);
+  };
+
+  const hasActiveFilters = roleFilter !== 'all' || statusFilter !== 'all';
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
@@ -65,13 +83,32 @@ const UserManagement = () => {
 
   // Fetch all users
   const { data, isLoading, error } = useQuery({
-    queryKey: ['users', page, searchQuery],
+    queryKey: ['users', page, searchQuery, roleFilter, statusFilter],
     queryFn: async () => {
-      const response = await api.get('/users', {
-        params: { page, limit, search: searchQuery }
-      });
+      const params: Record<string, any> = { page, limit, search: searchQuery };
+      if (roleFilter !== 'all') params.role = roleFilter;
+      if (statusFilter !== 'all') params.isActive = statusFilter === 'active';
+      const response = await api.get('/users', { params });
       return response.data;
     }
+  });
+
+  // Fetch user stats for admin overview
+  const { data: statsData } = useQuery({
+    queryKey: ['user-stats'],
+    queryFn: async () => {
+      const response = await api.get('/users', { params: { limit: 1000 } });
+      const allUsers: User[] = response.data?.data || [];
+      return {
+        total: allUsers.length,
+        admins: allUsers.filter(u => u.role === 'admin').length,
+        owners: allUsers.filter(u => u.role === 'owner').length,
+        vendors: allUsers.filter(u => u.role === 'vendor').length,
+        active: allUsers.filter(u => u.isActive).length,
+        inactive: allUsers.filter(u => !u.isActive).length,
+      };
+    },
+    staleTime: 30 * 1000, // 30 seconds
   });
 
   const users: User[] = data?.data || [];
@@ -327,39 +364,241 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4">
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name or email..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="w-full pl-10 pr-10 py-2.5 sm:py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
-            />
-            {searchInput && (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+        <button
+          onClick={() => { setRoleFilter('all'); setStatusFilter('all'); setPage(1); }}
+          className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 transition-all ${
+            roleFilter === 'all' && statusFilter === 'all'
+              ? 'border-primary-500 shadow-md'
+              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              <UsersIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{statsData?.total || 0}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Total Users</p>
+            </div>
           </div>
-          <button
-            type="submit"
-            className="px-4 py-2.5 sm:py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
-          >
-            <MagnifyingGlassIcon className="h-5 w-5" />
-            <span className="hidden sm:inline">Search</span>
-          </button>
-        </form>
+        </button>
+
+        <button
+          onClick={() => { setRoleFilter('admin'); setStatusFilter('all'); setPage(1); }}
+          className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 transition-all ${
+            roleFilter === 'admin'
+              ? 'border-purple-500 shadow-md'
+              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <ShieldCheckIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{statsData?.admins || 0}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Admins</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => { setRoleFilter('owner'); setStatusFilter('all'); setPage(1); }}
+          className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 transition-all ${
+            roleFilter === 'owner'
+              ? 'border-blue-500 shadow-md'
+              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{statsData?.owners || 0}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Owners</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => { setRoleFilter('vendor'); setStatusFilter('all'); setPage(1); }}
+          className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 transition-all ${
+            roleFilter === 'vendor'
+              ? 'border-green-500 shadow-md'
+              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <BuildingStorefrontIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{statsData?.vendors || 0}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Vendors</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => { setRoleFilter('all'); setStatusFilter('active'); setPage(1); }}
+          className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 transition-all ${
+            statusFilter === 'active'
+              ? 'border-emerald-500 shadow-md'
+              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+              <CheckCircleIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{statsData?.active || 0}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => { setRoleFilter('all'); setStatusFilter('inactive'); setPage(1); }}
+          className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 transition-all ${
+            statusFilter === 'inactive'
+              ? 'border-red-500 shadow-md'
+              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <NoSymbolIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{statsData?.inactive || 0}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Inactive</p>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      {/* Search and Filters Bar */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <form onSubmit={handleSearch} className="flex gap-2 flex-1">
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full pl-10 pr-10 py-2.5 sm:py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-gray-100"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2.5 sm:py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+            >
+              <MagnifyingGlassIcon className="h-5 w-5" />
+              <span className="hidden sm:inline">Search</span>
+            </button>
+          </form>
+        </div>
+
+        {/* Active Filters Display */}
+        {(hasActiveFilters || searchQuery) && (
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+            <span className="text-sm text-gray-500 dark:text-gray-400">Active filters:</span>
+            {searchQuery && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full text-xs font-medium">
+                Search: "{searchQuery}"
+                <button onClick={handleClearSearch} className="hover:text-primary-900 dark:hover:text-primary-100">
+                  <XMarkIcon className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            )}
+            {roleFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
+                Role: {roleFilter}
+                <button onClick={() => setRoleFilter('all')} className="hover:text-blue-900 dark:hover:text-blue-100">
+                  <XMarkIcon className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            )}
+            {statusFilter !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
+                Status: {statusFilter}
+                <button onClick={() => setStatusFilter('all')} className="hover:text-green-900 dark:hover:text-green-100">
+                  <XMarkIcon className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            )}
+            <button
+              onClick={() => { handleClearSearch(); handleClearFilters(); }}
+              className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
+        {/* Bulk Actions Bar */}
+        {selectedUsers.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {selectedUsers.length} selected:
+            </span>
+            <button
+              onClick={handleBulkActivate}
+              disabled={bulkUpdateStatusMutation.isPending}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
+            >
+              <CheckCircleIcon className="h-4 w-4" />
+              Activate
+            </button>
+            <button
+              onClick={handleBulkDeactivate}
+              disabled={bulkUpdateStatusMutation.isPending}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+            >
+              <NoSymbolIcon className="h-4 w-4" />
+              Deactivate
+            </button>
+            <button
+              onClick={() => setShowRoleModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+            >
+              <UserGroupIcon className="h-4 w-4" />
+              Change Role
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+            >
+              <TrashIcon className="h-4 w-4" />
+              Delete
+            </button>
+            <button
+              onClick={() => setSelectedUsers([])}
+              className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline ml-2"
+            >
+              Clear selection
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Table */}

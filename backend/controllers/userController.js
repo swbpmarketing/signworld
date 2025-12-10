@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const SystemSettings = require('../models/SystemSettings');
 const { sendWelcomeEmail } = require('../utils/emailService');
 
 // Import models for stats aggregation
@@ -98,7 +99,18 @@ exports.createUser = async (req, res) => {
     // Store the plain text password before it gets hashed
     const plainPassword = req.body.password;
 
-    const user = await User.create(req.body);
+    // Get system settings to check auto-approve
+    const settings = await SystemSettings.getSettings();
+    const userRole = req.body.role || 'owner';
+
+    // Determine if user should be active based on role and settings
+    // Admins are always active, owners follow the auto-approve setting
+    let isActive = req.body.isActive !== undefined ? req.body.isActive : true;
+    if (userRole === 'owner' && !settings.autoApproveOwners && req.body.isActive === undefined) {
+      isActive = false; // Requires admin approval unless explicitly set
+    }
+
+    const user = await User.create({ ...req.body, isActive });
 
     // Send welcome email with credentials
     try {

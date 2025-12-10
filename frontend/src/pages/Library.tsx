@@ -25,6 +25,7 @@ import {
 import { FolderIcon as FolderSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 
 const API_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV
@@ -85,8 +86,10 @@ const categoryMeta: { [key: string]: { name: string; icon: string; color: string
 
 const Library = () => {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
-  const isOwner = user?.role === 'owner';
+  const { getEffectiveRole } = usePreviewMode();
+  const effectiveRole = getEffectiveRole();
+  const isAdmin = effectiveRole === 'admin';
+  const isOwner = effectiveRole === 'owner';
   const canUpload = isAdmin || isOwner;
 
   // State

@@ -4,6 +4,8 @@ import { Toaster } from 'react-hot-toast';
 import { lazy, Suspense } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { DarkModeProvider } from './context/DarkModeContext';
+import { PreviewModeProvider } from './context/PreviewModeContext';
+import { PermissionsProvider } from './context/PermissionsContext';
 
 // Only import Layout and contexts eagerly as they're needed immediately
 import Layout from './components/Layout';
@@ -77,112 +79,152 @@ function App() {
       <Router>
         <DarkModeProvider>
           <AuthProvider>
-            <Toaster position="top-right" />
-            <Suspense fallback={<LoadingFallback />}>
-              <Routes>
+            <PreviewModeProvider>
+              <PermissionsProvider>
+                <Toaster position="top-right" />
+                <Suspense fallback={<LoadingFallback />}>
+                  <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
 
                 {/* Protected routes with Layout */}
                 <Route element={<Layout />}>
-                  <Route path="dashboard" element={<DashboardRouter />} />
+                  <Route path="dashboard" element={
+                    <ProtectedRoute requiredPermission="canAccessDashboard">
+                      <DashboardRouter />
+                    </ProtectedRoute>
+                  } />
                   <Route path="reports" element={
-                    <ProtectedRoute allowedRoles={['admin', 'owner', 'vendor']}>
+                    <ProtectedRoute requiredPermission="canAccessDashboard">
                       <ReportsRouter />
                     </ProtectedRoute>
                   } />
                   <Route path="users" element={
-                    <ProtectedRoute adminOnly>
+                    <ProtectedRoute adminOnly requiredPermission="canManageUsers">
                       <UserManagement />
                     </ProtectedRoute>
                   } />
-                  <Route path="calendar" element={<Calendar />} />
-                  <Route path="convention" element={<Convention />} />
-                  <Route path="brags" element={<Brags />} />
+                  <Route path="calendar" element={
+                    <ProtectedRoute requiredPermission="canAccessEvents">
+                      <Calendar />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="convention" element={
+                    <ProtectedRoute requiredPermission="canAccessEvents">
+                      <Convention />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="brags" element={
+                    <ProtectedRoute requiredPermission="canAccessBrags">
+                      <Brags />
+                    </ProtectedRoute>
+                  } />
                   <Route path="forum" element={
-                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                    <ProtectedRoute requiredPermission="canAccessForum">
                       <Forum />
                     </ProtectedRoute>
                   } />
                   <Route path="forum/thread/:id" element={
-                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                    <ProtectedRoute requiredPermission="canAccessForum">
                       <ForumThread />
                     </ProtectedRoute>
                   } />
-                  <Route path="chat" element={<Chat />} />
+                  <Route path="chat" element={
+                    <ProtectedRoute requiredPermission="canAccessChat">
+                      <Chat />
+                    </ProtectedRoute>
+                  } />
                   <Route path="library" element={
-                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                    <ProtectedRoute requiredPermission="canAccessLibrary">
                       <Library />
                     </ProtectedRoute>
                   } />
                   <Route path="library/pending" element={
-                    <ProtectedRoute adminOnly>
+                    <ProtectedRoute adminOnly requiredPermission="canApprovePending">
                       <PendingApproval />
                     </ProtectedRoute>
                   } />
                   <Route path="archive" element={
-                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                    <ProtectedRoute requiredPermission="canAccessLibrary">
                       <Archive />
                     </ProtectedRoute>
                   } />
                   <Route path="recently-deleted" element={
-                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                    <ProtectedRoute requiredPermission="canAccessLibrary">
                       <RecentlyDeleted />
                     </ProtectedRoute>
                   } />
-                  <Route path="resources" element={<Resources />} />
+                  <Route path="resources" element={
+                    <ProtectedRoute requiredPermission="canAccessLibrary">
+                      <Resources />
+                    </ProtectedRoute>
+                  } />
                   <Route path="owners" element={
-                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                    <ProtectedRoute requiredPermission="canAccessDirectory">
                       <OwnersRoster />
                     </ProtectedRoute>
                   } />
                   <Route path="owners/:id" element={
-                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                    <ProtectedRoute requiredPermission="canAccessDirectory">
                       <OwnerProfileEnhanced />
                     </ProtectedRoute>
                   } />
-                  <Route path="map" element={<MapSearch />} />
-                  <Route path="partners" element={<Partners />} />
+                  <Route path="map" element={
+                    <ProtectedRoute requiredPermission="canAccessDirectory">
+                      <MapSearch />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="partners" element={
+                    <ProtectedRoute requiredPermission="canAccessPartners">
+                      <Partners />
+                    </ProtectedRoute>
+                  } />
                   <Route path="videos" element={
-                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                    <ProtectedRoute requiredPermission="canAccessVideos">
                       <Videos />
                     </ProtectedRoute>
                   } />
-                  <Route path="equipment" element={<Equipment />} />
+                  <Route path="equipment" element={
+                    <ProtectedRoute requiredPermission="canAccessEquipment">
+                      <Equipment />
+                    </ProtectedRoute>
+                  } />
                   <Route path="faqs" element={<FAQs />} />
                   <Route path="profile" element={<UserProfile />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="billing" element={<Billing />} />
                   {/* Vendor-specific routes - accessible to vendors and admins */}
                   <Route path="vendor-profile" element={
-                    <ProtectedRoute allowedRoles={['admin', 'vendor']}>
+                    <ProtectedRoute allowedRoles={['admin', 'vendor']} requiredPermission="canAccessDashboard">
                       <VendorProfile />
                     </ProtectedRoute>
                   } />
                   <Route path="vendor-map" element={
-                    <ProtectedRoute allowedRoles={['admin', 'vendor']}>
+                    <ProtectedRoute allowedRoles={['admin', 'vendor']} requiredPermission="canAccessDirectory">
                       <VendorMap />
                     </ProtectedRoute>
                   } />
                   <Route path="vendor-equipment" element={
-                    <ProtectedRoute allowedRoles={['admin', 'vendor']}>
+                    <ProtectedRoute allowedRoles={['admin', 'vendor']} requiredPermission="canListEquipment">
                       <VendorEquipment />
                     </ProtectedRoute>
                   } />
                   <Route path="vendor-reports" element={
-                    <ProtectedRoute allowedRoles={['admin', 'vendor']}>
+                    <ProtectedRoute allowedRoles={['admin', 'vendor']} requiredPermission="canAccessDashboard">
                       <VendorReports />
                     </ProtectedRoute>
                   } />
                   <Route path="vendor-inquiries" element={
-                    <ProtectedRoute allowedRoles={['admin', 'vendor']}>
+                    <ProtectedRoute allowedRoles={['admin', 'vendor']} requiredPermission="canAccessEquipment">
                       <VendorInquiries />
                     </ProtectedRoute>
                   } />
                 </Route>
-              </Routes>
-            </Suspense>
+                </Routes>
+              </Suspense>
+              </PermissionsProvider>
+            </PreviewModeProvider>
           </AuthProvider>
         </DarkModeProvider>
       </Router>

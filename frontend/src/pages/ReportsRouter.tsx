@@ -1,18 +1,23 @@
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import Reports from './Reports';
 import OwnerReports from './OwnerReports';
 import VendorReports from './VendorReports';
 
 const ReportsRouter = () => {
   const { user } = useAuth();
+  const { getEffectiveRole } = usePreviewMode();
+
+  // Get effective role (respects preview mode for admins)
+  const effectiveRole = getEffectiveRole();
 
   // Show owner-specific reports for owner role
-  if (user?.role === 'owner') {
+  if (effectiveRole === 'owner') {
     return <OwnerReports />;
   }
 
   // Show vendor-specific reports for vendor role
-  if (user?.role === 'vendor') {
+  if (effectiveRole === 'vendor') {
     return <VendorReports />;
   }
 

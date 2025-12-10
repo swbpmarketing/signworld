@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import api from '../config/axios';
 import socketService from '../services/socketService';
 import {
@@ -94,9 +95,11 @@ const loadFavoritesFromStorage = (userId: string | undefined): Set<string> => {
 
 const Equipment = () => {
   const { user } = useAuth();
+  const { getEffectiveRole } = usePreviewMode();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const effectiveRole = getEffectiveRole();
   const userId = user?._id || user?.id;
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchInput, setSearchInput] = useState('');
@@ -679,7 +682,7 @@ const Equipment = () => {
                         {isInCart(selectedEquipment._id) ? 'Add Another' : 'Add to Cart'}
                       </button>
                     )}
-                    {(user?.role === 'vendor' || user?.role === 'owner') && selectedEquipment?.vendorId !== userId && (
+                    {(effectiveRole === 'vendor' || effectiveRole === 'owner') && selectedEquipment?.vendorId !== userId && (
                       <button
                         onClick={() => {
                           setShowInquiryModal(true);
@@ -1301,7 +1304,7 @@ const Equipment = () => {
                                 Add to Cart
                               </button>
                             )}
-                            {(user?.role === 'vendor' || user?.role === 'owner') && (
+                            {(effectiveRole === 'vendor' || effectiveRole === 'owner') && (
                               <button
                                 onClick={() => {
                                   setSelectedEquipment(item);
@@ -1478,7 +1481,7 @@ const Equipment = () => {
             </div>
             <div className="mt-4 sm:mt-0 flex items-center gap-3">
               {/* Vendor-specific: Manage Listings button only */}
-              {user?.role === 'vendor' ? (
+              {effectiveRole === 'vendor' ? (
                 <button
                   onClick={() => navigate('/vendor-equipment')}
                   className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"

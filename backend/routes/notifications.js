@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Notification = require('../models/Notification');
-const { protect } = require('../middleware/auth');
+const User = require('../models/User');
+const { protect, authorize } = require('../middleware/auth');
 
 // @desc    Get all notifications for the current user
 // @route   GET /api/notifications
@@ -165,6 +166,124 @@ router.delete('/', protect, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Server error deleting notifications'
+    });
+  }
+});
+
+// @desc    Send broadcast notification to all users (Admin only)
+// @route   POST /api/notifications/broadcast
+// @access  Private/Admin
+router.post('/broadcast', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { title, message, type = 'announcement', targetRole } = req.body;
+
+    if (!title || !message) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title and message are required'
+      });
+    }
+
+    // Get target users based on role filter
+    const userQuery = { isActive: true };
+    if (targetRole && targetRole !== 'all') {
+      userQuery.role = targetRole;
+    }
+
+    const users = await User.find(userQuery).select('_id');
+
+    if (users.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No users found to notify'
+      });
+    }
+
+    // Create notifications for all target users
+    const notifications = users.map(user => ({
+      recipient: user._id,
+      sender: req.user._id,
+      type: type,
+      title: title,
+      message: message,
+      isRead: false
+    }));
+
+    await Notification.insertMany(notifications);
+
+    res.status(201).json({
+      success: true,
+      message: `Broadcast sent to ${users.length} users`,
+      recipientCount: users.length
+    });
+  } catch (error) {
+    console.error('Error sending broadcast notification:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error sending broadcast notification'
+    });
+  }
+});
+
+// @desc    Get broadcast history (Admin only)
+// @route   GET /api/notifications/broadcasts
+// @access  Private/Admin
+router.get('/broadcasts', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+
+    // Get unique broadcast messages sent by admins
+    const broadcasts = await Notification.aggregate([
+      {
+        $match: {
+          type: 'announcement',
+          sender: { $exists: true }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            title: '$title',
+            message: '$message',
+            createdAt: {
+              $dateToString: { format: '%Y-%m-%d %H:%M', date: '$createdAt' }
+            }
+          },
+          recipientCount: { $sum: 1 },
+          createdAt: { $first: '$createdAt' },
+          sender: { $first: '$sender' }
+        }
+      },
+      { $sort: { createdAt: -1 } },
+      { $skip: (parseInt(page) - 1) * parseInt(limit) },
+      { $limit: parseInt(limit) }
+    ]);
+
+    // Populate sender info
+    await User.populate(broadcasts, {
+      path: 'sender',
+      select: 'name firstName lastName'
+    });
+
+    res.json({
+      success: true,
+      data: broadcasts.map(b => ({
+        title: b._id.title,
+        message: b._id.message,
+        recipientCount: b.recipientCount,
+        createdAt: b.createdAt,
+        sender: b.sender
+      })),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching broadcast history:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error fetching broadcast history'
     });
   }
 });

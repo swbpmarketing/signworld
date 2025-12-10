@@ -39,6 +39,7 @@ import {
   type GetBragsParams
 } from '../services/bragsService';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import { usePermissions } from '../hooks/usePermissions';
 import toast from 'react-hot-toast';
 import CustomSelect from '../components/CustomSelect';
@@ -57,7 +58,9 @@ const categories = [
 
 const Brags = () => {
   const { user } = useAuth();
+  const { getEffectiveRole } = usePreviewMode();
   const { canManage, canEditItem, canDeleteItem } = usePermissions();
+  const effectiveRole = getEffectiveRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState('All Stories');
   const [stories, setStories] = useState<Brag[]>([]);
@@ -136,8 +139,8 @@ const Brags = () => {
   // Fetch statistics (owner-specific for owner role, public for others)
   const fetchStats = async () => {
     try {
-      // Use owner-specific stats for owner role
-      if (user?.role === 'owner') {
+      // Use owner-specific stats for owner role (respects preview mode)
+      if (effectiveRole === 'owner') {
         const response = await getMyStats();
         setStats(response.data);
       } else {
@@ -845,7 +848,7 @@ const Brags = () => {
             {stats?.publishedStories || pagination.total || 0}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {user?.role === 'owner' ? 'My Stories' : 'Success Stories'}
+            {effectiveRole === 'owner' ? 'My Stories' : 'Success Stories'}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
@@ -854,7 +857,7 @@ const Brags = () => {
             {(stats?.totalViews || 0).toLocaleString()}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {user?.role === 'owner' ? 'My Views' : 'Total Views'}
+            {effectiveRole === 'owner' ? 'My Views' : 'Total Views'}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
@@ -863,7 +866,7 @@ const Brags = () => {
             {(stats?.totalLikes || 0).toLocaleString()}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {user?.role === 'owner' ? 'My Likes' : 'Total Likes'}
+            {effectiveRole === 'owner' ? 'My Likes' : 'Total Likes'}
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
@@ -872,7 +875,7 @@ const Brags = () => {
             {(stats?.totalComments || 0).toLocaleString()}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {user?.role === 'owner' ? 'My Comments' : 'Total Comments'}
+            {effectiveRole === 'owner' ? 'My Comments' : 'Total Comments'}
           </p>
         </div>
       </div>

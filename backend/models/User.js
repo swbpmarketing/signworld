@@ -94,6 +94,15 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  notificationPreferences: {
+    emailNotifications: { type: Boolean, default: true },
+    pushNotifications: { type: Boolean, default: true },
+    newMessages: { type: Boolean, default: true },
+    forumReplies: { type: Boolean, default: true },
+    systemAnnouncements: { type: Boolean, default: true },
+    marketplaceUpdates: { type: Boolean, default: true },
+    weeklyDigest: { type: Boolean, default: false },
+  },
   createdAt: {
     type: Date,
     default: Date.now,

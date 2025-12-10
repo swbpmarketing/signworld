@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import { usePermissions } from '../hooks/usePermissions';
 import socketService from '../services/socketService';
 import {
@@ -91,8 +92,10 @@ const forumCategories = [
 
 const Forum = () => {
   const { user } = useAuth();
+  const { getEffectiveRole } = usePreviewMode();
   const { canEditItem, canDeleteItem, canManage } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
+  const effectiveRole = getEffectiveRole();
 
   // Ref to track current user ID for socket handlers (avoids stale closure)
   const userIdRef = useRef<string | undefined>();
@@ -2026,7 +2029,7 @@ const Forum = () => {
                                       </span>
                                     </div>
                                     {/* 3-dot menu - show for reply author or admin */}
-                                    {user && (user._id === reply.author?._id || user.role === 'admin') && (
+                                    {user && (user._id === reply.author?._id || effectiveRole === 'admin') && (
                                       <div className="relative">
                                         <button
                                           onClick={(e) => {

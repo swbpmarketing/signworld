@@ -1,19 +1,24 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import Dashboard from './Dashboard';
 import OwnerDashboard from './OwnerDashboard';
 import VendorDashboard from './VendorDashboard';
 
 const DashboardRouter = () => {
   const { user } = useAuth();
+  const { getEffectiveRole } = usePreviewMode();
 
   // If no user or role is undefined, redirect to login
   if (!user?.role) {
     return <Navigate to="/login" replace />;
   }
 
-  // Route to role-specific dashboard
-  switch (user.role) {
+  // Get effective role (respects preview mode for admins)
+  const effectiveRole = getEffectiveRole();
+
+  // Route to role-specific dashboard based on effective role
+  switch (effectiveRole) {
     case 'admin':
       return <Dashboard />;
     case 'owner':

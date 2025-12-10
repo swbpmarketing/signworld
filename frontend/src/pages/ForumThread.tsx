@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import { useToast } from '../hooks/useToast';
 import ToastContainer from '../components/ToastContainer';
 import socketService from '../services/socketService';
@@ -217,7 +218,9 @@ const ForumThread = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { getEffectiveRole } = usePreviewMode();
   const toast = useToast();
+  const effectiveRole = getEffectiveRole();
 
   const [thread, setThread] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -768,7 +771,7 @@ const ForumThread = () => {
     const authorInitials = authorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
     const isLiked = user && reply.likes?.includes(user._id);
     const isEditing = editingReplyId === reply._id;
-    const isAuthorOrAdmin = user && (reply.author?._id === user._id || user.role === 'admin');
+    const isAuthorOrAdmin = user && (reply.author?._id === user._id || effectiveRole === 'admin');
     const timeAgo = (() => {
       const seconds = Math.floor((Date.now() - new Date(reply.createdAt).getTime()) / 1000);
       if (seconds < 60) return 'just now';
@@ -920,7 +923,7 @@ const ForumThread = () => {
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  {user && (thread.author?._id === user._id || user.role === 'admin') && (
+                  {user && (thread.author?._id === user._id || effectiveRole === 'admin') && (
                     <>
                       <button
                         onClick={handleEditThread}

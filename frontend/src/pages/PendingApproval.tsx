@@ -23,6 +23,7 @@ import {
 import { FolderIcon as FolderSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 
 const API_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV
@@ -66,7 +67,9 @@ const categoryMeta: { [key: string]: { name: string; icon: string; color: string
 
 const PendingApproval = () => {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const { getEffectiveRole } = usePreviewMode();
+  const effectiveRole = getEffectiveRole();
+  const isAdmin = effectiveRole === 'admin';
 
   // State
   const [files, setFiles] = useState<LibraryFile[]>([]);
@@ -93,6 +96,10 @@ const PendingApproval = () => {
   const [fileToReject, setFileToReject] = useState<LibraryFile | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
+
+  // Bulk selection state
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Fetch pending files
   const fetchFiles = useCallback(async (page: number = 1) => {
@@ -224,6 +231,110 @@ const PendingApproval = () => {
     } finally {
       setRejecting(false);
     }
+  };
+
+  // Bulk selection handlers
+  const toggleSelectFile = (fileId: string) => {
+    setSelectedFiles(prev =>
+      prev.includes(fileId)
+        ? prev.filter(id => id !== fileId)
+        : [...prev, fileId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedFiles.length === files.length) {
+      setSelectedFiles([]);
+    } else {
+      setSelectedFiles(files.map(f => f._id));
+    }
+  };
+
+  // Bulk approve
+  const handleBulkApprove = async () => {
+    if (selectedFiles.length === 0) return;
+
+    setBulkProcessing(true);
+    const token = localStorage.getItem('token');
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const fileId of selectedFiles) {
+      try {
+        const response = await fetch(`${API_URL}/library/${fileId}/approve`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await response.json();
+        if (data.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    setBulkProcessing(false);
+    setSelectedFiles([]);
+
+    if (successCount > 0) {
+      toast.success(`${successCount} file(s) approved successfully`);
+    }
+    if (failCount > 0) {
+      toast.error(`${failCount} file(s) failed to approve`);
+    }
+    fetchFiles(currentPage);
+  };
+
+  // Bulk reject
+  const handleBulkReject = async () => {
+    if (selectedFiles.length === 0) return;
+
+    if (!window.confirm(`Are you sure you want to reject ${selectedFiles.length} file(s)?`)) {
+      return;
+    }
+
+    setBulkProcessing(true);
+    const token = localStorage.getItem('token');
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const fileId of selectedFiles) {
+      try {
+        const response = await fetch(`${API_URL}/library/${fileId}/reject`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ reason: 'Bulk rejection by admin' })
+        });
+        const data = await response.json();
+        if (data.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    setBulkProcessing(false);
+    setSelectedFiles([]);
+
+    if (successCount > 0) {
+      toast.success(`${successCount} file(s) rejected`);
+    }
+    if (failCount > 0) {
+      toast.error(`${failCount} file(s) failed to reject`);
+    }
+    fetchFiles(currentPage);
   };
 
   // Handle file preview
@@ -368,7 +479,7 @@ const PendingApproval = () => {
       </div>
 
       {/* Search and Filter Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 space-y-3">
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 min-w-0 flex gap-2">
             <div className="flex-1 min-w-0 relative">
@@ -432,6 +543,53 @@ const PendingApproval = () => {
             </div>
           </div>
         </form>
+
+        {/* Bulk Actions Bar */}
+        {files.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedFiles.length === files.length && files.length > 0}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {selectedFiles.length === files.length ? 'Deselect All' : 'Select All'}
+              </span>
+            </label>
+
+            {selectedFiles.length > 0 && (
+              <>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {selectedFiles.length} selected:
+                </span>
+                <button
+                  onClick={handleBulkApprove}
+                  disabled={bulkProcessing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors disabled:opacity-50"
+                >
+                  <CheckCircleIcon className="h-4 w-4" />
+                  Approve All
+                </button>
+                <button
+                  onClick={handleBulkReject}
+                  disabled={bulkProcessing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
+                >
+                  <XCircleIcon className="h-4 w-4" />
+                  Reject All
+                </button>
+                <button
+                  onClick={() => setSelectedFiles([])}
+                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
+                >
+                  Clear selection
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Files Section */}
@@ -472,10 +630,27 @@ const PendingApproval = () => {
                 {files.map((file) => (
                   <div
                     key={file._id}
-                    className="relative border border-blue-200 dark:border-blue-800 rounded-lg p-4 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md transition-all duration-200 cursor-pointer group bg-blue-50/50 dark:bg-blue-900/20"
+                    className={`relative border rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer group ${
+                      selectedFiles.includes(file._id)
+                        ? 'border-blue-500 bg-blue-100/50 dark:bg-blue-900/40 ring-2 ring-blue-500/30'
+                        : 'border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600 bg-blue-50/50 dark:bg-blue-900/20'
+                    }`}
                     onClick={() => handlePreview(file)}
                   >
-                    <div className="flex items-start justify-between">
+                    {/* Checkbox */}
+                    <div className="absolute top-2 right-2 z-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.includes(file._id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleSelectFile(file._id);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-4 w-4 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </div>
+                    <div className="flex items-start justify-between pr-6">
                       <div className="flex items-center flex-1 min-w-0">
                         {getFileIcon(file.fileType)}
                         <div className="ml-3 min-w-0">
@@ -587,10 +762,25 @@ const PendingApproval = () => {
                 {files.map((file) => (
                   <div
                     key={file._id}
-                    className="flex items-center justify-between p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg cursor-pointer group bg-blue-50/30 dark:bg-blue-900/10"
+                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer group ${
+                      selectedFiles.includes(file._id)
+                        ? 'bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-500/30'
+                        : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 bg-blue-50/30 dark:bg-blue-900/10'
+                    }`}
                     onClick={() => handlePreview(file)}
                   >
                     <div className="flex items-center flex-1 min-w-0">
+                      {/* Checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.includes(file._id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleSelectFile(file._id);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-4 w-4 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 cursor-pointer mr-3"
+                      />
                       {getFileIcon(file.fileType)}
                       <div className="ml-3 flex-1 min-w-0">
                         <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">

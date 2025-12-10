@@ -2,6 +2,9 @@ import { Outlet, Link, useLocation, Navigate } from "react-router-dom";
 import { Suspense } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useDarkMode } from "../context/DarkModeContext";
+import { usePreviewMode } from "../context/PreviewModeContext";
+import { usePermissions } from "../context/PermissionsContext";
+import type { Permissions } from "../context/PermissionsContext";
 import {
   CalendarIcon,
   HomeIcon,
@@ -27,48 +30,71 @@ import {
   ClipboardDocumentListIcon,
   BuildingStorefrontIcon,
   InboxIcon,
+  EyeIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import AISearchModal from "./AISearchModal";
 import { NotificationPanel } from "./NotificationPanel";
 import { useNotifications } from "../hooks/useNotifications";
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['admin', 'owner', 'vendor'] },
-  { name: "Reports", href: "/reports", icon: ChartBarIcon, roles: ['admin', 'owner', 'vendor'] },
-  { name: "User Management", href: "/users", icon: UsersIcon, roles: ['admin'] },
-  { name: "Calendar", href: "/calendar", icon: CalendarIcon, roles: ['admin', 'owner', 'vendor'] },
-  { name: "Convention", href: "/convention", icon: BuildingOffice2Icon, roles: ['admin', 'owner', 'vendor'] },
-  { name: "Success Stories", href: "/brags", icon: NewspaperIcon, roles: ['admin', 'owner', 'vendor'] },
-  { name: "Forum", href: "/forum", icon: ChatBubbleLeftRightIcon, roles: ['admin', 'owner'] },
-  { name: "Chat", href: "/chat", icon: ChatBubbleLeftIcon, roles: ['admin', 'owner', 'vendor'] },
-  { name: "Library", href: "/library", icon: FolderIcon, roles: ['admin', 'owner'] },
-  { name: "Owners Roster", href: "/owners", icon: UserGroupIcon, roles: ['admin', 'owner'] },
-  { name: "Map Search", href: "/map", icon: MapIcon, roles: ['admin', 'owner', 'vendor'] },
-  { name: "Partners", href: "/partners", icon: UserGroupIcon, roles: ['admin', 'owner', 'vendor'] },
-  { name: "Videos", href: "/videos", icon: VideoCameraIcon, roles: ['admin', 'owner'] },
-  { name: "Equipment", href: "/equipment", icon: ShoppingBagIcon, roles: ['admin', 'owner', 'vendor'] },
-  { name: "My Listings", href: "/vendor-equipment", icon: ClipboardDocumentListIcon, roles: ['vendor'] },
-  { name: "My Inquiries", href: "/vendor-inquiries", icon: InboxIcon, roles: ['vendor'] },
-  { name: "Business Profile", href: "/vendor-profile", icon: BuildingStorefrontIcon, roles: ['vendor'] },
+const navigation: {
+  name: string;
+  href: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  roles: string[];
+  permission?: keyof Permissions;
+}[] = [
+  { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDashboard' },
+  { name: "Reports", href: "/reports", icon: ChartBarIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDashboard' },
+  { name: "User Management", href: "/users", icon: UsersIcon, roles: ['admin'], permission: 'canManageUsers' },
+  { name: "Calendar", href: "/calendar", icon: CalendarIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEvents' },
+  { name: "Convention", href: "/convention", icon: BuildingOffice2Icon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEvents' },
+  { name: "Success Stories", href: "/brags", icon: NewspaperIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessBrags' },
+  { name: "Forum", href: "/forum", icon: ChatBubbleLeftRightIcon, roles: ['admin', 'owner'], permission: 'canAccessForum' },
+  { name: "Chat", href: "/chat", icon: ChatBubbleLeftIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessChat' },
+  { name: "Library", href: "/library", icon: FolderIcon, roles: ['admin', 'owner'], permission: 'canAccessLibrary' },
+  { name: "Owners Roster", href: "/owners", icon: UserGroupIcon, roles: ['admin', 'owner'], permission: 'canAccessDirectory' },
+  { name: "Map Search", href: "/map", icon: MapIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDirectory' },
+  { name: "Partners", href: "/partners", icon: UserGroupIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessPartners' },
+  { name: "Videos", href: "/videos", icon: VideoCameraIcon, roles: ['admin', 'owner'], permission: 'canAccessVideos' },
+  { name: "Equipment", href: "/equipment", icon: ShoppingBagIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEquipment' },
+  { name: "My Listings", href: "/vendor-equipment", icon: ClipboardDocumentListIcon, roles: ['vendor'], permission: 'canListEquipment' },
+  { name: "My Inquiries", href: "/vendor-inquiries", icon: InboxIcon, roles: ['vendor'], permission: 'canAccessEquipment' },
+  { name: "Business Profile", href: "/vendor-profile", icon: BuildingStorefrontIcon, roles: ['vendor'], permission: 'canAccessDashboard' },
   { name: "FAQs", href: "/faqs", icon: QuestionMarkCircleIcon, roles: ['admin', 'owner', 'vendor'] },
 ];
 
 // Memoized Sidebar component - only re-renders when props change
+// Note: isPreviewMode and permissions are passed to trigger re-renders when they change
 const Sidebar = memo(({
   sidebarOpen,
   userRole,
   currentPath,
-  onClose
+  onClose,
+  hasPermission,
+  isPreviewMode: _isPreviewMode,
+  permissions: _permissions
 }: {
   sidebarOpen: boolean;
   userRole?: string;
   currentPath: string;
   onClose: () => void;
+  hasPermission: (permission: keyof Permissions) => boolean;
+  isPreviewMode: boolean;
+  permissions: Permissions | null;
 }) => {
-  const filteredNavigation = navigation.filter(item =>
-    !userRole || item.roles.includes(userRole)
-  );
+  const filteredNavigation = navigation.filter(item => {
+    // First check role-based access
+    if (userRole && !item.roles.includes(userRole)) {
+      return false;
+    }
+    // Then check permission-based access
+    if (item.permission && !hasPermission(item.permission)) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <aside
@@ -219,11 +245,16 @@ Breadcrumb.displayName = 'Breadcrumb';
 const Layout = () => {
   const { user, logout, loading } = useAuth();
   const { darkMode, toggleDarkMode } = useDarkMode();
+  const { previewRole, isPreviewMode, startPreview, exitPreview, getEffectiveRole } = usePreviewMode();
+  const { hasPermission, permissions } = usePermissions();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+
+  // Get the effective role for UI (actual role or preview role)
+  const effectiveRole = getEffectiveRole();
 
   // Notifications hook
   const {
@@ -306,18 +337,40 @@ const Layout = () => {
         />
       )}
 
+      {/* Preview Mode Banner */}
+      {isPreviewMode && (
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2">
+          <div className="flex items-center justify-center gap-3">
+            <EyeIcon className="h-5 w-5" />
+            <span className="font-medium">
+              Preview Mode: Viewing as {previewRole === 'owner' ? 'Owner' : 'Vendor'}
+            </span>
+            <button
+              onClick={exitPreview}
+              className="ml-4 inline-flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+            >
+              <XMarkIcon className="h-4 w-4" />
+              Exit Preview
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
-        userRole={user?.role}
+        userRole={effectiveRole}
         currentPath={location.pathname}
         onClose={handleSidebarClose}
+        hasPermission={hasPermission}
+        isPreviewMode={isPreviewMode}
+        permissions={permissions}
       />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen md:ml-64 min-w-0 overflow-hidden">
+      <div className={`flex-1 flex flex-col min-h-screen md:ml-64 min-w-0 overflow-hidden ${isPreviewMode ? 'pt-10' : ''}`}>
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md">
+        <header className={`sticky ${isPreviewMode ? 'top-10' : 'top-0'} z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md`}>
           <div className="px-6">
             <div className="flex items-center justify-between h-16">
               {/* Left side - Mobile menu + Breadcrumbs */}
@@ -555,6 +608,58 @@ const Layout = () => {
                     <Cog6ToothIcon className="mr-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
                     Settings
                   </Link>
+                  {/* Preview Mode - Admin Only */}
+                  {user?.role === 'admin' && (
+                    <>
+                      <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+                      <div className="px-4 py-2">
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                          Preview As
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              startPreview('owner');
+                              handleUserMenuClose();
+                            }}
+                            disabled={previewRole === 'owner'}
+                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                              previewRole === 'owner'
+                                ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 cursor-default'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300'
+                            }`}
+                          >
+                            Owner
+                          </button>
+                          <button
+                            onClick={() => {
+                              startPreview('vendor');
+                              handleUserMenuClose();
+                            }}
+                            disabled={previewRole === 'vendor'}
+                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                              previewRole === 'vendor'
+                                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 cursor-default'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300'
+                            }`}
+                          >
+                            Vendor
+                          </button>
+                        </div>
+                        {isPreviewMode && (
+                          <button
+                            onClick={() => {
+                              exitPreview();
+                              handleUserMenuClose();
+                            }}
+                            className="w-full mt-2 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                          >
+                            Exit Preview Mode
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
                   <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                   <button
                     onClick={logout}

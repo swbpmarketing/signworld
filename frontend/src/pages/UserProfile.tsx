@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
@@ -57,8 +58,11 @@ const countryCodes = [
 ];
 
 const UserProfile = () => {
-  const { user, isVendor, refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const { getEffectiveRole } = usePreviewMode();
   const queryClient = useQueryClient();
+  const effectiveRole = getEffectiveRole();
+  const isVendor = effectiveRole === 'vendor';
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -420,7 +424,7 @@ const UserProfile = () => {
                   {fullProfile?.name || user?.name || 'Your Profile'}
                 </h1>
                 <p className="mt-1 text-lg text-primary-100">
-                  {user?.role === 'vendor' ? 'Partner' : user?.role === 'admin' ? 'Administrator' : 'Owner'}
+                  {effectiveRole === 'vendor' ? 'Partner' : effectiveRole === 'admin' ? 'Administrator' : 'Owner'}
                   {fullProfile?.company ? ` at ${fullProfile.company}` : ''}
                   {' - Joined '}{fullProfile?.createdAt ? new Date(fullProfile.createdAt).getFullYear() : new Date().getFullYear()}
                 </p>

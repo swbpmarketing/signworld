@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import {
   getPermissions,
   hasPermission,
@@ -59,7 +60,11 @@ interface UsePermissionsReturn {
 
 export const usePermissions = (): UsePermissionsReturn => {
   const { user } = useAuth();
-  const role = user?.role as UserRole | undefined;
+  const { getEffectiveRole, isPreviewMode } = usePreviewMode();
+
+  // Use effective role (respects preview mode for admins)
+  const effectiveRole = getEffectiveRole() as UserRole | undefined;
+  const role = effectiveRole;
   const userId = user?.id;
 
   return useMemo(() => {
@@ -122,7 +127,7 @@ export const usePermissions = (): UsePermissionsReturn => {
       canEditItem,
       canDeleteItem,
     };
-  }, [role, userId]);
+  }, [role, userId, isPreviewMode]);
 };
 
 export default usePermissions;
