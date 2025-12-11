@@ -190,6 +190,11 @@ function App() {
                       <Equipment />
                     </ProtectedRoute>
                   } />
+                  <Route path="equipment/:id" element={
+                    <ProtectedRoute requiredPermission="canAccessEquipment">
+                      <Equipment />
+                    </ProtectedRoute>
+                  } />
                   <Route path="faqs" element={<FAQs />} />
                   <Route path="profile" element={<UserProfile />} />
                   <Route path="settings" element={<Settings />} />

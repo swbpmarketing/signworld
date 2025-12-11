@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePreviewMode } from '../context/PreviewModeContext';
 import api from '../config/axios';
@@ -97,6 +97,7 @@ const Equipment = () => {
   const { user } = useAuth();
   const { getEffectiveRole } = usePreviewMode();
   const navigate = useNavigate();
+  const { id: equipmentIdFromPath } = useParams<{ id?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const effectiveRole = getEffectiveRole();
@@ -165,9 +166,9 @@ const Equipment = () => {
     setIsInitialized(true);
   }, [userId]);
 
-  // Handle view query parameter to auto-open equipment detail modal
+  // Handle view query parameter OR path parameter to auto-open equipment detail modal
   useEffect(() => {
-    const viewId = searchParams.get('view');
+    const viewId = searchParams.get('view') || equipmentIdFromPath;
     const fromParam = searchParams.get('from');
     if (viewId) {
       // Track where user came from before clearing params
@@ -185,12 +186,14 @@ const Equipment = () => {
           console.error('Error fetching equipment:', error);
           toast.error('Equipment not found');
         }
-        // Clear the view param from URL
-        setSearchParams({}, { replace: true });
+        // Clear the view param from URL if using query param
+        if (searchParams.get('view')) {
+          setSearchParams({}, { replace: true });
+        }
       };
       fetchEquipment();
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, equipmentIdFromPath]);
 
   // Persist cart to localStorage with user-specific key (only after initial load)
   useEffect(() => {
