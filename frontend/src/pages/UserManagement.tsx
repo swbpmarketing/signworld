@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   UsersIcon,
@@ -32,14 +33,23 @@ interface User {
 
 const UserManagement = () => {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [limit] = useState(15);
-  const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [roleFilter, setRoleFilter] = useState<string>(searchParams.get('role') || 'all');
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Update URL when filters change
+  useEffect(() => {
+    const newParams = new URLSearchParams();
+    if (roleFilter !== 'all') newParams.set('role', roleFilter);
+    if (statusFilter !== 'all') newParams.set('status', statusFilter);
+    setSearchParams(newParams);
+  }, [roleFilter, statusFilter, setSearchParams]);
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();

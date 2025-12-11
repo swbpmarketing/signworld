@@ -190,7 +190,9 @@ const Dashboard = () => {
       {/* Admin System Stats */}
       {isAdmin && adminStats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div
+            onClick={() => navigate('/users')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
                 <UsersIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
@@ -202,7 +204,9 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div
+            onClick={() => navigate('/users?role=admin')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                 <ShieldCheckIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
@@ -214,7 +218,9 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div
+            onClick={() => navigate('/owners')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                 <UserGroupIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -226,7 +232,9 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div
+            onClick={() => navigate('/users?role=vendor')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
                 <BuildingStorefrontIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -238,7 +246,9 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div
+            onClick={() => navigate('/users?status=active')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
                 <CheckCircleIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -250,7 +260,9 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div
+            onClick={() => navigate('/users?status=inactive')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
                 <ExclamationTriangleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
@@ -262,7 +274,9 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div
+            onClick={() => navigate('/new-users')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
                 <ClockIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />

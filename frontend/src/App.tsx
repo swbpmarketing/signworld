@@ -37,6 +37,7 @@ const UserProfile = lazy(() => import('./pages/UserProfile'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Billing = lazy(() => import('./pages/Billing'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
+const NewUsers = lazy(() => import('./pages/NewUsers'));
 const Chat = lazy(() => import('./pages/Chat'));
 const VendorProfile = lazy(() => import('./pages/VendorProfile'));
 const VendorMap = lazy(() => import('./pages/VendorMap'));
@@ -105,6 +106,11 @@ function App() {
                       <UserManagement />
                     </ProtectedRoute>
                   } />
+                  <Route path="new-users" element={
+                    <ProtectedRoute adminOnly requiredPermission="canManageUsers">
+                      <NewUsers />
+                    </ProtectedRoute>
+                  } />
                   <Route path="calendar" element={
                     <ProtectedRoute requiredPermission="canAccessEvents">
                       <Calendar />
@@ -141,6 +147,11 @@ function App() {
                     </ProtectedRoute>
                   } />
                   <Route path="library/pending" element={
+                    <ProtectedRoute adminOnly requiredPermission="canApprovePending">
+                      <PendingApproval />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="pending-approval" element={
                     <ProtectedRoute adminOnly requiredPermission="canApprovePending">
                       <PendingApproval />
                     </ProtectedRoute>
