@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { auth } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 const satisfactionService = require('../services/satisfactionService');
 
 /**
@@ -8,7 +8,7 @@ const satisfactionService = require('../services/satisfactionService');
  * Create a new satisfaction rating
  * Requires authentication
  */
-router.post('/', auth, async (req, res) => {
+router.post('/', protect, async (req, res) => {
   try {
     const { ratedUserId, rating, comment, categories, entityType, entityId, isAnonymous } = req.body;
 
@@ -116,7 +116,7 @@ router.get('/score/:userId', async (req, res) => {
  * Get recent ratings for a user
  * Query params: given (true/false), limit
  */
-router.get('/recent/:userId', auth, async (req, res) => {
+router.get('/recent/:userId', protect, async (req, res) => {
   try {
     const { given = false, limit = 10 } = req.query;
     const { userId } = req.params;

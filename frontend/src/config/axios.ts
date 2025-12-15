@@ -9,12 +9,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
   injectedApiUrl ||
   '/api';
 
-// Log the API URL for debugging
-  VITE_API_URL: import.meta.env.VITE_API_URL,
-  injectedApiUrl,
-  finalApiUrl: API_BASE_URL,
-  isDev: import.meta.env.DEV
-});
+// API base URL is configured above
 
 // Create axios instance with base configuration
 const api = axios.create({
