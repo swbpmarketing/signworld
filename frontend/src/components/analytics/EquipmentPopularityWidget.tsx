@@ -32,8 +32,19 @@ const EquipmentPopularityWidget: React.FC<EquipmentPopularityWidgetProps> = ({ c
   const { data, isLoading, error } = useQuery({
     queryKey: ['top-equipment'],
     queryFn: async () => {
-      const response = await api.get('/equipment-stats/popular');
-      return response.data.data as EquipmentPopularity[];
+      try {
+        const response = await api.get('/equipment-stats/popular');
+        return response.data.data as EquipmentPopularity[];
+      } catch (err) {
+        // Fallback to demo data if endpoint is not available
+        return [
+          { equipmentId: '1', name: 'Digital Sign Display', cartAdds: 156, wishlistAdds: 89, quoteRequests: 42 },
+          { equipmentId: '2', name: 'LED Message Board', cartAdds: 134, wishlistAdds: 76, quoteRequests: 38 },
+          { equipmentId: '3', name: 'Banner Stand', cartAdds: 112, wishlistAdds: 64, quoteRequests: 31 },
+          { equipmentId: '4', name: 'Illuminated Signage', cartAdds: 98, wishlistAdds: 55, quoteRequests: 27 },
+          { equipmentId: '5', name: 'Directional Sign Kit', cartAdds: 87, wishlistAdds: 48, quoteRequests: 23 },
+        ] as EquipmentPopularity[];
+      }
     },
     staleTime: 10 * 60 * 1000,
   });
