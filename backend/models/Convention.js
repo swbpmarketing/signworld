@@ -27,13 +27,18 @@ const conventionSchema = new mongoose.Schema({
     country: String,
   },
   schedule: [{
-    day: Date,
+    day: String,
     events: [{
       time: String,
       title: String,
       description: String,
       speaker: String,
-      room: String,
+      location: String,
+      type: {
+        type: String,
+        enum: ['keynote', 'workshop', 'networking', 'meal', 'exhibition'],
+        default: 'keynote'
+      }
     }],
   }],
   registrationLink: String,
