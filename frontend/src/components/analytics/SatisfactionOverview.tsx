@@ -1,26 +1,25 @@
 import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { StarIcon as StarOutline } from '@heroicons/react/24/outline';
+import { getOverallSatisfaction } from '../../services/analyticsService';
 
 interface SatisfactionOverviewProps {
-  averageRating?: number;
-  totalRatings?: number;
-  distribution?: {
-    1: number;
-    2: number;
-    3: number;
-    4: number;
-    5: number;
-  };
   className?: string;
 }
 
 const SatisfactionOverview: React.FC<SatisfactionOverviewProps> = ({
-  averageRating = 4.2,
-  totalRatings = 156,
-  distribution = { 1: 4, 2: 8, 3: 24, 4: 78, 5: 42 },
   className = '',
 }) => {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['overall-satisfaction'],
+    queryFn: getOverallSatisfaction,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const averageRating = data?.averageRating ?? 0;
+  const totalRatings = data?.totalRatings ?? 0;
+  const distribution = data?.ratingDistribution ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   const trustScore = useMemo(() => {
     return Math.round(averageRating * 20);
   }, [averageRating]);
@@ -44,6 +43,49 @@ const SatisfactionOverview: React.FC<SatisfactionOverviewProps> = ({
   const maxRatings = useMemo(() => {
     return Math.max(...Object.values(distribution));
   }, [distribution]);
+
+  if (isLoading) {
+    return (
+      <div
+        className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 ${className}`}
+      >
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-3 bg-gray-200 dark:bg-gray-700 rounded" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div
+        className={`bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl p-6 ${className}`}
+      >
+        <p className="text-red-700 dark:text-red-400 text-sm">
+          Failed to load customer satisfaction data
+        </p>
+      </div>
+    );
+  }
+
+  if (totalRatings === 0) {
+    return (
+      <div
+        className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center ${className}`}
+      >
+        <StarOutline className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No customer ratings yet
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
