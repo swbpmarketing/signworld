@@ -32,7 +32,7 @@ const EquipmentPopularityWidget: React.FC<EquipmentPopularityWidgetProps> = ({ c
   const { data, isLoading, error } = useQuery({
     queryKey: ['top-equipment'],
     queryFn: async () => {
-      const response = await api.get('/api/equipment-stats/popular');
+      const response = await api.get('/equipment-stats/popular');
       return response.data.data as EquipmentPopularity[];
     },
     staleTime: 10 * 60 * 1000,
