@@ -421,12 +421,12 @@ const Convention = () => {
   };
 
   const handleConfirmDeleteScheduleDay = async () => {
-    if (!selectedConvention || !scheduleIdToDelete) return;
+    if (!displayConvention || !scheduleIdToDelete) return;
 
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/conventions/${selectedConvention}/schedule/${scheduleIdToDelete}`, {
+      const response = await fetch(`${API_URL}/conventions/${displayConvention._id}/schedule/${scheduleIdToDelete}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
