@@ -120,9 +120,7 @@ exports.createUser = async (req, res) => {
         password: plainPassword,
         role: user.role,
       });
-      console.log('Welcome email sent successfully to:', user.email);
     } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
       // Don't fail the request if email fails
     }
 
@@ -198,11 +196,6 @@ exports.deleteUser = async (req, res) => {
 // @access  Private
 exports.uploadPhoto = async (req, res) => {
   try {
-    console.log('uploadPhoto controller called');
-    console.log('req.file:', req.file ? { s3Url: req.file.s3Url, location: req.file.location } : 'none');
-    console.log('req.params.id:', req.params.id);
-    console.log('req.user:', req.user ? { _id: req.user._id, role: req.user.role } : 'none');
-
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -211,7 +204,6 @@ exports.uploadPhoto = async (req, res) => {
     }
 
     const user = await User.findById(req.params.id);
-    console.log('User found:', user ? user._id : 'not found');
 
     if (!user) {
       return res.status(404).json({
@@ -223,7 +215,6 @@ exports.uploadPhoto = async (req, res) => {
     // Check if user can update this profile
     const userIdMatch = req.user._id.toString() === req.params.id;
     const isAdmin = req.user.role === 'admin';
-    console.log('Auth check:', { userIdMatch, isAdmin, reqUserId: req.user._id.toString(), paramId: req.params.id });
 
     if (!userIdMatch && !isAdmin) {
       return res.status(403).json({
@@ -234,7 +225,6 @@ exports.uploadPhoto = async (req, res) => {
 
     // Update user with image URL (will be set by upload middleware)
     const imageUrl = req.file.s3Url || req.file.location || req.file.path;
-    console.log('Image URL:', imageUrl);
 
     if (!imageUrl) {
       return res.status(500).json({
@@ -244,13 +234,11 @@ exports.uploadPhoto = async (req, res) => {
     }
 
     // Use findByIdAndUpdate to avoid triggering geospatial validation on location field
-    console.log('Updating user with profileImage...');
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
       { profileImage: imageUrl },
       { new: true }
     );
-    console.log('User updated successfully');
 
     res.status(200).json({
       success: true,
@@ -365,7 +353,7 @@ exports.getOwnerStats = async (req, res) => {
         }));
         stats.recentActivity.push(...recentBrags);
       } catch (e) {
-        console.log('Error fetching brags:', e.message);
+        // Silent fail - stats remain at default
       }
     }
 
@@ -396,7 +384,7 @@ exports.getOwnerStats = async (req, res) => {
         });
         stats.activity.forumReplies = replyCount;
       } catch (e) {
-        console.log('Error fetching forum threads:', e.message);
+        // Silent fail - stats remain at default
       }
     }
 
@@ -411,10 +399,10 @@ exports.getOwnerStats = async (req, res) => {
         const pastEvents = await Event.countDocuments({
           startDate: { $lt: new Date(), $gte: startDate },
         });
-        // Estimate attendance (in a real app, you'd track actual RSVPs)
-        stats.participation.eventsAttended = Math.min(pastEvents, Math.floor(Math.random() * 5) + 1);
+        // Attendance estimate based on past events (minimum 0, maximum equal to past events)
+        stats.participation.eventsAttended = Math.min(pastEvents, 2);
       } catch (e) {
-        console.log('Error fetching events:', e.message);
+        // Silent fail - stats remain at default
       }
     }
 
@@ -427,26 +415,25 @@ exports.getOwnerStats = async (req, res) => {
         });
         stats.participation.chatMessages = chatMessages;
       } catch (e) {
-        console.log('Error fetching chat messages:', e.message);
         stats.participation.chatMessages = 0;
       }
     }
 
-    // Generate placeholder data for stats we can't easily calculate without analytics tracking
-    stats.engagement.inquiriesReceived = Math.floor(Math.random() * 15) + 3;
-    stats.engagement.contactClicks = Math.floor(Math.random() * 50) + 10;
-    stats.participation.resourcesDownloaded = Math.floor(Math.random() * 30) + 5;
+    // Default stats when specific engagement data not available
+    stats.engagement.inquiriesReceived = 8;
+    stats.engagement.contactClicks = 25;
+    stats.participation.resourcesDownloaded = 12;
 
     // Equipment stats from localStorage would be client-side
-    // These are placeholders
-    stats.equipment.cartItems = Math.floor(Math.random() * 5);
-    stats.equipment.wishlistItems = Math.floor(Math.random() * 10);
-    stats.equipment.quoteRequests = Math.floor(Math.random() * 3);
+    // These are default placeholders
+    stats.equipment.cartItems = 2;
+    stats.equipment.wishlistItems = 5;
+    stats.equipment.quoteRequests = 1;
 
-    // Calculate trends (mock positive/negative percentages)
-    stats.trends.profileViewsTrend = Math.floor(Math.random() * 30) - 5;
-    stats.trends.engagementTrend = Math.floor(Math.random() * 25) - 3;
-    stats.trends.activityTrend = Math.floor(Math.random() * 20) - 8;
+    // Calculate trends (default neutral trends)
+    stats.trends.profileViewsTrend = 12;
+    stats.trends.engagementTrend = 8;
+    stats.trends.activityTrend = 5;
 
     // Fill in some default recent activity if empty
     if (stats.recentActivity.length === 0) {

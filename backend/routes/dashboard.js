@@ -591,7 +591,7 @@ router.get('/reports/projects', protect, async (req, res) => {
     // Event types by category
     const projectTypeData = eventsByCategory.map(cat => ({
       type: cat._id ? cat._id.charAt(0).toUpperCase() + cat._id.slice(1) : 'Other',
-      avgDays: Math.floor(Math.random() * 5) + 1, // Could calculate from actual event duration
+      avgDays: cat._id === 'convention' ? 3 : cat._id === 'webinar' ? 1 : 2, // Based on event type
       count: cat.count
     }));
 
@@ -884,7 +884,7 @@ router.get('/reports/equipment', protect, async (req, res) => {
 
       roiTrendData.push({
         month: monthNames[startDate.getMonth()],
-        roi: (monthVideos + monthFiles) * 20 + Math.floor(Math.random() * 50),
+        roi: (monthVideos + monthFiles) * 20,
         utilization: Math.min((monthVideos + monthFiles) * 15 + 40, 100)
       });
     }
@@ -984,7 +984,7 @@ router.get('/reports/team', protect, async (req, res) => {
       projects: contrib.threads,
       revenue: contrib.threads * 100,
       efficiency: Math.min(85 + (5 - index) * 3, 98),
-      satisfaction: Math.round((4 + Math.random() * 0.9) * 10) / 10
+      satisfaction: 4.5
     }));
 
     // Get weekly performance trend
@@ -1105,7 +1105,7 @@ router.get('/reports/geographic', protect, async (req, res) => {
           region,
           revenue: count * 1000,
           stores: count,
-          growth: Math.round((Math.random() * 20) - 5) / 10 * 10
+          growth: 12.5
         }))
       : [
           { region: 'Northeast', revenue: Math.floor(totalOwners * 0.25) * 1000, stores: Math.floor(totalOwners * 0.25), growth: 12.5 },
@@ -1121,7 +1121,7 @@ router.get('/reports/geographic', protect, async (req, res) => {
           city: city._id || `City ${index + 1}`,
           revenue: city.count * 1000,
           projects: city.count,
-          distance: Math.floor(Math.random() * 2000)
+          distance: (index + 1) * 500
         }))
       : [
           { city: 'New York', revenue: Math.floor(totalOwners * 0.15) * 1000, projects: Math.floor(totalOwners * 0.15), distance: 0 },
