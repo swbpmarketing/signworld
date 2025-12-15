@@ -236,6 +236,88 @@ const clearCart = async (userId) => {
   }
 };
 
+/**
+ * Get popular equipment aggregated from all users
+ */
+const getPopularEquipment = async (limit = 10) => {
+  try {
+    // Aggregate cart adds by equipment
+    const allStats = await EquipmentStats.find({}).lean();
+
+    const equipmentPopularity = {};
+
+    // Count cart adds
+    allStats.forEach((stat) => {
+      stat.cartItems?.forEach((item) => {
+        const equipmentId = item.equipmentId?.toString();
+        if (!equipmentPopularity[equipmentId]) {
+          equipmentPopularity[equipmentId] = {
+            equipmentId,
+            cartAdds: 0,
+            wishlistAdds: 0,
+            quoteRequests: 0,
+          };
+        }
+        equipmentPopularity[equipmentId].cartAdds++;
+      });
+
+      // Count wishlist adds
+      stat.wishlistItems?.forEach((item) => {
+        const equipmentId = item.equipmentId?.toString();
+        if (!equipmentPopularity[equipmentId]) {
+          equipmentPopularity[equipmentId] = {
+            equipmentId,
+            cartAdds: 0,
+            wishlistAdds: 0,
+            quoteRequests: 0,
+          };
+        }
+        equipmentPopularity[equipmentId].wishlistAdds++;
+      });
+
+      // Count quote requests
+      stat.quoteRequests?.forEach((req) => {
+        const equipmentId = req.equipmentId?.toString();
+        if (!equipmentPopularity[equipmentId]) {
+          equipmentPopularity[equipmentId] = {
+            equipmentId,
+            cartAdds: 0,
+            wishlistAdds: 0,
+            quoteRequests: 0,
+          };
+        }
+        equipmentPopularity[equipmentId].quoteRequests++;
+      });
+    });
+
+    // Get equipment details and sort by total interactions
+    const topEquipment = await Promise.all(
+      Object.values(equipmentPopularity)
+        .sort((a, b) => {
+          const totalA = a.cartAdds + a.wishlistAdds + a.quoteRequests;
+          const totalB = b.cartAdds + b.wishlistAdds + b.quoteRequests;
+          return totalB - totalA;
+        })
+        .slice(0, limit)
+        .map(async (item) => {
+          const equipment = await Equipment.findById(item.equipmentId).lean();
+          return {
+            equipmentId: item.equipmentId,
+            name: equipment?.name || 'Unknown Equipment',
+            cartAdds: item.cartAdds,
+            wishlistAdds: item.wishlistAdds,
+            quoteRequests: item.quoteRequests,
+          };
+        })
+    );
+
+    return topEquipment;
+  } catch (error) {
+    console.error('Error getting popular equipment:', error);
+    return [];
+  }
+};
+
 module.exports = {
   getOrCreateStats,
   syncCart,
@@ -246,4 +328,5 @@ module.exports = {
   addQuoteRequest,
   getUserStats,
   clearCart,
+  getPopularEquipment,
 };

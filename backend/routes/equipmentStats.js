@@ -4,6 +4,34 @@ const { protect } = require('../middleware/auth');
 const equipmentStatsService = require('../services/equipmentStatsService');
 
 /**
+ * GET /api/equipment-stats/popular
+ * Get popular equipment by cart/wishlist/quote interactions
+ * @access Private
+ */
+router.get('/popular', protect, async (req, res) => {
+  try {
+    const stats = await equipmentStatsService.getPopularEquipment();
+
+    if (!stats) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve popular equipment',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
  * GET /api/equipment-stats
  * Get user equipment stats
  * @access Private
