@@ -4,10 +4,7 @@ import './index.css'
 import App from './App'
 // import App from './test-app.tsx'
 
-console.log('Sign Company Dashboard - Production Build v3');
-console.log('Build time:', new Date().toISOString());
 const rootElement = document.getElementById('root');
-console.log('Root element:', rootElement);
 
 if (!rootElement) {
   console.error('Root element not found!');
@@ -19,7 +16,6 @@ if (!rootElement) {
         <App />
       </StrictMode>,
     )
-    console.log('React app mounted');
   } catch (error) {
     console.error('Error mounting app:', error);
     rootElement.innerHTML = `

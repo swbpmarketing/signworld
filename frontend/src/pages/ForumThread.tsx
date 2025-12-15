@@ -261,7 +261,6 @@ const ForumThread = () => {
 
     // Handle new reply event
     const handleNewReply = (data: { threadId: string; reply: any; replyCount: number }) => {
-      console.log('New reply received:', data);
       if (data.threadId === id) {
         setThread(prev => {
           if (!prev) return prev;
@@ -279,7 +278,6 @@ const ForumThread = () => {
 
     // Handle thread like event
     const handleThreadLike = (data: { threadId: string; likesCount: number; userId: string; isLiked: boolean }) => {
-      console.log('Thread like received:', data);
       if (data.threadId === id) {
         setThread(prev => {
           if (!prev) return prev;
@@ -294,7 +292,6 @@ const ForumThread = () => {
 
     // Handle reply like event
     const handleReplyLike = (data: { threadId: string; replyId: string; likesCount: number; userId: string; isLiked: boolean }) => {
-      console.log('Reply like received:', data);
       if (data.threadId === id) {
         setThread(prev => {
           if (!prev) return prev;

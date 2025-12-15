@@ -26,7 +26,6 @@ class SocketService {
     }
 
     const socketUrl = getSocketUrl();
-    console.log('Connecting to socket server:', socketUrl);
 
     this.socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
@@ -37,12 +36,10 @@ class SocketService {
     });
 
     this.socket.on('connect', () => {
-      console.log('Socket connected:', this.socket?.id);
       this.connected = true;
 
       // Join any pending rooms
       this.pendingRooms.forEach(room => {
-        console.log(`Joining pending room: ${room}`);
         // Handle parameterized rooms like "user:123"
         const [roomType, roomId] = room.includes(':') ? room.split(':') : [room, null];
         if (roomId) {
@@ -55,7 +52,6 @@ class SocketService {
     });
 
     this.socket.on('disconnect', () => {
-      console.log('Socket disconnected');
       this.connected = false;
     });
 
@@ -93,15 +89,12 @@ class SocketService {
       if (roomId) {
         // For parameterized rooms, send the ID as a parameter
         this.socket.emit(`join:${roomType}`, roomId);
-        console.log(`Joined room: ${roomType} with id ${roomId}`);
       } else {
         // For simple rooms, just emit the join event
         this.socket.emit(`join:${room}`);
-        console.log(`Joined room: ${room}`);
       }
     } else {
       // Queue the room join for when connection is established
-      console.log(`Queueing room join: ${room}`);
       if (!this.pendingRooms.includes(room)) {
         this.pendingRooms.push(room);
       }
@@ -116,10 +109,8 @@ class SocketService {
     if (this.socket) {
       if (roomId) {
         this.socket.emit(`leave:${roomType}`, roomId);
-        console.log(`Left room: ${roomType} with id ${roomId}`);
       } else {
         this.socket.emit(`leave:${room}`);
-        console.log(`Left room: ${room}`);
       }
     }
     // Remove from pending if it was there

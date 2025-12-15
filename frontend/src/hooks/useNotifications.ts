@@ -86,7 +86,6 @@ export const useNotifications = (): UseNotificationsReturn => {
 
     // Listen for real-time notifications
     const handleNewNotification = (notification: Notification) => {
-      console.log('New notification received:', notification);
 
       // Add to notifications list
       setNotifications(prev => [notification, ...prev]);
@@ -110,10 +109,8 @@ export const useNotifications = (): UseNotificationsReturn => {
 
   // Mark single notification as read
   const markAsRead = useCallback(async (notificationId: string) => {
-    console.log('markAsRead called with:', notificationId);
     try {
       await markNotificationAsRead(notificationId);
-      console.log('markNotificationAsRead API call succeeded');
       setNotifications(prev =>
         prev.map(n =>
           n._id === notificationId ? { ...n, isRead: true, readAt: new Date().toISOString() } : n
@@ -129,10 +126,8 @@ export const useNotifications = (): UseNotificationsReturn => {
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
-    console.log('markAllAsRead called');
     try {
       await markAllNotificationsAsRead();
-      console.log('markAllNotificationsAsRead API call succeeded');
       setNotifications(prev =>
         prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
       );
@@ -146,10 +141,8 @@ export const useNotifications = (): UseNotificationsReturn => {
 
   // Dismiss/delete single notification
   const dismissNotification = useCallback(async (notificationId: string) => {
-    console.log('dismissNotification called with:', notificationId);
     try {
       await deleteNotification(notificationId);
-      console.log('deleteNotification API call succeeded');
       const notification = notifications.find(n => n._id === notificationId);
       setNotifications(prev => prev.filter(n => n._id !== notificationId));
       if (notification && !notification.isRead) {
@@ -163,10 +156,8 @@ export const useNotifications = (): UseNotificationsReturn => {
 
   // Clear all notifications
   const clearAll = useCallback(async () => {
-    console.log('clearAll called');
     try {
       await deleteAllNotifications();
-      console.log('deleteAllNotifications API call succeeded');
       setNotifications([]);
       setUnreadCount(0);
       toast.success('All notifications cleared');

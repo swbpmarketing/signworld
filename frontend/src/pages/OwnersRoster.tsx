@@ -338,7 +338,6 @@ const OwnersRoster = () => {
           specialty: selectedSpecialties.length > 0 ? selectedSpecialties[0] : undefined,
           state: selectedTerritory !== 'All Territories' ? selectedTerritory : undefined,
         });
-        console.log('Owners API response:', result);
         return result;
       } catch (err) {
         console.error('Error in queryFn:', err);

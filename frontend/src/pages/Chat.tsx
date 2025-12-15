@@ -95,7 +95,6 @@ const Chat = () => {
 
     // Handle new message event
     const handleNewMessage = (data: { conversationId: string; message: Message }) => {
-      console.log('New message received:', data);
 
       // If we're viewing this conversation, add the message
       if (selectedContact?.conversationId === data.conversationId) {
@@ -128,7 +127,6 @@ const Chat = () => {
 
     // Handle conversation update event (for sidebar updates)
     const handleConversationUpdate = (data: { conversationId: string; lastMessage: string; lastMessageAt: string; senderId: string }) => {
-      console.log('Conversation update received:', data);
       // Only update if this message is from someone else
       if (data.senderId !== currentUserId) {
         setContacts(prevContacts =>

@@ -293,7 +293,6 @@ const Settings = () => {
     try {
       const result = await emailService.testEmail();
       toast.success('Test email sent successfully! Check your inbox.');
-      console.log('Email result:', result);
     } catch (error: any) {
       toast.error(error.message || 'Failed to send test email');
       console.error('Email error:', error);

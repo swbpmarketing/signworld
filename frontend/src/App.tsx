@@ -70,9 +70,6 @@ const queryClient = new QueryClient({
 function App() {
   // Only log in development mode
   if (import.meta.env.DEV) {
-    console.log('App component rendering');
-    console.log('Environment:', import.meta.env.MODE);
-    console.log('API URL:', import.meta.env.VITE_API_URL);
   }
   
   return (

@@ -449,7 +449,6 @@ const Forum = () => {
 
     // Handle new thread event
     const handleNewThread = (data: { thread: ForumThread }) => {
-      console.log('New thread received:', data);
       setThreads(prevThreads => {
         // Check if thread already exists
         if (prevThreads.some(t => t._id === data.thread._id)) {
@@ -468,7 +467,6 @@ const Forum = () => {
 
     // Handle thread update event (reply count, last reply, etc.)
     const handleThreadUpdate = (data: { threadId: string; replyCount?: number; lastReplyAt?: string; newReplyAdded?: boolean }) => {
-      console.log('Thread update received:', data);
       setThreads(prevThreads =>
         prevThreads.map(thread =>
           thread._id === data.threadId
@@ -491,10 +489,8 @@ const Forum = () => {
 
     // Handle thread like event
     const handleThreadLike = (data: { threadId: string; likesCount: number; userId: string; isLiked: boolean }) => {
-      console.log('Thread like received:', data);
       // Skip if this is the current user's own action (API response already handled it)
       if (userIdRef.current && data.userId === userIdRef.current) {
-        console.log('Skipping socket update for own action');
         return;
       }
       setThreads(prevThreads =>

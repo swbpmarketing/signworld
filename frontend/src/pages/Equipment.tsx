@@ -217,7 +217,6 @@ const Equipment = () => {
 
     // Handler for equipment created
     const handleEquipmentCreated = (data: { equipment: EquipmentType }) => {
-      console.log('Equipment created:', data.equipment?.name);
       // Invalidate queries to refetch equipment list
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
       queryClient.invalidateQueries({ queryKey: ['equipmentStats'] });
@@ -225,7 +224,6 @@ const Equipment = () => {
 
     // Handler for equipment updated
     const handleEquipmentUpdated = (data: { equipment: EquipmentType }) => {
-      console.log('Equipment updated:', data.equipment?.name);
       // Invalidate queries to refetch equipment list
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
       queryClient.invalidateQueries({ queryKey: ['equipmentStats'] });
@@ -233,7 +231,6 @@ const Equipment = () => {
 
     // Handler for equipment deleted
     const handleEquipmentDeleted = (data: { equipmentId: string }) => {
-      console.log('Equipment deleted:', data.equipmentId);
       // Invalidate queries to refetch equipment list
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
       queryClient.invalidateQueries({ queryKey: ['equipmentStats'] });

@@ -61,15 +61,12 @@ const OwnerProfileEnhanced = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 Fetching owner profile for ID:', id);
       
       const [ownerData, reviewsData] = await Promise.all([
         getOwnerProfile(id),
         getOwnerReviews(id),
       ]);
       
-      console.log('✅ Owner data received:', ownerData);
-      console.log('✅ Reviews data received:', reviewsData);
       
       setOwner(ownerData);
       setReviews(reviewsData);

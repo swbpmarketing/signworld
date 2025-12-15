@@ -39,23 +39,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log('AuthContext: Checking for existing token');
     const token = localStorage.getItem('token');
     if (token) {
-      console.log('AuthContext: Token found, attempting to fetch user');
       // Verify token and get user info
       fetchUser();
     } else {
-      console.log('AuthContext: No token found, setting loading to false');
       setLoading(false);
     }
   }, []);
 
   const fetchUser = async () => {
     try {
-      console.log('AuthContext: Fetching user data');
       const response = await api.get('/auth/me');
-      console.log('AuthContext: User data received', response.data);
       setUser(response.data.data);
     } catch (error: any) {
       console.error('AuthContext: Error fetching user', error.response?.status, error.message);

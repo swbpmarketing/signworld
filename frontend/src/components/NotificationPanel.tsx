@@ -119,7 +119,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                console.log('Mark all as read button clicked');
                 onMarkAllAsRead();
               }}
               className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
@@ -131,7 +130,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              console.log('Clear all button clicked');
               onClearAll();
             }}
             className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium transition-colors ml-auto"
@@ -172,7 +170,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 <div
                   key={notification._id}
                   onClick={() => {
-                    console.log('Notification clicked:', notification._id);
                     onDismiss(notification._id);
                     onClose();
                     navigate(route);
@@ -240,7 +237,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              console.log('Mark as read clicked for:', notification._id);
                               onMarkAsRead(notification._id);
                             }}
                             className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-medium transition-colors flex items-center gap-1"
@@ -253,7 +249,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            console.log('Dismiss clicked for:', notification._id);
                             onDismiss(notification._id);
                           }}
                           className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-medium transition-colors flex items-center gap-1"

@@ -352,6 +352,8 @@ app.use('/api/email', require('./routes/email'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/equipment-stats', require('./routes/equipmentStats'));
 
 // Add API route debugging
 app.use('/api/*', (req, res, next) => {

@@ -10,7 +10,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
   '/api';
 
 // Log the API URL for debugging
-console.log('🔗 API Configuration:', {
   VITE_API_URL: import.meta.env.VITE_API_URL,
   injectedApiUrl,
   finalApiUrl: API_BASE_URL,

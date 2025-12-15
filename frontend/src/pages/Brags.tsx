@@ -394,7 +394,6 @@ const Brags = () => {
 
     // Handle real-time like updates
     const handleLikeUpdate = (data: { storyId: string; likesCount: number; userId: string; isLiked: boolean }) => {
-      console.log('Real-time like update:', data);
 
       // Update stories list
       setStories(prevStories =>
@@ -425,7 +424,6 @@ const Brags = () => {
 
     // Handle real-time comment updates
     const handleCommentUpdate = (data: { storyId: string; comment: any; commentsCount: number }) => {
-      console.log('Real-time comment update:', data);
 
       // Update stories list
       setStories(prevStories =>
@@ -468,7 +466,6 @@ const Brags = () => {
 
     // Handle new story (when approved)
     const handleNewStory = (data: { story: Brag }) => {
-      console.log('Real-time new story:', data);
 
       // Add new story to the top of the list (if not already there)
       setStories(prevStories => {

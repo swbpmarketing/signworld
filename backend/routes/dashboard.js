@@ -7,6 +7,7 @@ const LibraryFile = require('../models/LibraryFile');
 const ForumThread = require('../models/ForumThread');
 const Rating = require('../models/Rating');
 const { protect } = require('../middleware/auth');
+const eventDurationService = require('../services/eventDurationService');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/dashboard/stats
@@ -588,20 +589,23 @@ router.get('/reports/projects', protect, async (req, res) => {
       });
     }
 
-    // Event types by category
+    // Get real event durations by category
+    const realDurations = await eventDurationService.getAverageDurationByCategory();
+
+    // Event types by category - using real duration data
     const projectTypeData = eventsByCategory.map(cat => ({
       type: cat._id ? cat._id.charAt(0).toUpperCase() + cat._id.slice(1) : 'Other',
-      avgDays: cat._id === 'convention' ? 3 : cat._id === 'webinar' ? 1 : 2, // Based on event type
+      avgDays: realDurations[cat._id] || 0, // Real average duration in hours, converted to concept of "days"
       count: cat.count
     }));
 
     // Ensure we have data
     if (projectTypeData.length === 0) {
       projectTypeData.push(
-        { type: 'Training', avgDays: 1, count: 0 },
-        { type: 'Webinar', avgDays: 2, count: 0 },
-        { type: 'Convention', avgDays: 3, count: 0 },
-        { type: 'Meeting', avgDays: 1, count: 0 }
+        { type: 'Training', avgDays: realDurations['training'] || 0, count: 0 },
+        { type: 'Webinar', avgDays: realDurations['webinar'] || 0, count: 0 },
+        { type: 'Convention', avgDays: realDurations['convention'] || 0, count: 0 },
+        { type: 'Meeting', avgDays: realDurations['meeting'] || 0, count: 0 }
       );
     }
 
