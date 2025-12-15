@@ -72,6 +72,8 @@ const Convention = () => {
     location: '',
     type: 'keynote' as 'keynote' | 'workshop' | 'networking' | 'meal' | 'exhibition'
   });
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [scheduleIdToDelete, setScheduleIdToDelete] = useState<string | null>(null);
   const [newConvention, setNewConvention] = useState({
     title: '',
     description: '',
@@ -413,17 +415,18 @@ const Convention = () => {
     });
   };
 
-  const handleDeleteScheduleDay = async (scheduleId: string) => {
-    if (!selectedConvention) return;
+  const handleDeleteScheduleDay = (scheduleId: string) => {
+    setScheduleIdToDelete(scheduleId);
+    setShowConfirmDelete(true);
+  };
 
-    if (!confirm('Are you sure you want to delete this schedule day? This action cannot be undone.')) {
-      return;
-    }
+  const handleConfirmDeleteScheduleDay = async () => {
+    if (!selectedConvention || !scheduleIdToDelete) return;
 
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/conventions/${selectedConvention}/schedule/${scheduleId}`, {
+      const response = await fetch(`${API_URL}/conventions/${selectedConvention}/schedule/${scheduleIdToDelete}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -433,6 +436,8 @@ const Convention = () => {
       const data = await response.json();
       if (data.success) {
         toast.success('Schedule day deleted successfully!');
+        setShowConfirmDelete(false);
+        setScheduleIdToDelete(null);
         fetchConventions();
       } else {
         toast.error(`Error: ${data.error || 'Failed to delete schedule'}`);
@@ -1553,6 +1558,46 @@ const Convention = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Delete Schedule Modal */}
+      {showConfirmDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-sm w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
+                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4v2m0 0v2m0-6v-2m0 0V7a2 2 0 012-2h2.586a1 1 0 00-.707-1.707h-3.172a1 1 0 00-.707.293l-.929.929A1 1 0 009 5.586V7a1 1 0 001 1h2" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-2">
+                Delete Schedule Day?
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
+                This action cannot be undone. The schedule day and all its events will be permanently deleted.
+              </p>
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 rounded-b-2xl">
+              <button
+                onClick={() => {
+                  setShowConfirmDelete(false);
+                  setScheduleIdToDelete(null);
+                }}
+                className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteScheduleDay}
+                disabled={loading}
+                className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {loading ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>
