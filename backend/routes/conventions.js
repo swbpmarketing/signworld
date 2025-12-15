@@ -324,6 +324,41 @@ router.post('/:id/schedule', protect, authorize('admin'), async (req, res) => {
 });
 
 /**
+ * @route   DELETE /api/conventions/:id/schedule/:scheduleId
+ * @desc    Delete schedule item from convention
+ * @access  Private/Admin
+ */
+router.delete('/:id/schedule/:scheduleId', protect, authorize('admin'), async (req, res) => {
+  try {
+    const convention = await Convention.findById(req.params.id);
+
+    if (!convention) {
+      return res.status(404).json({
+        success: false,
+        error: 'Convention not found'
+      });
+    }
+
+    convention.schedule = convention.schedule.filter(
+      item => item._id.toString() !== req.params.scheduleId
+    );
+
+    await convention.save();
+
+    res.json({
+      success: true,
+      data: convention
+    });
+  } catch (error) {
+    console.error('Delete schedule error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while deleting schedule'
+    });
+  }
+});
+
+/**
  * @route   GET /api/conventions/upcoming
  * @desc    Get upcoming conventions
  * @access  Public

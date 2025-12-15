@@ -56,9 +56,22 @@ const Convention = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [conventions, setConventions] = useState<any[]>([]);
   const [selectedConvention, setSelectedConvention] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [newScheduleDay, setNewScheduleDay] = useState({
+    day: '',
+    date: '',
+    events: []
+  });
+  const [newScheduleEvent, setNewScheduleEvent] = useState({
+    time: '',
+    title: '',
+    speaker: '',
+    location: '',
+    type: 'keynote' as 'keynote' | 'workshop' | 'networking' | 'meal' | 'exhibition'
+  });
   const [newConvention, setNewConvention] = useState({
     title: '',
     description: '',
@@ -329,6 +342,109 @@ const Convention = () => {
     }
   };
 
+  const handleAddScheduleDay = async () => {
+    if (!selectedConvention) {
+      toast.warning('Please select a convention first');
+      return;
+    }
+
+    if (!newScheduleDay.day || !newScheduleDay.date) {
+      toast.warning('Please fill in day and date');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/conventions/${selectedConvention}/schedule`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          day: newScheduleDay.day,
+          events: newScheduleDay.events
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Schedule day added successfully!');
+        setNewScheduleDay({ day: '', date: '', events: [] });
+        fetchConventions();
+      } else {
+        toast.error(`Error: ${data.error || 'Failed to add schedule'}`);
+      }
+    } catch (error: any) {
+      console.error('Error adding schedule:', error);
+      toast.error(`Failed to add schedule: ${error.message || 'Network error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddScheduleEvent = () => {
+    if (!newScheduleEvent.time || !newScheduleEvent.title || !newScheduleEvent.location) {
+      toast.warning('Please fill in time, title, and location');
+      return;
+    }
+
+    setNewScheduleDay({
+      ...newScheduleDay,
+      events: [...newScheduleDay.events, newScheduleEvent]
+    });
+
+    setNewScheduleEvent({
+      time: '',
+      title: '',
+      speaker: '',
+      location: '',
+      type: 'keynote'
+    });
+
+    toast.success('Event added to schedule day');
+  };
+
+  const handleRemoveScheduleEvent = (index: number) => {
+    setNewScheduleDay({
+      ...newScheduleDay,
+      events: newScheduleDay.events.filter((_, i) => i !== index)
+    });
+  };
+
+  const handleDeleteScheduleDay = async (scheduleId: string) => {
+    if (!selectedConvention) return;
+
+    if (!confirm('Are you sure you want to delete this schedule day? This action cannot be undone.')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/conventions/${selectedConvention}/schedule/${scheduleId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Schedule day deleted successfully!');
+        fetchConventions();
+      } else {
+        toast.error(`Error: ${data.error || 'Failed to delete schedule'}`);
+      }
+    } catch (error: any) {
+      console.error('Error deleting schedule:', error);
+      toast.error(`Failed to delete schedule: ${error.message || 'Network error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getEventTypeIcon = (type: string) => {
     switch (type) {
       case 'keynote': return '🎤';
@@ -496,49 +612,72 @@ const Convention = () => {
           {/* Schedule Tab */}
           {activeTab === 'schedule' && (
             <div className="space-y-6">
-              {schedule.map((day) => (
-                <div key={day.day} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{day.day}</h3>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">{day.date}</span>
-                  </div>
-                  <div className="space-y-3">
-                    {day.events.map((event, idx) => (
-                      <div key={idx} className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 flex items-start space-x-3 sm:space-x-4">
-                        <div className="flex-shrink-0">
-                          <span className="text-2xl">{getEventTypeIcon(event.type)}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                            <div>
-                              <h4 className="font-medium text-gray-900 dark:text-gray-100">{event.title}</h4>
-                              {event.speaker && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Speaker: {event.speaker}</p>
-                              )}
-                              <div className="flex flex-col sm:flex-row sm:items-center mt-2 sm:space-x-4 space-y-1 sm:space-y-0 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                                <span className="flex items-center">
-                                  <ClockIcon className="h-4 w-4 mr-1" />
-                                  {event.time}
-                                </span>
-                                <span className="flex items-center">
-                                  <MapPinIcon className="h-4 w-4 mr-1" />
-                                  {event.location}
+              {displayConvention?.schedule && displayConvention.schedule.length > 0 ? (
+                displayConvention.schedule.map((day: any, dayIdx: number) => (
+                  <div key={dayIdx} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                        {day.day || `Day ${dayIdx + 1}`}
+                      </h3>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDeleteScheduleDay(day._id)}
+                          className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-2"
+                          title="Delete schedule day"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      {day.events && day.events.length > 0 ? (
+                        day.events.map((event: any, idx: number) => (
+                          <div key={idx} className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 flex items-start space-x-3 sm:space-x-4">
+                            <div className="flex-shrink-0">
+                              <span className="text-2xl">{getEventTypeIcon(event.type)}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                <div>
+                                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{event.title}</h4>
+                                  {event.speaker && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Speaker: {event.speaker}</p>
+                                  )}
+                                  <div className="flex flex-col sm:flex-row sm:items-center mt-2 sm:space-x-4 space-y-1 sm:space-y-0 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                                    <span className="flex items-center">
+                                      <ClockIcon className="h-4 w-4 mr-1" />
+                                      {event.time}
+                                    </span>
+                                    <span className="flex items-center">
+                                      <MapPinIcon className="h-4 w-4 mr-1" />
+                                      {event.location}
+                                    </span>
+                                  </div>
+                                </div>
+                                <span className={`
+                                  inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border
+                                  ${getEventTypeColor(event.type)}
+                                `}>
+                                  {event.type}
                                 </span>
                               </div>
                             </div>
-                            <span className={`
-                              inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border
-                              ${getEventTypeColor(event.type)}
-                            `}>
-                              {event.type}
-                            </span>
                           </div>
-                        </div>
-                      </div>
-                    ))}
+                        ))
+                      ) : (
+                        <p className="text-gray-500 dark:text-gray-400 text-center py-4">No events scheduled for this day</p>
+                      )}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-6 text-center">
+                  <CalendarDaysIcon className="h-12 w-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-3" />
+                  <p className="text-yellow-800 dark:text-yellow-400">
+                    No schedule has been created yet. {isAdmin && 'Go to the Admin tab to add one.'}
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           )}
 
@@ -832,6 +971,24 @@ const Convention = () => {
                   >
                     <PlusIcon className="h-5 w-5 mr-2" />
                     Upload Documents
+                  </button>
+                </div>
+
+                {/* Schedule Management */}
+                <div className="bg-white dark:bg-gray-700 rounded-lg p-6 border border-gray-200 dark:border-gray-600 md:col-span-2">
+                  <div className="flex items-center mb-4">
+                    <CalendarDaysIcon className="h-8 w-8 text-primary-600 dark:text-primary-400 mr-3" />
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Schedule</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Manage convention schedule and events</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowScheduleModal(true)}
+                    className="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm flex items-center justify-center"
+                  >
+                    <PlusIcon className="h-5 w-5 mr-2" />
+                    Add Schedule Day
                   </button>
                 </div>
               </div>
@@ -1161,6 +1318,193 @@ const Convention = () => {
                   {uploading ? 'Uploading...' : 'Upload'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Management Modal */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
+            <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Schedule Day</h3>
+              <button
+                onClick={() => {
+                  setShowScheduleModal(false);
+                  setNewScheduleDay({ day: '', date: '', events: [] });
+                  setNewScheduleEvent({ time: '', title: '', speaker: '', location: '', type: 'keynote' });
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+              {/* Schedule Day Info */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Day Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newScheduleDay.day}
+                    onChange={(e) => setNewScheduleDay({ ...newScheduleDay, day: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., Day 1, August 22"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Date *
+                  </label>
+                  <input
+                    type="text"
+                    value={newScheduleDay.date}
+                    onChange={(e) => setNewScheduleDay({ ...newScheduleDay, date: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., August 22, 2025"
+                  />
+                </div>
+              </div>
+
+              {/* Add Event Section */}
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Add Events to This Day</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Time *
+                    </label>
+                    <input
+                      type="text"
+                      value={newScheduleEvent.time}
+                      onChange={(e) => setNewScheduleEvent({ ...newScheduleEvent, time: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="e.g., 9:00 AM"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Event Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={newScheduleEvent.title}
+                      onChange={(e) => setNewScheduleEvent({ ...newScheduleEvent, title: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="e.g., Opening Keynote"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Speaker (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={newScheduleEvent.speaker}
+                      onChange={(e) => setNewScheduleEvent({ ...newScheduleEvent, speaker: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Speaker name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Location *
+                    </label>
+                    <input
+                      type="text"
+                      value={newScheduleEvent.location}
+                      onChange={(e) => setNewScheduleEvent({ ...newScheduleEvent, location: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="e.g., Grand Ballroom"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Event Type *
+                    </label>
+                    <select
+                      value={newScheduleEvent.type}
+                      onChange={(e) => setNewScheduleEvent({ ...newScheduleEvent, type: e.target.value as any })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="keynote">Keynote</option>
+                      <option value="workshop">Workshop</option>
+                      <option value="networking">Networking</option>
+                      <option value="meal">Meal</option>
+                      <option value="exhibition">Exhibition</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={handleAddScheduleEvent}
+                    className="w-full mt-3 py-2 px-3 bg-secondary-600 text-white font-medium rounded-lg hover:bg-secondary-700 active:bg-secondary-800 transition-colors"
+                  >
+                    Add Event
+                  </button>
+                </div>
+              </div>
+
+              {/* Events List */}
+              {newScheduleDay.events.length > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Events ({newScheduleDay.events.length})</h4>
+                  <div className="space-y-2">
+                    {newScheduleDay.events.map((event, idx) => (
+                      <div key={idx} className="bg-white dark:bg-gray-700 rounded-lg p-3 flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{getEventTypeIcon(event.type)}</span>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{event.title}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">{event.time} • {event.location}</p>
+                              {event.speaker && (
+                                <p className="text-xs text-gray-500 dark:text-gray-500">Speaker: {event.speaker}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveScheduleEvent(idx)}
+                          className="ml-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => {
+                  setShowScheduleModal(false);
+                  setNewScheduleDay({ day: '', date: '', events: [] });
+                  setNewScheduleEvent({ time: '', title: '', speaker: '', location: '', type: 'keynote' });
+                }}
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddScheduleDay}
+                disabled={loading || !newScheduleDay.day || !newScheduleDay.date}
+                className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Adding...' : 'Add Schedule Day'}
+              </button>
             </div>
           </div>
         </div>
