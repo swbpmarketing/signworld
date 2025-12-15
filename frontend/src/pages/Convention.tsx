@@ -48,6 +48,7 @@ const Convention = () => {
   const [selectedSpeaker, setSelectedSpeaker] = useState<Speaker | null>(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isRegistered, setIsRegistered] = useState(false);
+  const [displayConvention, setDisplayConvention] = useState<any>(null);
 
   // Admin state
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -71,6 +72,9 @@ const Convention = () => {
       zipCode: '',
       country: 'USA'
     },
+    expectedAttendees: 0,
+    educationalSessions: 0,
+    exhibitors: 0,
     isActive: true,
     isFeatured: false
   });
@@ -79,11 +83,11 @@ const Convention = () => {
   const [lightboxImage, setLightboxImage] = useState<{ url: string; caption?: string; conventionTitle: string } | null>(null);
   const [loadingGallery, setLoadingGallery] = useState(false);
 
-  // Convention date - August 22, 2025
-  const conventionDate = new Date(2025, 7, 22, 9, 0, 0);
-
   useEffect(() => {
     const updateCountdown = () => {
+      if (!displayConvention) return;
+
+      const conventionDate = new Date(displayConvention.startDate);
       const now = new Date();
       const difference = conventionDate.getTime() - now.getTime();
 
@@ -94,6 +98,8 @@ const Convention = () => {
         const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
         setCountdown({ days, hours, minutes, seconds });
+      } else {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
       }
     };
 
@@ -101,7 +107,7 @@ const Convention = () => {
     const interval = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [displayConvention]);
 
   // Load conventions for gallery (all users) and admin management
   useEffect(() => {
@@ -114,8 +120,15 @@ const Convention = () => {
       const data = await response.json();
       if (data.success) {
         setConventions(data.data);
-        if (data.data.length > 0 && !selectedConvention) {
-          setSelectedConvention(data.data[0]._id);
+        if (data.data.length > 0) {
+          // Find featured convention first, otherwise use first active convention
+          const featured = data.data.find((conv: any) => conv.isFeatured && conv.isActive);
+          const toDisplay = featured || data.data.find((conv: any) => conv.isActive) || data.data[0];
+          setDisplayConvention(toDisplay);
+
+          if (!selectedConvention) {
+            setSelectedConvention(data.data[0]._id);
+          }
         }
       }
     } catch (error) {
@@ -156,6 +169,9 @@ const Convention = () => {
             zipCode: '',
             country: 'USA'
           },
+          expectedAttendees: 0,
+          educationalSessions: 0,
+          exhibitors: 0,
           isActive: true,
           isFeatured: false
         });
@@ -340,19 +356,22 @@ const Convention = () => {
       <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
       <div className="space-y-6">
       {/* Hero Section with Countdown */}
+      {displayConvention ? (
       <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl shadow-lg p-3 sm:p-4 md:p-6 lg:p-8 text-white overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-center">
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold mb-1 sm:mb-2">Sign Company Convention 2025</h1>
+            <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold mb-1 sm:mb-2">{displayConvention.title}</h1>
             <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-3 sm:mb-4 text-primary-100">Innovate. Connect. Grow.</p>
             <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 md:space-x-6 space-y-1.5 sm:space-y-0 text-xs sm:text-sm">
               <div className="flex items-center">
                 <CalendarDaysIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1.5 sm:mr-2 flex-shrink-0" />
-                <span className="text-xs sm:text-sm">August 22-23, 2025</span>
+                <span className="text-xs sm:text-sm">
+                  {new Date(displayConvention.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - {new Date(displayConvention.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </span>
               </div>
               <div className="flex items-center">
                 <MapPinIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1.5 sm:mr-2 flex-shrink-0" />
-                <span className="text-xs sm:text-sm">Las Vegas Convention Center</span>
+                <span className="text-xs sm:text-sm">{displayConvention.location?.venue || 'Location TBA'}</span>
               </div>
             </div>
           </div>
@@ -381,6 +400,11 @@ const Convention = () => {
           </div>
         </div>
       </div>
+      ) : (
+        <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl shadow-lg p-6 text-white text-center">
+          <p className="text-lg">Loading convention details...</p>
+        </div>
+      )}
 
       {/* Navigation Tabs */}
       <div className="bg-white dark:bg-gray-800 shadow-sm rounded-xl overflow-hidden">
@@ -421,17 +445,17 @@ const Convention = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 rounded-lg p-5 sm:p-6">
                   <UserGroupIcon className="h-10 w-10 sm:h-12 sm:w-12 text-blue-600 dark:text-blue-400 mb-3 sm:mb-4" />
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">500+</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{displayConvention?.expectedAttendees || 0}+</h3>
                   <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">Expected Attendees</p>
                 </div>
                 <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30 rounded-lg p-5 sm:p-6">
                   <AcademicCapIcon className="h-10 w-10 sm:h-12 sm:w-12 text-green-600 dark:text-green-400 mb-3 sm:mb-4" />
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">30+</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{displayConvention?.educationalSessions || 0}+</h3>
                   <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">Educational Sessions</p>
                 </div>
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/30 rounded-lg p-5 sm:p-6">
                   <GlobeAmericasIcon className="h-10 w-10 sm:h-12 sm:w-12 text-purple-600 dark:text-purple-400 mb-3 sm:mb-4" />
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">50+</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{displayConvention?.exhibitors || 0}+</h3>
                   <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">Industry Exhibitors</p>
                 </div>
               </div>
@@ -439,13 +463,7 @@ const Convention = () => {
               <div className="prose max-w-none">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">About the Convention</h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Join us for the most anticipated Sign Company event of the year! The 2025 Annual Convention brings together
-                  sign industry professionals from across the nation for two days of learning, networking, and innovation.
-                </p>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Discover cutting-edge technologies, learn from industry leaders, and connect with fellow sign business
-                  owners. Whether you're looking to grow your business, stay ahead of trends, or find new partnerships,
-                  this convention has something for everyone.
+                  {displayConvention?.description || 'Convention description coming soon.'}
                 </p>
 
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-6 mb-3">What to Expect</h4>
@@ -968,6 +986,45 @@ const Convention = () => {
                     onChange={(e) => setNewConvention({ ...newConvention, location: { ...newConvention.location, country: e.target.value } })}
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="Country"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Expected Attendees
+                  </label>
+                  <input
+                    type="number"
+                    value={newConvention.expectedAttendees}
+                    onChange={(e) => setNewConvention({ ...newConvention, expectedAttendees: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., 500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Educational Sessions
+                  </label>
+                  <input
+                    type="number"
+                    value={newConvention.educationalSessions}
+                    onChange={(e) => setNewConvention({ ...newConvention, educationalSessions: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., 30"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Industry Exhibitors
+                  </label>
+                  <input
+                    type="number"
+                    value={newConvention.exhibitors}
+                    onChange={(e) => setNewConvention({ ...newConvention, exhibitors: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., 50"
                   />
                 </div>
 

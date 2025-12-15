@@ -75,6 +75,18 @@ const conventionSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  expectedAttendees: {
+    type: Number,
+    default: 0,
+  },
+  educationalSessions: {
+    type: Number,
+    default: 0,
+  },
+  exhibitors: {
+    type: Number,
+    default: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
