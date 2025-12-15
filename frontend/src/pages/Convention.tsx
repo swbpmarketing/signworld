@@ -74,6 +74,7 @@ const Convention = () => {
   });
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [scheduleIdToDelete, setScheduleIdToDelete] = useState<string | null>(null);
+  const [selectedScheduleDayIndex, setSelectedScheduleDayIndex] = useState<number | null>(null);
   const [newConvention, setNewConvention] = useState({
     title: '',
     description: '',
@@ -350,14 +351,36 @@ const Convention = () => {
       return;
     }
 
-    if (!newScheduleDay.day || !newScheduleDay.date) {
+    // Only validate day and date when creating a new day (not when editing existing)
+    if (selectedScheduleDayIndex === null && (!newScheduleDay.day || !newScheduleDay.date)) {
       toast.warning('Please fill in day and date');
+      return;
+    }
+
+    if (newScheduleDay.events.length === 0) {
+      toast.warning('Please add at least one event');
       return;
     }
 
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+
+      // If updating an existing day, first delete the old one
+      if (selectedScheduleDayIndex !== null) {
+        const selectedConv = conventions.find(c => c._id === selectedConvention);
+        const oldDay = selectedConv?.schedule?.[selectedScheduleDayIndex];
+        if (oldDay && oldDay._id) {
+          await fetch(`${API_URL}/conventions/${selectedConvention}/schedule/${oldDay._id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+        }
+      }
+
+      // Now create/update the schedule day with new events
       const response = await fetch(`${API_URL}/conventions/${selectedConvention}/schedule`, {
         method: 'POST',
         headers: {
@@ -372,9 +395,26 @@ const Convention = () => {
 
       const data = await response.json();
       if (data.success) {
-        toast.success('Schedule day added successfully!');
+        toast.success(selectedScheduleDayIndex !== null ? 'Events added successfully!' : 'Schedule day added successfully!');
         setNewScheduleDay({ day: '', date: '', events: [] });
-        fetchConventions();
+        setNewScheduleEvent({ time: '', title: '', speaker: '', location: '', type: 'keynote' });
+        setSelectedScheduleDayIndex(null);
+        setShowScheduleModal(false);
+
+        // Fetch and update the specific convention being edited
+        try {
+          const convResponse = await fetch(`${API_URL}/conventions/${selectedConvention}`);
+          const convData = await convResponse.json();
+          if (convData.success && convData.data) {
+            setDisplayConvention(convData.data);
+            // Also update in the conventions array
+            setConventions(prev => prev.map(c => c._id === selectedConvention ? convData.data : c));
+          }
+        } catch (err) {
+          console.error('Error fetching updated convention:', err);
+          // Fallback to fetching all conventions
+          fetchConventions();
+        }
       } else {
         toast.error(`Error: ${data.error || 'Failed to add schedule'}`);
       }
@@ -470,6 +510,29 @@ const Convention = () => {
       case 'exhibition': return 'bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-400 border-pink-200 dark:border-pink-700';
       default: return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
+  };
+
+  // Convert time string (e.g., "9:00 AM", "2:30 PM") to minutes for sorting
+  const convertTimeToMinutes = (timeStr: string): number => {
+    if (!timeStr) return 0;
+    const [time, period] = timeStr.split(' ');
+    const [hours, minutes] = time.split(':').map(Number);
+    let totalMinutes = hours * 60 + (minutes || 0);
+    if (period?.toUpperCase() === 'PM' && hours !== 12) {
+      totalMinutes += 12 * 60;
+    }
+    if (period?.toUpperCase() === 'AM' && hours === 12) {
+      totalMinutes -= 12 * 60;
+    }
+    return totalMinutes;
+  };
+
+  // Sort events by time
+  const getSortedEvents = (events: any[]): any[] => {
+    if (!events) return [];
+    return [...events].sort((a, b) =>
+      convertTimeToMinutes(a.time) - convertTimeToMinutes(b.time)
+    );
   };
 
   return (
@@ -636,7 +699,7 @@ const Convention = () => {
                     </div>
                     <div className="space-y-3">
                       {day.events && day.events.length > 0 ? (
-                        day.events.map((event: any, idx: number) => (
+                        getSortedEvents(day.events).map((event: any, idx: number) => (
                           <div key={idx} className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 flex items-start space-x-3 sm:space-x-4">
                             <div className="flex-shrink-0">
                               <span className="text-2xl">{getEventTypeIcon(event.type)}</span>
@@ -1333,12 +1396,13 @@ const Convention = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
             <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Schedule Day</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Events to Schedule</h3>
               <button
                 onClick={() => {
                   setShowScheduleModal(false);
                   setNewScheduleDay({ day: '', date: '', events: [] });
                   setNewScheduleEvent({ time: '', title: '', speaker: '', location: '', type: 'keynote' });
+                  setSelectedScheduleDayIndex(null);
                 }}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
@@ -1349,33 +1413,105 @@ const Convention = () => {
             </div>
 
             <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
-              {/* Schedule Day Info */}
+              {/* Day Selection */}
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Day Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newScheduleDay.day}
-                    onChange={(e) => setNewScheduleDay({ ...newScheduleDay, day: e.target.value })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="e.g., Day 1, August 22"
-                  />
-                </div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Select Day *
+                </label>
+                <select
+                  value={selectedScheduleDayIndex === null ? 'new' : selectedScheduleDayIndex.toString()}
+                  onChange={(e) => {
+                    if (e.target.value === 'new') {
+                      setSelectedScheduleDayIndex(null);
+                      setNewScheduleDay({ day: '', date: '', events: [] });
+                    } else {
+                      const idx = parseInt(e.target.value);
+                      const selectedConv = conventions.find(c => c._id === selectedConvention);
+                      const selectedDay = selectedConv?.schedule?.[idx];
+                      if (selectedDay) {
+                        setSelectedScheduleDayIndex(idx);
+                        setNewScheduleDay({
+                          day: selectedDay.day,
+                          date: selectedDay.date,
+                          events: [...selectedDay.events]
+                        });
+                      }
+                    }
+                    setNewScheduleEvent({ time: '', title: '', speaker: '', location: '', type: 'keynote' });
+                  }}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="new">+ Create New Day</option>
+                  {conventions.find(c => c._id === selectedConvention)?.schedule?.map((day: any, idx: number) => (
+                    <option key={idx} value={idx.toString()}>
+                      {day.day} - {day.date}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Date *
-                  </label>
-                  <input
-                    type="text"
-                    value={newScheduleDay.date}
-                    onChange={(e) => setNewScheduleDay({ ...newScheduleDay, date: e.target.value })}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="e.g., August 22, 2025"
-                  />
+              {/* Schedule Day Info (only show if creating new day) */}
+              {selectedScheduleDayIndex === null && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Day Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={newScheduleDay.day}
+                      onChange={(e) => setNewScheduleDay({ ...newScheduleDay, day: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="e.g., Day 1, August 22"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Date *
+                    </label>
+                    <input
+                      type="text"
+                      value={newScheduleDay.date}
+                      onChange={(e) => setNewScheduleDay({ ...newScheduleDay, date: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="e.g., August 22, 2025"
+                    />
+                  </div>
                 </div>
+              )}
+
+              {/* Events List - Always Visible */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Events ({newScheduleDay.events.length})</h4>
+                {newScheduleDay.events.length === 0 ? (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 py-2">No events added yet. Add an event below to get started.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {getSortedEvents(newScheduleDay.events).map((event, idx) => (
+                      <div key={idx} className="bg-white dark:bg-gray-700 rounded-lg p-3 flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{getEventTypeIcon(event.type)}</span>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{event.title}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">{event.time} • {event.location}</p>
+                              {event.speaker && (
+                                <p className="text-xs text-gray-500 dark:text-gray-500">Speaker: {event.speaker}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveScheduleEvent(idx)}
+                          className="ml-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Add Event Section */}
@@ -1455,41 +1591,10 @@ const Convention = () => {
                     onClick={handleAddScheduleEvent}
                     className="w-full mt-3 py-2 px-3 bg-secondary-600 text-white font-medium rounded-lg hover:bg-secondary-700 active:bg-secondary-800 transition-colors"
                   >
-                    Add Event
+                    Add Event to Schedule
                   </button>
                 </div>
               </div>
-
-              {/* Events List */}
-              {newScheduleDay.events.length > 0 && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Events ({newScheduleDay.events.length})</h4>
-                  <div className="space-y-2">
-                    {newScheduleDay.events.map((event, idx) => (
-                      <div key={idx} className="bg-white dark:bg-gray-700 rounded-lg p-3 flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">{getEventTypeIcon(event.type)}</span>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{event.title}</p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400">{event.time} • {event.location}</p>
-                              {event.speaker && (
-                                <p className="text-xs text-gray-500 dark:text-gray-500">Speaker: {event.speaker}</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveScheduleEvent(idx)}
-                          className="ml-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
@@ -1505,10 +1610,14 @@ const Convention = () => {
               </button>
               <button
                 onClick={handleAddScheduleDay}
-                disabled={loading || !newScheduleDay.day || !newScheduleDay.date}
+                disabled={
+                  loading ||
+                  newScheduleDay.events.length === 0 ||
+                  (selectedScheduleDayIndex === null && (!newScheduleDay.day || !newScheduleDay.date))
+                }
                 className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Adding...' : 'Add Schedule Day'}
+                {loading ? 'Saving...' : 'Save Events'}
               </button>
             </div>
           </div>
