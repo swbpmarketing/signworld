@@ -916,6 +916,12 @@ const Convention = () => {
               : ''
           }
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+          <div style="background-color: #fef3c7; border: 2px solid #fbbf24; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
+            <p style="margin: 0 0 8px 0; color: #92400e; font-size: 12px; font-weight: bold;">PAYMENT REQUIRED</p>
+            <p style="margin: 0; color: #78350f; font-size: 13px; line-height: 1.5;">
+              Please contact the admin to proceed with payment as instructed. Your registration is confirmed pending payment completion.
+            </p>
+          </div>
           <div style="text-align: center;">
             <p style="margin: 0; color: #999; font-size: 12px;">This is your official event ticket. Please present this when registering.</p>
           </div>
