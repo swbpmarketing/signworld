@@ -178,6 +178,31 @@ const Convention = () => {
     }
   }, [displayConvention?.registrationOptions]);
 
+  // Load registration state from localStorage when convention changes
+  useEffect(() => {
+    if (displayConvention?._id) {
+      const registeredKey = `convention_registered_${displayConvention._id}`;
+      const calendarAddedKey = `convention_calendar_${displayConvention._id}`;
+
+      const wasRegistered = localStorage.getItem(registeredKey) === 'true';
+      const wasCalendarAdded = localStorage.getItem(calendarAddedKey) === 'true';
+
+      setIsRegistered(wasRegistered);
+      setHasAddedToCalendar(wasCalendarAdded);
+    }
+  }, [displayConvention?._id]);
+
+  // Save registration state to localStorage
+  useEffect(() => {
+    if (displayConvention?._id) {
+      const registeredKey = `convention_registered_${displayConvention._id}`;
+      const calendarAddedKey = `convention_calendar_${displayConvention._id}`;
+
+      localStorage.setItem(registeredKey, isRegistered.toString());
+      localStorage.setItem(calendarAddedKey, hasAddedToCalendar.toString());
+    }
+  }, [isRegistered, hasAddedToCalendar, displayConvention?._id]);
+
   const fetchConventions = async () => {
     try {
       const response = await fetch(`${API_URL}/conventions`);
