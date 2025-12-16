@@ -54,6 +54,7 @@ const Convention = () => {
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isRegistered, setIsRegistered] = useState(false);
   const [hasAddedToCalendar, setHasAddedToCalendar] = useState(false);
+  const [registrationLoading, setRegistrationLoading] = useState(false);
   const [displayConvention, setDisplayConvention] = useState<any>(null);
 
   // Admin state
@@ -994,6 +995,39 @@ const Convention = () => {
     }
   };
 
+  const handleCompleteRegistration = async () => {
+    if (!displayConvention || !user) {
+      toast.error('Convention or user information not available');
+      return;
+    }
+
+    setRegistrationLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/conventions/${displayConvention._id}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsRegistered(true);
+        toast.success('Successfully registered for the convention! Check your email for details.');
+      } else {
+        toast.error(`Registration failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error registering for convention:', error);
+      toast.error('Failed to register for convention');
+    } finally {
+      setRegistrationLoading(false);
+    }
+  };
+
   const getEventTypeIcon = (type: string) => {
     switch (type) {
       case 'keynote': return '🎤';
@@ -1487,10 +1521,11 @@ const Convention = () => {
                   )}
 
                   <button
-                    onClick={() => setIsRegistered(true)}
-                    className="w-full py-3 px-6 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm"
+                    onClick={handleCompleteRegistration}
+                    disabled={registrationLoading}
+                    className="w-full py-3 px-6 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Complete Registration
+                    {registrationLoading ? 'Registering...' : 'Complete Registration'}
                   </button>
                 </div>
               ) : (
@@ -1533,10 +1568,11 @@ const Convention = () => {
                         You can complete your registration at any time before the event starts.
                       </p>
                       <button
-                        onClick={() => setIsRegistered(true)}
-                        className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm"
+                        onClick={handleCompleteRegistration}
+                        disabled={registrationLoading}
+                        className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Complete Registration
+                        {registrationLoading ? 'Registering...' : 'Complete Registration'}
                       </button>
                     </>
                   )}

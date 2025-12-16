@@ -154,6 +154,19 @@ const conventionSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  attendees: [{
+    userId: {
+      type: mongoose.Schema.ObjectId,
+      ref: 'User'
+    },
+    email: String,
+    firstName: String,
+    lastName: String,
+    registeredAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   createdAt: {
     type: Date,
     default: Date.now,

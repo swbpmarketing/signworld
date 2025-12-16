@@ -156,6 +156,13 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
       });
     }
 
+    // Check if dates changed
+    const oldStartDate = convention.startDate.getTime();
+    const oldEndDate = convention.endDate.getTime();
+    const newStartDate = new Date(req.body.startDate).getTime();
+    const newEndDate = new Date(req.body.endDate).getTime();
+    const datesChanged = oldStartDate !== newStartDate || oldEndDate !== newEndDate;
+
     convention = await Convention.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -172,6 +179,52 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
     console.log('Early bird discount:', convention.earlyBirdDiscount);
     console.log('Early bird message:', convention.earlyBirdMessage);
     console.log('Full convention object keys:', Object.keys(convention.toObject ? convention.toObject() : convention));
+
+    // If dates changed and there are attendees, send notifications
+    if (datesChanged && convention.attendees && convention.attendees.length > 0) {
+      const io = req.app.get('io');
+      const oldDateStr = new Date(oldStartDate).toLocaleDateString();
+      const newDateStr = convention.startDate.toLocaleDateString();
+
+      console.log(`Dates changed from ${oldDateStr} to ${newDateStr}, notifying ${convention.attendees.length} attendees`);
+
+      try {
+        // Send notifications to all attendees
+        for (const attendee of convention.attendees) {
+          await Notification.createAndEmit(io, {
+            recipient: attendee.userId,
+            sender: req.user.id,
+            type: 'convention_date_change',
+            title: `Schedule Update: ${convention.title}`,
+            message: `The convention date has been changed. New date: ${convention.startDate.toLocaleDateString()} - ${convention.endDate.toLocaleDateString()}`,
+            referenceType: 'Convention',
+            referenceId: convention._id,
+            link: `/conventions/${convention._id}`,
+            metadata: {
+              oldStartDate: oldStartDate,
+              oldEndDate: oldEndDate,
+              newStartDate: newStartDate,
+              newEndDate: newEndDate
+            }
+          });
+        }
+
+        // Emit real-time update
+        if (io) {
+          io.to('conventions').emit('convention:updated', {
+            conventionId: convention._id,
+            title: convention.title,
+            oldStartDate,
+            oldEndDate,
+            newStartDate,
+            newEndDate,
+            attendeeCount: convention.attendees.length
+          });
+        }
+      } catch (notifError) {
+        console.error('Error sending date change notifications:', notifError);
+      }
+    }
 
     // Convert Mongoose document to plain JavaScript object to ensure all fields are included
     const conventionObj = convention.toObject ? convention.toObject() : convention;
@@ -668,6 +721,79 @@ router.delete('/:id/speakers/:speakerId', protect, authorize('admin'), async (re
     res.status(500).json({
       success: false,
       error: 'Server error while removing speaker'
+    });
+  }
+});
+
+/**
+ * @route   POST /api/conventions/:id/register
+ * @desc    Register user for convention
+ * @access  Private
+ */
+router.post('/:id/register', protect, async (req, res) => {
+  try {
+    const convention = await Convention.findById(req.params.id);
+
+    if (!convention) {
+      return res.status(404).json({
+        success: false,
+        error: 'Convention not found'
+      });
+    }
+
+    // Check if user already registered
+    const isRegistered = convention.attendees.some(
+      attendee => attendee.userId && attendee.userId.toString() === req.user.id
+    );
+
+    if (isRegistered) {
+      return res.status(400).json({
+        success: false,
+        error: 'You are already registered for this convention'
+      });
+    }
+
+    // Get user info
+    const user = await User.findById(req.user.id).select('firstName lastName email');
+
+    // Add user to attendees
+    convention.attendees.push({
+      userId: req.user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      registeredAt: new Date()
+    });
+
+    await convention.save();
+
+    // Create notification for user
+    const io = req.app.get('io');
+    try {
+      await Notification.createAndEmit(io, {
+        recipient: req.user.id,
+        sender: req.user.id,
+        type: 'convention_registered',
+        title: `Successfully Registered: ${convention.title}`,
+        message: `You have been registered for the convention. Check your email for details.`,
+        referenceType: 'Convention',
+        referenceId: convention._id,
+        link: `/conventions/${convention._id}`
+      });
+    } catch (notifError) {
+      console.error('Error creating registration notification:', notifError);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Successfully registered for convention',
+      data: convention
+    });
+  } catch (error) {
+    console.error('Register for convention error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while registering for convention'
     });
   }
 });
