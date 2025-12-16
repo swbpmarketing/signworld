@@ -837,6 +837,145 @@ const Convention = () => {
     }
   };
 
+  const handleDownloadTicket = async () => {
+    if (!displayConvention) {
+      toast.error('Convention information not available');
+      return;
+    }
+
+    try {
+      const jsPDF = (await import('jspdf')).jsPDF;
+      const html2canvas = (await import('html2canvas')).default;
+
+      // Create a temporary element with ticket content
+      const ticketContent = document.createElement('div');
+      ticketContent.style.position = 'absolute';
+      ticketContent.style.left = '-9999px';
+      ticketContent.style.width = '800px';
+      ticketContent.style.padding = '40px';
+      ticketContent.style.backgroundColor = 'white';
+      ticketContent.style.fontFamily = 'Arial, sans-serif';
+      ticketContent.innerHTML = `
+        <div style="text-align: center; margin-bottom: 40px;">
+          <h1 style="margin: 0; color: #1f2937; font-size: 32px;">Event Ticket</h1>
+        </div>
+        <div style="border: 2px solid #3b82f6; border-radius: 8px; padding: 30px; margin-bottom: 30px;">
+          <div style="margin-bottom: 20px;">
+            <h2 style="margin: 0 0 10px 0; color: #3b82f6; font-size: 24px;">${displayConvention.title}</h2>
+            <p style="margin: 0; color: #666; font-size: 14px;">${displayConvention.description}</p>
+          </div>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+              <p style="margin: 0 0 5px 0; color: #666; font-size: 12px; font-weight: bold;">START DATE</p>
+              <p style="margin: 0; color: #1f2937; font-size: 14px;">${new Date(displayConvention.startDate).toLocaleString()}</p>
+            </div>
+            <div>
+              <p style="margin: 0 0 5px 0; color: #666; font-size: 12px; font-weight: bold;">END DATE</p>
+              <p style="margin: 0; color: #1f2937; font-size: 14px;">${new Date(displayConvention.endDate).toLocaleString()}</p>
+            </div>
+          </div>
+          ${
+            displayConvention.location?.venue
+              ? `
+            <div style="margin-bottom: 20px;">
+              <p style="margin: 0 0 5px 0; color: #666; font-size: 12px; font-weight: bold;">LOCATION</p>
+              <p style="margin: 0; color: #1f2937; font-size: 14px;">
+                ${displayConvention.location.venue}${displayConvention.location.address ? '<br>' + displayConvention.location.address : ''}${
+                displayConvention.location.city ? '<br>' + displayConvention.location.city + ', ' + displayConvention.location.state : ''
+              }
+              </p>
+            </div>
+          `
+              : ''
+          }
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+          <div style="text-align: center;">
+            <p style="margin: 0; color: #999; font-size: 12px;">This is your official event ticket. Please present this when registering.</p>
+          </div>
+        </div>
+        <div style="text-align: center; color: #999; font-size: 11px;">
+          <p style="margin: 10px 0;">Generated on ${new Date().toLocaleString()}</p>
+        </div>
+      `;
+
+      document.body.appendChild(ticketContent);
+
+      // Convert HTML to canvas
+      const canvas = await html2canvas(ticketContent, {
+        backgroundColor: '#ffffff',
+        scale: 2
+      });
+
+      // Create PDF from canvas
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.save(`${displayConvention.title}-ticket.pdf`);
+
+      document.body.removeChild(ticketContent);
+      toast.success('Ticket downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating ticket:', error);
+      toast.error('Failed to download ticket');
+    }
+  };
+
+  const handleAddToCalendar = () => {
+    if (!displayConvention) {
+      toast.error('Convention information not available');
+      return;
+    }
+
+    try {
+      const startDate = new Date(displayConvention.startDate);
+      const endDate = new Date(displayConvention.endDate);
+
+      // Format dates in iCalendar format (YYYYMMDDTHHMMSSZ)
+      const formatICalDate = (date: Date) => {
+        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      };
+
+      // Create iCalendar content
+      const iCalContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sign Company//Event Calendar//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:${displayConvention._id}@signdashboard.com
+DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z
+DTSTART:${formatICalDate(startDate)}
+DTEND:${formatICalDate(endDate)}
+SUMMARY:${displayConvention.title}
+DESCRIPTION:${displayConvention.description || ''}
+LOCATION:${displayConvention.location?.venue || displayConvention.location?.address || 'TBD'}
+STATUS:CONFIRMED
+SEQUENCE:0
+END:VEVENT
+END:VCALENDAR`;
+
+      // Create blob and download
+      const blob = new Blob([iCalContent], { type: 'text/calendar' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${displayConvention.title}-event.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Event added to calendar!');
+    } catch (error) {
+      console.error('Error creating calendar event:', error);
+      toast.error('Failed to add event to calendar');
+    }
+  };
+
   const getEventTypeIcon = (type: string) => {
     switch (type) {
       case 'keynote': return '🎤';
@@ -1349,10 +1488,16 @@ const Convention = () => {
                     We've sent a confirmation email with your ticket details.
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-                    <button className="w-full sm:w-auto px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm">
+                    <button
+                      onClick={handleDownloadTicket}
+                      className="w-full sm:w-auto px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm"
+                    >
                       Download Ticket
                     </button>
-                    <button className="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors">
+                    <button
+                      onClick={handleAddToCalendar}
+                      className="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
+                    >
                       Add to Calendar
                     </button>
                   </div>
