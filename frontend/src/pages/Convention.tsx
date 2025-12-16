@@ -53,6 +53,7 @@ const Convention = () => {
   const [selectedSpeaker, setSelectedSpeaker] = useState<Speaker | null>(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isRegistered, setIsRegistered] = useState(false);
+  const [hasAddedToCalendar, setHasAddedToCalendar] = useState(false);
   const [displayConvention, setDisplayConvention] = useState<any>(null);
 
   // Admin state
@@ -924,54 +925,40 @@ const Convention = () => {
     }
   };
 
-  const handleAddToCalendar = () => {
+  const handleAddToCalendar = async () => {
     if (!displayConvention) {
       toast.error('Convention information not available');
       return;
     }
 
     try {
-      const startDate = new Date(displayConvention.startDate);
-      const endDate = new Date(displayConvention.endDate);
+      // Import calendarService dynamically
+      const { default: calendarService } = await import('../services/calendarService');
 
-      // Format dates in iCalendar format (YYYYMMDDTHHMMSSZ)
-      const formatICalDate = (date: Date) => {
-        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      // Build location string
+      const location = displayConvention.location?.venue
+        ? `${displayConvention.location.venue}${displayConvention.location.address ? ', ' + displayConvention.location.address : ''}${displayConvention.location.city ? ', ' + displayConvention.location.city : ''}`
+        : 'TBD';
+
+      // Create calendar event object
+      const calendarEvent = {
+        title: displayConvention.title,
+        description: displayConvention.description || '',
+        startDate: new Date(displayConvention.startDate),
+        endDate: new Date(displayConvention.endDate),
+        category: 'convention' as const,
+        location: location,
+        isOnline: false,
+        color: '#3b82f6', // Blue color for conventions
       };
 
-      // Create iCalendar content
-      const iCalContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Sign Company//Event Calendar//EN
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-BEGIN:VEVENT
-UID:${displayConvention._id}@signdashboard.com
-DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z
-DTSTART:${formatICalDate(startDate)}
-DTEND:${formatICalDate(endDate)}
-SUMMARY:${displayConvention.title}
-DESCRIPTION:${displayConvention.description || ''}
-LOCATION:${displayConvention.location?.venue || displayConvention.location?.address || 'TBD'}
-STATUS:CONFIRMED
-SEQUENCE:0
-END:VEVENT
-END:VCALENDAR`;
+      // Add event to calendar
+      await calendarService.createEvent(calendarEvent);
 
-      // Create blob and download
-      const blob = new Blob([iCalContent], { type: 'text/calendar' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${displayConvention.title}-event.ics`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success('Event added to calendar!');
+      setHasAddedToCalendar(true);
+      toast.success('Event added to your calendar!');
     } catch (error) {
-      console.error('Error creating calendar event:', error);
+      console.error('Error adding event to calendar:', error);
       toast.error('Failed to add event to calendar');
     }
   };
@@ -1420,7 +1407,7 @@ END:VCALENDAR`;
                 </p>
               </div>
 
-              {!isRegistered ? (
+              {!isRegistered && !hasAddedToCalendar ? (
                 <div className="space-y-6">
                   {displayConvention?.registrationOptions && displayConvention.registrationOptions.length > 0 ? (
                     <div className="bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-lg p-6">
@@ -1482,25 +1469,46 @@ END:VCALENDAR`;
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <h4 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Registration Complete!</h4>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    Thank you for registering for {displayConvention?.title}.
-                    We've sent a confirmation email with your ticket details.
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-                    <button
-                      onClick={handleDownloadTicket}
-                      className="w-full sm:w-auto px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm"
-                    >
-                      Download Ticket
-                    </button>
-                    <button
-                      onClick={handleAddToCalendar}
-                      className="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
-                    >
-                      Add to Calendar
-                    </button>
-                  </div>
+                  {isRegistered && (
+                    <>
+                      <h4 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Registration Complete!</h4>
+                      <p className="text-gray-600 dark:text-gray-400 mb-6">
+                        Thank you for registering for {displayConvention?.title}.
+                        We've sent a confirmation email with your ticket details.
+                      </p>
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+                        <button
+                          onClick={handleDownloadTicket}
+                          className="w-full sm:w-auto px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm"
+                        >
+                          Download Ticket
+                        </button>
+                        {!hasAddedToCalendar && (
+                          <button
+                            onClick={handleAddToCalendar}
+                            className="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
+                          >
+                            Add to Calendar
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  {!isRegistered && hasAddedToCalendar && (
+                    <>
+                      <h4 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Event Added to Calendar!</h4>
+                      <p className="text-gray-600 dark:text-gray-400 mb-6">
+                        {displayConvention?.title} has been added to your calendar.
+                        You can complete your registration at any time before the event starts.
+                      </p>
+                      <button
+                        onClick={() => setIsRegistered(true)}
+                        className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm"
+                      >
+                        Complete Registration
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
