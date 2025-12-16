@@ -41,6 +41,45 @@ const conventionSchema = new mongoose.Schema({
       }
     }],
   }],
+  speakers: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    company: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    image: {
+      type: String,
+      required: true,
+    },
+    bio: {
+      type: String,
+      required: true,
+    },
+    topic: {
+      type: String,
+      required: true,
+    },
+    day: String,
+    time: String,
+    email: String,
+    linkedin: String,
+    twitter: String,
+    website: String,
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
   registrationLink: String,
   registrationDeadline: Date,
   earlyBirdDeadline: Date,
@@ -49,6 +88,29 @@ const conventionSchema = new mongoose.Schema({
     regular: Number,
     lateFee: Number,
   },
+  registrationOptions: [{
+    name: {
+      type: String,
+      required: true,
+    },
+    price: {
+      type: Number,
+      required: true,
+    },
+    description: {
+      type: String,
+      required: true,
+    },
+    order: {
+      type: Number,
+      default: 0,
+    },
+  }],
+  earlyBirdDiscount: {
+    type: Number,
+    default: 0,
+  },
+  earlyBirdMessage: String,
   sponsors: [{
     name: String,
     logo: String,

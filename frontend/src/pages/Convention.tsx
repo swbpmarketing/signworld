@@ -14,15 +14,20 @@ const API_URL = import.meta.env.VITE_API_URL ||
     : 'https://sign-company.onrender.com/api');
 
 interface Speaker {
-  id: string;
+  _id?: string;
+  id?: string; // For backward compatibility
   name: string;
   title: string;
   company: string;
   image: string;
   bio: string;
   topic: string;
-  day: string;
-  time: string;
+  day?: string;
+  time?: string;
+  email?: string;
+  linkedin?: string;
+  twitter?: string;
+  website?: string;
 }
 
 interface Schedule {
@@ -57,6 +62,7 @@ const Convention = () => {
   const [uploading, setUploading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [conventions, setConventions] = useState<any[]>([]);
   const [selectedConvention, setSelectedConvention] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -75,6 +81,8 @@ const Convention = () => {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [scheduleIdToDelete, setScheduleIdToDelete] = useState<string | null>(null);
   const [selectedScheduleDayIndex, setSelectedScheduleDayIndex] = useState<number | null>(null);
+  const [showConfirmDeleteSpeaker, setShowConfirmDeleteSpeaker] = useState(false);
+  const [speakerIdToDelete, setSpeakerIdToDelete] = useState<string | null>(null);
   const [newConvention, setNewConvention] = useState({
     title: '',
     description: '',
@@ -98,6 +106,34 @@ const Convention = () => {
   // Gallery lightbox state
   const [lightboxImage, setLightboxImage] = useState<{ url: string; caption?: string; conventionTitle: string } | null>(null);
   const [loadingGallery, setLoadingGallery] = useState(false);
+
+  // Speaker management state
+  const [showSpeakerModal, setShowSpeakerModal] = useState(false);
+  const [speakerImageMode, setSpeakerImageMode] = useState<'upload' | 'url'>('upload');
+  const [newSpeaker, setNewSpeaker] = useState({
+    name: '',
+    title: '',
+    company: '',
+    bio: '',
+    topic: '',
+    day: '',
+    time: '',
+    imageUrl: '',
+    email: '',
+    linkedin: '',
+    twitter: '',
+    website: ''
+  });
+  const [speakerImageFile, setSpeakerImageFile] = useState<File | null>(null);
+  const [newRegistrationOption, setNewRegistrationOption] = useState({
+    name: '',
+    price: '',
+    description: ''
+  });
+  const [earlyBirdSettings, setEarlyBirdSettings] = useState({
+    discount: '',
+    message: ''
+  });
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -129,6 +165,13 @@ const Convention = () => {
   useEffect(() => {
     fetchConventions();
   }, []);
+
+  // Sync registration data when convention changes
+  useEffect(() => {
+    if (displayConvention && displayConvention.registrationOptions) {
+      console.log('Convention registration options updated:', displayConvention.registrationOptions);
+    }
+  }, [displayConvention?.registrationOptions]);
 
   const fetchConventions = async () => {
     try {
@@ -202,53 +245,8 @@ const Convention = () => {
     }
   };
 
-  // Mock speakers data
-  const speakers: Speaker[] = [
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      title: 'CEO & Industry Leader',
-      company: 'SignTech Innovations',
-      image: 'https://via.placeholder.com/150',
-      bio: 'With over 20 years in the sign industry, Sarah has revolutionized digital signage solutions.',
-      topic: 'The Future of Digital Signage',
-      day: 'Day 1',
-      time: '9:30 AM'
-    },
-    {
-      id: '2',
-      name: 'Michael Chen',
-      title: 'Marketing Director',
-      company: 'BrandVision Group',
-      image: 'https://via.placeholder.com/150',
-      bio: 'Expert in brand development and marketing strategies for sign businesses.',
-      topic: 'Building Your Sign Business Brand',
-      day: 'Day 1',
-      time: '11:00 AM'
-    },
-    {
-      id: '3',
-      name: 'Lisa Rodriguez',
-      title: 'Technical Specialist',
-      company: 'LED Solutions Pro',
-      image: 'https://via.placeholder.com/150',
-      bio: 'Leading expert in LED technology and sustainable sign solutions.',
-      topic: 'Sustainable Sign Manufacturing',
-      day: 'Day 2',
-      time: '10:00 AM'
-    },
-    {
-      id: '4',
-      name: 'David Thompson',
-      title: 'Business Coach',
-      company: 'Growth Strategies Inc.',
-      image: 'https://via.placeholder.com/150',
-      bio: 'Helps sign businesses scale operations and increase profitability.',
-      topic: 'Scaling Your Sign Business',
-      day: 'Day 2',
-      time: '2:00 PM'
-    }
-  ];
+  // Get speakers from displayed convention
+  const speakers: Speaker[] = displayConvention?.speakers || [];
 
   // Mock schedule data
   const schedule: Schedule[] = [
@@ -485,6 +483,274 @@ const Convention = () => {
     } catch (error: any) {
       console.error('Error deleting schedule:', error);
       toast.error(`Failed to delete schedule: ${error.message || 'Network error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddSpeaker = async () => {
+    if (!selectedConvention) {
+      toast.warning('Please select a convention first');
+      return;
+    }
+
+    // Validation
+    if (!newSpeaker.name || !newSpeaker.title || !newSpeaker.company ||
+        !newSpeaker.bio || !newSpeaker.topic) {
+      toast.warning('Please fill in all required fields');
+      return;
+    }
+
+    // Validate image
+    if (speakerImageMode === 'upload' && !speakerImageFile) {
+      toast.warning('Please upload a speaker image');
+      return;
+    }
+
+    if (speakerImageMode === 'url' && !newSpeaker.imageUrl) {
+      toast.warning('Please provide an image URL');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+
+      // Append all speaker data
+      formData.append('name', newSpeaker.name);
+      formData.append('title', newSpeaker.title);
+      formData.append('company', newSpeaker.company);
+      formData.append('bio', newSpeaker.bio);
+      formData.append('topic', newSpeaker.topic);
+
+      // Optional day and time fields
+      if (newSpeaker.day) formData.append('day', newSpeaker.day);
+      if (newSpeaker.time) formData.append('time', newSpeaker.time);
+
+      // Optional fields
+      if (newSpeaker.email) formData.append('email', newSpeaker.email);
+      if (newSpeaker.linkedin) formData.append('linkedin', newSpeaker.linkedin);
+      if (newSpeaker.twitter) formData.append('twitter', newSpeaker.twitter);
+      if (newSpeaker.website) formData.append('website', newSpeaker.website);
+
+      // Handle image based on mode
+      if (speakerImageMode === 'upload' && speakerImageFile) {
+        formData.append('image', speakerImageFile);
+      } else if (speakerImageMode === 'url') {
+        formData.append('imageUrl', newSpeaker.imageUrl);
+      }
+
+      const response = await fetch(`${API_URL}/conventions/${selectedConvention}/speakers`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Speaker added successfully!');
+        setShowSpeakerModal(false);
+        await fetchConventions();
+
+        // Reset form
+        setNewSpeaker({
+          name: '',
+          title: '',
+          company: '',
+          bio: '',
+          topic: '',
+          imageUrl: '',
+          email: '',
+          linkedin: '',
+          twitter: '',
+          website: ''
+        });
+        setSpeakerImageFile(null);
+        setSpeakerImageMode('upload');
+      } else {
+        toast.error(`Error: ${data.error || 'Failed to add speaker'}`);
+      }
+    } catch (error: any) {
+      console.error('Error adding speaker:', error);
+      toast.error(`Failed to add speaker: ${error.message || 'Network error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteSpeaker = (speakerId: string) => {
+    if (!displayConvention) return;
+    setSpeakerIdToDelete(speakerId);
+    setShowConfirmDeleteSpeaker(true);
+  };
+
+  const handleConfirmDeleteSpeaker = async () => {
+    if (!displayConvention || !speakerIdToDelete) return;
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${API_URL}/conventions/${displayConvention._id}/speakers/${speakerIdToDelete}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Speaker deleted successfully');
+        setShowConfirmDeleteSpeaker(false);
+        setSpeakerIdToDelete(null);
+        await fetchConventions();
+      } else {
+        toast.error(`Error: ${data.error || 'Failed to delete speaker'}`);
+      }
+    } catch (error: any) {
+      console.error('Error deleting speaker:', error);
+      toast.error(`Failed to delete speaker: ${error.message || 'Network error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSpeakerImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSpeakerImageFile(e.target.files[0]);
+    }
+  };
+
+  const handleAddRegistrationOption = () => {
+    console.log('handleAddRegistrationOption called');
+    console.log('newRegistrationOption:', newRegistrationOption);
+    console.log('selectedConvention:', selectedConvention);
+
+    if (!newRegistrationOption.name || !newRegistrationOption.price || !newRegistrationOption.description) {
+      console.log('Validation failed - missing fields');
+      toast.warning('Please fill in all registration option fields');
+      return;
+    }
+
+    // Get the selected convention from the admin dropdown
+    const selectedConv = conventions.find(c => c._id === selectedConvention);
+    console.log('selectedConv found:', selectedConv);
+
+    if (!selectedConv) {
+      console.log('No convention selected');
+      toast.warning('Please select a convention first');
+      return;
+    }
+
+    const updatedOptions = [
+      ...(selectedConv?.registrationOptions || []),
+      {
+        name: newRegistrationOption.name,
+        price: parseFloat(newRegistrationOption.price),
+        description: newRegistrationOption.description,
+        order: (selectedConv?.registrationOptions?.length || 0)
+      }
+    ];
+
+    console.log('updatedOptions:', updatedOptions);
+
+    // Update conventions list with updated convention
+    setConventions(prev => {
+      const updated = prev.map(c =>
+        c._id === selectedConvention
+          ? { ...c, registrationOptions: updatedOptions }
+          : c
+      );
+      console.log('Updated conventions list:', updated);
+      return updated;
+    });
+
+    setNewRegistrationOption({ name: '', price: '', description: '' });
+    console.log('Option form cleared');
+  };
+
+  const handleDeleteRegistrationOption = (index: number) => {
+    const selectedConv = conventions.find(c => c._id === selectedConvention);
+    if (selectedConv?.registrationOptions) {
+      const updatedOptions = selectedConv.registrationOptions.filter((_, i) => i !== index);
+      setConventions(prev => prev.map(c =>
+        c._id === selectedConvention
+          ? { ...c, registrationOptions: updatedOptions }
+          : c
+      ));
+    }
+  };
+
+  const handleSaveRegistrationSettings = async () => {
+    if (!selectedConvention) {
+      toast.warning('Please select a convention first');
+      return;
+    }
+
+    const selectedConv = conventions.find(c => c._id === selectedConvention);
+    if (!selectedConv) {
+      toast.warning('Please select a convention first');
+      return;
+    }
+
+    if (!selectedConv.registrationOptions || selectedConv.registrationOptions.length === 0) {
+      toast.warning('Please add at least one registration option');
+      return;
+    }
+
+    if (earlyBirdSettings.discount && isNaN(parseFloat(earlyBirdSettings.discount))) {
+      toast.warning('Early bird discount must be a number');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const updateData = {
+        registrationOptions: selectedConv.registrationOptions,
+        earlyBirdDiscount: earlyBirdSettings.discount ? parseFloat(earlyBirdSettings.discount) : 0,
+        earlyBirdMessage: earlyBirdSettings.message || ''
+      };
+
+      console.log('Saving registration settings:', updateData);
+      console.log('Convention ID:', selectedConvention);
+
+      const response = await fetch(`${API_URL}/conventions/${selectedConvention}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      const data = await response.json();
+      console.log('Save response:', data);
+      console.log('Response status:', response.status);
+
+      if (data.success) {
+        toast.success('Registration settings saved successfully!');
+        setShowRegistrationModal(false);
+        await fetchConventions();
+
+        // Update displayConvention to the one being edited so user sees changes immediately
+        const updatedConv = data.data;
+        if (updatedConv) {
+          setDisplayConvention(updatedConv);
+        }
+      } else {
+        toast.error(`Error: ${data.error || 'Failed to save registration settings'}`);
+      }
+    } catch (error: any) {
+      console.error('Error saving registration settings:', error);
+      toast.error(`Failed to save registration settings: ${error.message || 'Network error'}`);
     } finally {
       setLoading(false);
     }
@@ -752,37 +1018,94 @@ const Convention = () => {
           {/* Speakers Tab */}
           {activeTab === 'speakers' && (
             <div className="space-y-6">
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Learn from the best in the industry. Our speakers bring decades of experience and cutting-edge insights.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {speakers.map((speaker) => (
-                  <div
-                    key={speaker.id}
-                    onClick={() => setSelectedSpeaker(speaker)}
-                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 hover:shadow-lg dark:hover:bg-gray-600 transition-all cursor-pointer"
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-gray-600 dark:text-gray-400">
+                  Learn from the best in the industry. Our speakers bring decades of experience and cutting-edge insights.
+                </p>
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowSpeakerModal(true)}
+                    className="py-2 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm flex items-center flex-shrink-0 ml-4"
                   >
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-3 sm:space-y-0 sm:space-x-4 text-center sm:text-left">
-                      <div className="w-24 h-24 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                        {speaker.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{speaker.name}</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{speaker.title}</p>
-                        <p className="text-sm text-primary-600 dark:text-primary-400">{speaker.company}</p>
-                        <div className="mt-3">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Topic:</p>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">{speaker.topic}</p>
-                        </div>
-                        <div className="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400">
-                          <CalendarDaysIcon className="h-4 w-4 mr-1" />
-                          {speaker.day} • {speaker.time}
+                    <PlusIcon className="h-5 w-5 mr-2" />
+                    Add Speaker
+                  </button>
+                )}
+              </div>
+
+              {speakers.length === 0 ? (
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-6 text-center">
+                  <MicrophoneIcon className="h-12 w-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-3" />
+                  <p className="text-yellow-800 dark:text-yellow-400">
+                    No speakers have been added yet. {isAdmin && 'Add your first speaker above!'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {speakers.map((speaker) => (
+                    <div
+                      key={speaker._id || speaker.id}
+                      className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 hover:shadow-lg dark:hover:bg-gray-600 transition-all group relative"
+                    >
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSpeaker(speaker._id || speaker.id!);
+                          }}
+                          className="absolute top-4 right-4 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity p-2"
+                          title="Delete speaker"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      )}
+                      <div
+                        onClick={() => setSelectedSpeaker(speaker)}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-3 sm:space-y-0 sm:space-x-4 text-center sm:text-left">
+                          {speaker.image ? (
+                            <img
+                              src={speaker.image}
+                              alt={speaker.name}
+                              className="w-24 h-24 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-24 h-24 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                              {speaker.name.split(' ').map(n => n[0]).join('')}
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{speaker.name}</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{speaker.title}</p>
+                            <p className="text-sm text-primary-600 dark:text-primary-400">{speaker.company}</p>
+                            <div className="mt-3">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Topic:</p>
+                              <p className="text-sm text-gray-700 dark:text-gray-300">{speaker.topic}</p>
+                            </div>
+                            {(speaker.day || speaker.time) && (
+                              <div className="mt-3 flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                {speaker.day && (
+                                  <div className="flex items-center">
+                                    <CalendarDaysIcon className="h-4 w-4 mr-1 text-primary-600 dark:text-primary-400" />
+                                    {speaker.day}
+                                  </div>
+                                )}
+                                {speaker.time && (
+                                  <div className="flex items-center">
+                                    <ClockIcon className="h-4 w-4 mr-1 text-primary-600 dark:text-primary-400" />
+                                    {speaker.time}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -872,49 +1195,58 @@ const Convention = () => {
             <div className="max-w-2xl mx-auto">
               <div className="text-center mb-8">
                 <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Reserve Your Spot</h3>
-                <p className="text-gray-600 dark:text-gray-400">Join us for an unforgettable experience at Sign Company Convention 2025</p>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Join us for an unforgettable experience at {displayConvention?.title}
+                </p>
               </div>
 
               {!isRegistered ? (
                 <div className="space-y-6">
-                  <div className="bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-lg p-6">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Registration Options</h4>
-                    <div className="space-y-4">
-                      <label className="block">
-                        <input type="radio" name="registration" className="mr-3" defaultChecked />
-                        <span className="text-gray-700 dark:text-gray-300">
-                          <strong>Full Convention Pass</strong> - $599
-                          <span className="block text-sm text-gray-600 dark:text-gray-400 ml-6">
-                            Access to all sessions, workshops, exhibition hall, and meals
-                          </span>
-                        </span>
-                      </label>
-                      <label className="block">
-                        <input type="radio" name="registration" className="mr-3" />
-                        <span className="text-gray-700 dark:text-gray-300">
-                          <strong>Day Pass</strong> - $349
-                          <span className="block text-sm text-gray-600 dark:text-gray-400 ml-6">
-                            Single day access to sessions and exhibition hall
-                          </span>
-                        </span>
-                      </label>
-                      <label className="block">
-                        <input type="radio" name="registration" className="mr-3" />
-                        <span className="text-gray-700 dark:text-gray-300">
-                          <strong>Virtual Pass</strong> - $199
-                          <span className="block text-sm text-gray-600 dark:text-gray-400 ml-6">
-                            Live streaming access to keynote sessions
-                          </span>
-                        </span>
-                      </label>
+                  {displayConvention?.registrationOptions && displayConvention.registrationOptions.length > 0 ? (
+                    <div className="bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-lg p-6">
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Registration Options</h4>
+                      <div className="space-y-4">
+                        {displayConvention.registrationOptions
+                          .sort((a, b) => (a.order || 0) - (b.order || 0))
+                          .map((option, index) => (
+                            <label key={index} className="block">
+                              <input
+                                type="radio"
+                                name="registration"
+                                className="mr-3"
+                                defaultChecked={index === 0}
+                              />
+                              <span className="text-gray-700 dark:text-gray-300">
+                                <strong>{option.name}</strong> - ${option.price}
+                                <span className="block text-sm text-gray-600 dark:text-gray-400 ml-6">
+                                  {option.description}
+                                </span>
+                              </span>
+                            </label>
+                          ))}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                        Registration options are not yet configured for this convention.
+                      </p>
+                    </div>
+                  )}
 
-                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
-                    <p className="text-sm text-yellow-800 dark:text-yellow-400">
-                      <strong>Early Bird Special:</strong> Register before July 1st and save 20% on all passes!
-                    </p>
-                  </div>
+                  {displayConvention?.earlyBirdDiscount && displayConvention.earlyBirdDiscount > 0 && (
+                    <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                        <strong>Early Bird Special:</strong>{' '}
+                        {displayConvention.earlyBirdMessage ||
+                          `Register before ${
+                            displayConvention.earlyBirdDeadline
+                              ? new Date(displayConvention.earlyBirdDeadline).toLocaleDateString()
+                              : 'the deadline'
+                          } and save ${displayConvention.earlyBirdDiscount}% on all passes!`}
+                      </p>
+                    </div>
+                  )}
 
                   <button
                     onClick={() => setIsRegistered(true)}
@@ -932,7 +1264,7 @@ const Convention = () => {
                   </div>
                   <h4 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Registration Complete!</h4>
                   <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    Thank you for registering for Sign Company Convention 2025.
+                    Thank you for registering for {displayConvention?.title}.
                     We've sent a confirmation email with your ticket details.
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
@@ -1057,6 +1389,36 @@ const Convention = () => {
                   >
                     <PlusIcon className="h-5 w-5 mr-2" />
                     Add Schedule Day
+                  </button>
+                </div>
+
+                {/* Registration Management */}
+                <div className="bg-white dark:bg-gray-700 rounded-lg p-6 border border-gray-200 dark:border-gray-600 md:col-span-2">
+                  <div className="flex items-center mb-4">
+                    <TicketIcon className="h-8 w-8 text-secondary-600 dark:text-secondary-400 mr-3" />
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Registration</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Manage registration options and pricing</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (!selectedConvention) {
+                        toast.warning('Please select a convention first');
+                        return;
+                      }
+                      const selectedConv = conventions.find(c => c._id === selectedConvention);
+                      setShowRegistrationModal(true);
+                      // Initialize early bird settings from convention
+                      setEarlyBirdSettings({
+                        discount: selectedConv?.earlyBirdDiscount?.toString() || '',
+                        message: selectedConv?.earlyBirdMessage || ''
+                      });
+                    }}
+                    className="w-full py-3 px-4 bg-secondary-600 text-white font-medium rounded-lg hover:bg-secondary-700 active:bg-secondary-800 transition-colors shadow-sm flex items-center justify-center"
+                  >
+                    <Cog6ToothIcon className="h-5 w-5 mr-2" />
+                    Manage Registration
                   </button>
                 </div>
               </div>
@@ -1642,9 +2004,17 @@ const Convention = () => {
 
             <div className="p-5 sm:p-6">
               <div className="flex flex-col items-center sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 text-center sm:text-left">
-                <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white text-2xl sm:text-3xl font-bold flex-shrink-0">
-                  {selectedSpeaker.name.split(' ').map(n => n[0]).join('')}
-                </div>
+                {selectedSpeaker.image ? (
+                  <img
+                    src={selectedSpeaker.image}
+                    alt={selectedSpeaker.name}
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white text-2xl sm:text-3xl font-bold flex-shrink-0">
+                    {selectedSpeaker.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <h4 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100">{selectedSpeaker.name}</h4>
                   <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mt-1">{selectedSpeaker.title}</p>
@@ -1659,11 +2029,74 @@ const Convention = () => {
                     <div>
                       <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-1 text-sm sm:text-base">Session Topic</h5>
                       <p className="text-sm sm:text-base text-gray-800 dark:text-gray-200 font-medium">{selectedSpeaker.topic}</p>
-                      <div className="flex items-center justify-center sm:justify-start mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                        <CalendarDaysIcon className="h-4 w-4 mr-1" />
-                        {selectedSpeaker.day} • {selectedSpeaker.time}
-                      </div>
                     </div>
+
+                    {(selectedSpeaker.day || selectedSpeaker.time) && (
+                      <div>
+                        <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm sm:text-base">Event Schedule</h5>
+                        <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                          {selectedSpeaker.day && (
+                            <div className="flex items-center">
+                              <CalendarDaysIcon className="h-4 w-4 mr-2 text-primary-600 dark:text-primary-400" />
+                              {selectedSpeaker.day}
+                            </div>
+                          )}
+                          {selectedSpeaker.time && (
+                            <div className="flex items-center">
+                              <ClockIcon className="h-4 w-4 mr-2 text-primary-600 dark:text-primary-400" />
+                              {selectedSpeaker.time}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Contact Information */}
+                    {(selectedSpeaker.email || selectedSpeaker.website || selectedSpeaker.linkedin || selectedSpeaker.twitter) && (
+                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                        <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm sm:text-base">Connect</h5>
+                        <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                          {selectedSpeaker.email && (
+                            <a
+                              href={`mailto:${selectedSpeaker.email}`}
+                              className="inline-flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"
+                            >
+                              Email
+                            </a>
+                          )}
+                          {selectedSpeaker.website && (
+                            <a
+                              href={selectedSpeaker.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"
+                            >
+                              Website
+                            </a>
+                          )}
+                          {selectedSpeaker.linkedin && (
+                            <a
+                              href={selectedSpeaker.linkedin}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"
+                            >
+                              LinkedIn
+                            </a>
+                          )}
+                          {selectedSpeaker.twitter && (
+                            <a
+                              href={selectedSpeaker.twitter.startsWith('http') ? selectedSpeaker.twitter : `https://twitter.com/${selectedSpeaker.twitter.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"
+                            >
+                              Twitter
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1706,6 +2139,499 @@ const Convention = () => {
                 className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 {loading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Speaker Confirmation Modal */}
+      {showConfirmDeleteSpeaker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-sm w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
+                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4v2m0 0v2m0-6v-2m0 0V7a2 2 0 012-2h2.586a1 1 0 00-.707-1.707h-3.172a1 1 0 00-.707.293l-.929.929A1 1 0 009 5.586V7a1 1 0 001 1h2" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-2">
+                Delete Speaker?
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
+                This action cannot be undone. The speaker will be permanently deleted.
+              </p>
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 rounded-b-2xl">
+              <button
+                onClick={() => {
+                  setShowConfirmDeleteSpeaker(false);
+                  setSpeakerIdToDelete(null);
+                }}
+                className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteSpeaker}
+                disabled={loading}
+                className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {loading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Speaker Modal */}
+      {showSpeakerModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
+            <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Speaker</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Add a speaker to this convention</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSpeakerModal(false);
+                  setNewSpeaker({
+                    name: '',
+                    title: '',
+                    company: '',
+                    bio: '',
+                    topic: '',
+                    day: '',
+                    time: '',
+                    imageUrl: '',
+                    email: '',
+                    linkedin: '',
+                    twitter: '',
+                    website: ''
+                  });
+                  setSpeakerImageFile(null);
+                  setSpeakerImageMode('upload');
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Basic Information</h4>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Full Name *</label>
+                  <input
+                    type="text"
+                    value={newSpeaker.name}
+                    onChange={(e) => setNewSpeaker({ ...newSpeaker, name: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., Sarah Johnson"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title / Position *</label>
+                  <input
+                    type="text"
+                    value={newSpeaker.title}
+                    onChange={(e) => setNewSpeaker({ ...newSpeaker, title: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., CEO & Industry Leader"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Company / Organization *</label>
+                  <input
+                    type="text"
+                    value={newSpeaker.company}
+                    onChange={(e) => setNewSpeaker({ ...newSpeaker, company: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., SignTech Innovations"
+                  />
+                </div>
+              </div>
+
+              {/* Biography */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Biography *</label>
+                <textarea
+                  value={newSpeaker.bio}
+                  onChange={(e) => setNewSpeaker({ ...newSpeaker, bio: e.target.value })}
+                  rows={4}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="Brief biography of the speaker..."
+                />
+              </div>
+
+              {/* Session Topic */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Session Topic *</label>
+                <input
+                  type="text"
+                  value={newSpeaker.topic}
+                  onChange={(e) => setNewSpeaker({ ...newSpeaker, topic: e.target.value })}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="e.g., The Future of Digital Signage"
+                />
+              </div>
+
+              {/* Event Day and Time */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Event Schedule (Optional)</h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Event Day</label>
+                    <input
+                      type="text"
+                      value={newSpeaker.day}
+                      onChange={(e) => setNewSpeaker({ ...newSpeaker, day: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="e.g., Day 1 or May 15"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Event Time</label>
+                    <input
+                      type="time"
+                      value={newSpeaker.time}
+                      onChange={(e) => setNewSpeaker({ ...newSpeaker, time: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Speaker Image */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Speaker Photo *</label>
+
+                {/* Image Mode Toggle */}
+                <div className="flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setSpeakerImageMode('upload')}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                      speakerImageMode === 'upload'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    Upload Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSpeakerImageMode('url')}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                      speakerImageMode === 'url'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    Use URL
+                  </button>
+                </div>
+
+                {speakerImageMode === 'upload' ? (
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSpeakerImageChange}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    {speakerImageFile && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                        Selected: {speakerImageFile.name}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <input
+                    type="url"
+                    value={newSpeaker.imageUrl}
+                    onChange={(e) => setNewSpeaker({ ...newSpeaker, imageUrl: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="https://example.com/speaker-photo.jpg"
+                  />
+                )}
+              </div>
+
+              {/* Optional Contact Information */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Optional Contact Information</h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
+                    <input
+                      type="email"
+                      value={newSpeaker.email}
+                      onChange={(e) => setNewSpeaker({ ...newSpeaker, email: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="speaker@example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Website</label>
+                    <input
+                      type="url"
+                      value={newSpeaker.website}
+                      onChange={(e) => setNewSpeaker({ ...newSpeaker, website: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="https://example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">LinkedIn</label>
+                    <input
+                      type="url"
+                      value={newSpeaker.linkedin}
+                      onChange={(e) => setNewSpeaker({ ...newSpeaker, linkedin: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="https://linkedin.com/in/..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Twitter</label>
+                    <input
+                      type="text"
+                      value={newSpeaker.twitter}
+                      onChange={(e) => setNewSpeaker({ ...newSpeaker, twitter: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="@username"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => {
+                  setShowSpeakerModal(false);
+                  setNewSpeaker({
+                    name: '',
+                    title: '',
+                    company: '',
+                    bio: '',
+                    topic: '',
+                    day: '',
+                    time: '',
+                    imageUrl: '',
+                    email: '',
+                    linkedin: '',
+                    twitter: '',
+                    website: ''
+                  });
+                  setSpeakerImageFile(null);
+                  setSpeakerImageMode('upload');
+                }}
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddSpeaker}
+                disabled={loading}
+                className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Adding...' : 'Add Speaker'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Registration Management Modal */}
+      {showRegistrationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
+            <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Manage Registration Settings</h3>
+              <button
+                onClick={() => {
+                  setShowRegistrationModal(false);
+                  setNewRegistrationOption({ name: '', price: '', description: '' });
+                  setEarlyBirdSettings({ discount: '', message: '' });
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+              {/* Registration Options Section */}
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                    <TicketIcon className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                    Add Registration Option
+                  </h4>
+
+                  <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-700">
+                    {/* Option Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Option Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={newRegistrationOption.name}
+                        onChange={(e) => setNewRegistrationOption({ ...newRegistrationOption, name: e.target.value })}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="e.g., Standard Ticket, VIP Ticket"
+                      />
+                    </div>
+
+                    {/* Price */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Price ($) *
+                      </label>
+                      <input
+                        type="number"
+                        value={newRegistrationOption.price}
+                        onChange={(e) => setNewRegistrationOption({ ...newRegistrationOption, price: e.target.value })}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="e.g., 99.99"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Description *
+                      </label>
+                      <textarea
+                        value={newRegistrationOption.description}
+                        onChange={(e) => setNewRegistrationOption({ ...newRegistrationOption, description: e.target.value })}
+                        rows={2}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="e.g., Includes lunch and workshop access"
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleAddRegistrationOption}
+                      className="w-full py-2 px-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors"
+                    >
+                      <PlusIcon className="h-4 w-4 inline mr-2" />
+                      Add Option
+                    </button>
+                  </div>
+                </div>
+
+                {/* Display Existing Registration Options */}
+                {conventions.find(c => c._id === selectedConvention)?.registrationOptions && conventions.find(c => c._id === selectedConvention)!.registrationOptions.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Current Options</h4>
+                    <div className="space-y-2">
+                      {conventions.find(c => c._id === selectedConvention)!.registrationOptions.map((option: any, index: number) => (
+                        <div
+                          key={index}
+                          className="flex items-start justify-between p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-700"
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900 dark:text-gray-100">{option.name}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">${option.price.toFixed(2)}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">{option.description}</div>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteRegistrationOption(index)}
+                            className="ml-4 p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title="Delete option"
+                          >
+                            <TrashIcon className="h-5 w-5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Early Bird Settings Section */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <SparklesIcon className="h-5 w-5 text-amber-500" />
+                    Early Bird Settings (Optional)
+                  </h4>
+
+                  <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    {/* Early Bird Discount */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Discount Percentage (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={earlyBirdSettings.discount}
+                        onChange={(e) => setEarlyBirdSettings({ ...earlyBirdSettings, discount: e.target.value })}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        placeholder="e.g., 15"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                      />
+                    </div>
+
+                    {/* Early Bird Message */}
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Custom Message
+                      </label>
+                      <textarea
+                        value={earlyBirdSettings.message}
+                        onChange={(e) => setEarlyBirdSettings({ ...earlyBirdSettings, message: e.target.value })}
+                        rows={2}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        placeholder="e.g., Early bird pricing available until December 31st!"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        Leave empty for default message
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => {
+                  setShowRegistrationModal(false);
+                  setNewRegistrationOption({ name: '', price: '', description: '' });
+                  setEarlyBirdSettings({ discount: '', message: '' });
+                }}
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveRegistrationSettings}
+                disabled={loading}
+                className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Saving...' : 'Save Settings'}
               </button>
             </div>
           </div>

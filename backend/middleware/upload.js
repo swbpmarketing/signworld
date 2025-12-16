@@ -8,11 +8,11 @@ const storage = multer.memoryStorage();
 // File filter for validation
 const fileFilter = (req, file, cb) => {
   // Accept images
-  if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail' || file.fieldname === 'file') {
+  if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'image' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail' || file.fieldname === 'file') {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed for images/gallery/logo/thumbnail'), false);
+      cb(new Error('Only image files are allowed for images/gallery/logo/image/thumbnail'), false);
     }
   }
   // Accept videos
@@ -95,7 +95,7 @@ const uploadFilesToS3 = async (req, res, next) => {
     const uploadPromises = files.map(async (file) => {
       // Determine folder based on field name
       let folder = 'other';
-      if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail') {
+      if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'image' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail') {
         folder = 'images';
       } else if (file.fieldname === 'file') {
         folder = 'profile-photos';

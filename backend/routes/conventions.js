@@ -143,6 +143,10 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
  */
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
   try {
+    console.log('PUT /conventions/:id called');
+    console.log('Convention ID:', req.params.id);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+
     let convention = await Convention.findById(req.params.id);
 
     if (!convention) {
@@ -161,9 +165,21 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
       }
     );
 
+    console.log('Updated convention from DB:');
+    console.log('Convention ID:', convention._id);
+    console.log('Convention title:', convention.title);
+    console.log('Registration options:', convention.registrationOptions);
+    console.log('Early bird discount:', convention.earlyBirdDiscount);
+    console.log('Early bird message:', convention.earlyBirdMessage);
+    console.log('Full convention object keys:', Object.keys(convention.toObject ? convention.toObject() : convention));
+
+    // Convert Mongoose document to plain JavaScript object to ensure all fields are included
+    const conventionObj = convention.toObject ? convention.toObject() : convention;
+    console.log('Final response data registrationOptions:', conventionObj.registrationOptions);
+
     res.json({
       success: true,
-      data: convention
+      data: conventionObj
     });
   } catch (error) {
     console.error('Update convention error:', error);
@@ -566,6 +582,92 @@ router.delete('/:id/documents/:documentId', protect, authorize('admin'), async (
     res.status(500).json({
       success: false,
       error: 'Server error while deleting document'
+    });
+  }
+});
+
+/**
+ * @route   POST /api/conventions/:id/speakers
+ * @desc    Add speaker to convention
+ * @access  Private/Admin
+ */
+router.post('/:id/speakers', protect, authorize('admin'), upload.single('image'), async (req, res) => {
+  try {
+    const convention = await Convention.findById(req.params.id);
+
+    if (!convention) {
+      return res.status(404).json({
+        success: false,
+        error: 'Convention not found'
+      });
+    }
+
+    // Build speaker object from request body
+    const speakerData = {
+      name: req.body.name,
+      title: req.body.title,
+      company: req.body.company,
+      bio: req.body.bio,
+      topic: req.body.topic,
+      // Handle both uploaded file and URL input
+      image: req.file ? (req.file.s3Url || req.file.location) : req.body.imageUrl,
+      // Optional event schedule fields
+      day: req.body.day || '',
+      time: req.body.time || '',
+      // Optional fields
+      email: req.body.email || '',
+      linkedin: req.body.linkedin || '',
+      twitter: req.body.twitter || '',
+      website: req.body.website || ''
+    };
+
+    convention.speakers.push(speakerData);
+    await convention.save();
+
+    res.status(201).json({
+      success: true,
+      data: convention
+    });
+  } catch (error) {
+    console.error('Add speaker error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while adding speaker'
+    });
+  }
+});
+
+/**
+ * @route   DELETE /api/conventions/:id/speakers/:speakerId
+ * @desc    Remove speaker from convention
+ * @access  Private/Admin
+ */
+router.delete('/:id/speakers/:speakerId', protect, authorize('admin'), async (req, res) => {
+  try {
+    const convention = await Convention.findById(req.params.id);
+
+    if (!convention) {
+      return res.status(404).json({
+        success: false,
+        error: 'Convention not found'
+      });
+    }
+
+    convention.speakers = convention.speakers.filter(
+      speaker => speaker._id.toString() !== req.params.speakerId
+    );
+
+    await convention.save();
+
+    res.json({
+      success: true,
+      data: convention
+    });
+  } catch (error) {
+    console.error('Remove speaker error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while removing speaker'
     });
   }
 });
