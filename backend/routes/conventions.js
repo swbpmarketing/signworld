@@ -3,6 +3,7 @@ const router = express.Router();
 const Convention = require('../models/Convention');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const emailService = require('../services/emailService');
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
@@ -189,8 +190,9 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
       console.log(`Dates changed from ${oldDateStr} to ${newDateStr}, notifying ${convention.attendees.length} attendees`);
 
       try {
-        // Send notifications to all attendees
+        // Send notifications and emails to all attendees
         for (const attendee of convention.attendees) {
+          // Send in-app notification
           await Notification.createAndEmit(io, {
             recipient: attendee.userId,
             sender: req.user.id,
@@ -207,6 +209,20 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
               newEndDate: newEndDate
             }
           });
+
+          // Send email notification
+          try {
+            await emailService.sendConventionDateChangeEmail({
+              to: attendee.email,
+              name: `${attendee.firstName} ${attendee.lastName}`,
+              convention: convention,
+              oldStartDate: new Date(oldStartDate),
+              oldEndDate: new Date(oldEndDate)
+            });
+          } catch (emailError) {
+            console.error(`Error sending date change email to ${attendee.email}:`, emailError);
+            // Don't fail the request if email fails
+          }
         }
 
         // Emit real-time update
@@ -782,6 +798,18 @@ router.post('/:id/register', protect, async (req, res) => {
       });
     } catch (notifError) {
       console.error('Error creating registration notification:', notifError);
+    }
+
+    // Send registration confirmation email
+    try {
+      await emailService.sendConventionRegistrationEmail({
+        to: user.email,
+        name: `${user.firstName} ${user.lastName}`,
+        convention: convention
+      });
+    } catch (emailError) {
+      console.error('Error sending registration confirmation email:', emailError);
+      // Don't fail the request if email fails - registration is still successful
     }
 
     res.status(201).json({

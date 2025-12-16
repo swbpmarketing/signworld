@@ -122,6 +122,46 @@ class EmailService {
     }
   }
 
+  /**
+   * Send convention registration confirmation email
+   */
+  async sendConventionRegistrationEmail({ to, name, convention }) {
+    try {
+      const info = await transporter.sendMail({
+        from: DEFAULT_FROM,
+        to,
+        subject: `Registration Confirmed: ${convention.title}`,
+        html: this.getConventionRegistrationTemplate(name, convention),
+      });
+
+      console.log('Convention registration email sent successfully:', info.messageId);
+      return { success: true, data: info };
+    } catch (error) {
+      console.error('Failed to send convention registration email:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Send convention date change notification email
+   */
+  async sendConventionDateChangeEmail({ to, name, convention, oldStartDate, oldEndDate }) {
+    try {
+      const info = await transporter.sendMail({
+        from: DEFAULT_FROM,
+        to,
+        subject: `Schedule Change: ${convention.title}`,
+        html: this.getConventionDateChangeTemplate(name, convention, oldStartDate, oldEndDate),
+      });
+
+      console.log('Convention date change email sent successfully:', info.messageId);
+      return { success: true, data: info };
+    } catch (error) {
+      console.error('Failed to send convention date change email:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // EMAIL TEMPLATES
 
   getWelcomeTemplate(name) {
@@ -324,6 +364,134 @@ class EmailService {
                 <p>${post.content?.substring(0, 200)}${post.content?.length > 200 ? '...' : ''}</p>
               </div>
               <a href="${threadUrl}" class="button">View Thread</a>
+              <p>Best regards,<br>The SignWorld Team</p>
+            </div>
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} SignWorld. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  getConventionRegistrationTemplate(name, convention) {
+    const convUrl = `${process.env.CLIENT_URL}/conventions/${convention._id}`;
+    const startDate = new Date(convention.startDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const endDate = new Date(convention.endDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+            .convention-details { background: white; padding: 20px; border-left: 4px solid #10b981; margin: 20px 0; border-radius: 4px; }
+            .button { display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Registration Confirmed!</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${name},</p>
+              <p>Thank you for registering for ${convention.title}. We're excited to have you join us!</p>
+              <div class="convention-details">
+                <h2>${convention.title}</h2>
+                <p><strong>Date:</strong> ${startDate}${startDate !== endDate ? ` to ${endDate}` : ''}</p>
+                ${convention.location?.venue ? `<p><strong>Venue:</strong> ${convention.location.venue}</p>` : ''}
+                ${convention.location?.address ? `<p><strong>Address:</strong> ${convention.location.address}</p>` : ''}
+                <p><strong>Status:</strong> Registration Complete</p>
+              </div>
+              <p>Please follow up with the event organizers regarding payment as instructed. Your registration is confirmed and pending payment completion.</p>
+              <a href="${convUrl}" class="button">View Convention Details</a>
+              <p>If you have any questions, please contact the event organizer.</p>
+              <p>Best regards,<br>The SignWorld Team</p>
+            </div>
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} SignWorld. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  getConventionDateChangeTemplate(name, convention, oldStartDate, oldEndDate) {
+    const convUrl = `${process.env.CLIENT_URL}/conventions/${convention._id}`;
+    const newStartDate = new Date(convention.startDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const newEndDate = new Date(convention.endDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const oldStartDateFormatted = new Date(oldStartDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const oldEndDateFormatted = new Date(oldEndDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+            .schedule-box { background: white; padding: 20px; border-left: 4px solid #f59e0b; margin: 20px 0; border-radius: 4px; }
+            .old-date { color: #dc2626; text-decoration: line-through; }
+            .new-date { color: #059669; font-weight: bold; }
+            .button { display: inline-block; background: #f59e0b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Schedule Change Notice</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${name},</p>
+              <p>We wanted to notify you that the schedule for ${convention.title} has been updated.</p>
+              <div class="schedule-box">
+                <h2>${convention.title}</h2>
+                <p><strong>Previous Date:</strong> <span class="old-date">${oldStartDateFormatted}${oldStartDateFormatted !== oldEndDateFormatted ? ` to ${oldEndDateFormatted}` : ''}</span></p>
+                <p><strong>New Date:</strong> <span class="new-date">${newStartDate}${newStartDate !== newEndDate ? ` to ${newEndDate}` : ''}</span></p>
+              </div>
+              <p>Please update your calendar accordingly. If you have any concerns or questions about this change, please contact the event organizers.</p>
+              <a href="${convUrl}" class="button">View Updated Details</a>
+              <p>We look forward to seeing you at the event!</p>
               <p>Best regards,<br>The SignWorld Team</p>
             </div>
             <div class="footer">
