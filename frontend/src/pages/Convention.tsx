@@ -135,6 +135,10 @@ const Convention = () => {
     message: ''
   });
 
+  // Convention settings state
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [editingSettings, setEditingSettings] = useState<any>(null);
+
   useEffect(() => {
     const updateCountdown = () => {
       if (!displayConvention) return;
@@ -756,6 +760,83 @@ const Convention = () => {
     }
   };
 
+  const handleEditSettings = () => {
+    if (!selectedConvention) {
+      toast.warning('Please select a convention first');
+      return;
+    }
+    const selectedConv = conventions.find(c => c._id === selectedConvention);
+    if (selectedConv) {
+      setEditingSettings({
+        title: selectedConv.title || '',
+        description: selectedConv.description || '',
+        startDate: selectedConv.startDate || '',
+        endDate: selectedConv.endDate || '',
+        location: selectedConv.location || {},
+        isActive: selectedConv.isActive || false,
+        isFeatured: selectedConv.isFeatured || false
+      });
+      setShowSettingsModal(true);
+    }
+  };
+
+  const handleSettingChange = (field: string, value: any) => {
+    setEditingSettings(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveSettings = async () => {
+    if (!editingSettings.title || !editingSettings.description || !editingSettings.startDate || !editingSettings.endDate) {
+      toast.warning('Please fill in all required fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+
+      const updateData = {
+        title: editingSettings.title,
+        description: editingSettings.description,
+        startDate: editingSettings.startDate,
+        endDate: editingSettings.endDate,
+        location: editingSettings.location,
+        isActive: editingSettings.isActive,
+        isFeatured: editingSettings.isFeatured
+      };
+
+      const response = await fetch(`${API_URL}/conventions/${selectedConvention}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Convention settings saved successfully!');
+        setShowSettingsModal(false);
+        await fetchConventions();
+        const updatedConv = data.data;
+        if (updatedConv) {
+          setDisplayConvention(updatedConv);
+        }
+      } else {
+        toast.error(`Error: ${data.error || 'Failed to save settings'}`);
+      }
+    } catch (error: any) {
+      console.error('Error saving convention settings:', error);
+      toast.error(`Failed to save settings: ${error.message || 'Network error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getEventTypeIcon = (type: string) => {
     switch (type) {
       case 'keynote': return '🎤';
@@ -1332,6 +1413,55 @@ const Convention = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Convention Settings */}
+                <div className="bg-white dark:bg-gray-700 rounded-lg p-6 border border-gray-200 dark:border-gray-600 md:col-span-2">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <Cog6ToothIcon className="h-8 w-8 text-primary-600 dark:text-primary-400 mr-3" />
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Convention Settings</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Edit dates, location, title and description</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleEditSettings}
+                      className="py-2 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  {selectedConvention && conventions.find(c => c._id === selectedConvention) && (
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <p className="text-gray-500 dark:text-gray-400">Title</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{conventions.find(c => c._id === selectedConvention)?.title}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 dark:text-gray-400">Description</p>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{conventions.find(c => c._id === selectedConvention)?.description}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-gray-500 dark:text-gray-400">Start Date</p>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{new Date(conventions.find(c => c._id === selectedConvention)?.startDate).toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 dark:text-gray-400">End Date</p>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{new Date(conventions.find(c => c._id === selectedConvention)?.endDate).toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        {conventions.find(c => c._id === selectedConvention)?.isActive && (
+                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs font-medium">Active</span>
+                        )}
+                        {conventions.find(c => c._id === selectedConvention)?.isFeatured && (
+                          <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded text-xs font-medium">Featured</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Upload Gallery Images */}
                 <div className="bg-white dark:bg-gray-700 rounded-lg p-6 border border-gray-200 dark:border-gray-600">
                   <div className="flex items-center mb-4">
@@ -2629,6 +2759,230 @@ const Convention = () => {
               <button
                 onClick={handleSaveRegistrationSettings}
                 disabled={loading}
+                className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Saving...' : 'Save Settings'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Convention Settings Modal */}
+      {showSettingsModal && editingSettings && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
+            <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Convention Settings</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Edit convention details</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSettingsModal(false);
+                  setEditingSettings(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Basic Information</h4>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Convention Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editingSettings.title || ''}
+                    onChange={(e) => handleSettingChange('title', e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Enter convention title"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Description *
+                  </label>
+                  <textarea
+                    value={editingSettings.description || ''}
+                    onChange={(e) => handleSettingChange('description', e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Enter convention description"
+                  />
+                </div>
+              </div>
+
+              {/* Date and Time Information */}
+              <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Date & Time</h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Start Date & Time *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={editingSettings.startDate ? new Date(editingSettings.startDate).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => handleSettingChange('startDate', e.target.value ? new Date(e.target.value).toISOString() : '')}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      End Date & Time *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={editingSettings.endDate ? new Date(editingSettings.endDate).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => handleSettingChange('endDate', e.target.value ? new Date(e.target.value).toISOString() : '')}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Location Information */}
+              <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Location</h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Venue
+                    </label>
+                    <input
+                      type="text"
+                      value={editingSettings.location?.venue || ''}
+                      onChange={(e) => handleSettingChange('location', { ...editingSettings.location, venue: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Venue name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Address
+                    </label>
+                    <input
+                      type="text"
+                      value={editingSettings.location?.address || ''}
+                      onChange={(e) => handleSettingChange('location', { ...editingSettings.location, address: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Street address"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      value={editingSettings.location?.city || ''}
+                      onChange={(e) => handleSettingChange('location', { ...editingSettings.location, city: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="City"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      State
+                    </label>
+                    <input
+                      type="text"
+                      value={editingSettings.location?.state || ''}
+                      onChange={(e) => handleSettingChange('location', { ...editingSettings.location, state: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="State/Province"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Zip Code
+                    </label>
+                    <input
+                      type="text"
+                      value={editingSettings.location?.zipCode || ''}
+                      onChange={(e) => handleSettingChange('location', { ...editingSettings.location, zipCode: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Postal code"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Country
+                    </label>
+                    <input
+                      type="text"
+                      value={editingSettings.location?.country || ''}
+                      onChange={(e) => handleSettingChange('location', { ...editingSettings.location, country: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Country"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Settings */}
+              <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Status</h4>
+
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={editingSettings.isActive || false}
+                      onChange={(e) => handleSettingChange('isActive', e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Active Convention
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={editingSettings.isFeatured || false}
+                      onChange={(e) => handleSettingChange('isFeatured', e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                    />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Featured Convention
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => {
+                  setShowSettingsModal(false);
+                  setEditingSettings(null);
+                }}
+                className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSettings}
+                disabled={loading || !editingSettings.title || !editingSettings.description}
                 className="flex-1 py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Saving...' : 'Save Settings'}
