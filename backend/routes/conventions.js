@@ -6,6 +6,7 @@ const Notification = require('../models/Notification');
 const emailService = require('../services/emailService');
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { getConventionStatus } = require('../utils/conventionStatus');
 
 /**
  * @route   GET /api/conventions
@@ -30,13 +31,10 @@ router.get('/', async (req, res) => {
 
     const conventions = await Convention.find(filter).sort('-startDate');
 
-    // Convert to JSON to include virtuals
+    // Convert to JSON and add status
     const conventionsWithStatus = conventions.map(c => {
-      const data = c.toJSON({ virtuals: true });
-      // Explicitly set status from virtual getter if not already included
-      if (!data.status) {
-        data.status = c.status;
-      }
+      const data = c.toJSON();
+      data.status = getConventionStatus(c.startDate, c.endDate);
       return data;
     });
 
@@ -70,12 +68,9 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // Force virtual field computation
-    const conventionData = convention.toJSON({ virtuals: true });
-    // Explicitly set status from virtual getter
-    if (!conventionData.status) {
-      conventionData.status = convention.status;
-    }
+    // Get convention data and add status
+    const conventionData = convention.toJSON();
+    conventionData.status = getConventionStatus(convention.startDate, convention.endDate);
 
     res.json({
       success: true,
@@ -134,10 +129,8 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
       console.error('Error creating convention notifications:', notifError);
     }
 
-    const data = convention.toJSON({ virtuals: true });
-    if (!data.status) {
-      data.status = convention.status;
-    }
+    const data = convention.toJSON();
+    data.status = getConventionStatus(convention.startDate, convention.endDate);
 
     res.status(201).json({
       success: true,
@@ -264,8 +257,9 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
       }
     }
 
-    // Convert to JSON to include virtuals like status
-    const conventionObj = convention.toJSON({ virtuals: true });
+    // Convert to JSON and add status
+    const conventionObj = convention.toJSON();
+    conventionObj.status = getConventionStatus(convention.startDate, convention.endDate);
     console.log('Final response data registrationOptions:', conventionObj.registrationOptions);
 
     res.json({
@@ -479,10 +473,16 @@ router.get('/filter/upcoming', async (req, res) => {
       isActive: true
     }).sort('startDate').limit(5);
 
+    const withStatus = conventions.map(c => {
+      const data = c.toJSON();
+      data.status = getConventionStatus(c.startDate, c.endDate);
+      return data;
+    });
+
     res.json({
       success: true,
-      count: conventions.length,
-      data: conventions.map(c => c.toJSON({ virtuals: true }))
+      count: withStatus.length,
+      data: withStatus
     });
   } catch (error) {
     console.error('Get upcoming conventions error:', error);
@@ -512,9 +512,12 @@ router.get('/filter/featured', async (req, res) => {
       });
     }
 
+    const data = convention.toJSON();
+    data.status = getConventionStatus(convention.startDate, convention.endDate);
+
     res.json({
       success: true,
-      data: convention.toJSON({ virtuals: true })
+      data: data
     });
   } catch (error) {
     console.error('Get featured convention error:', error);
@@ -834,10 +837,13 @@ router.post('/:id/register', protect, async (req, res) => {
       // Don't fail the request if email fails - registration is still successful
     }
 
+    const data = convention.toJSON();
+    data.status = getConventionStatus(convention.startDate, convention.endDate);
+
     res.status(201).json({
       success: true,
       message: 'Successfully registered for convention',
-      data: convention.toJSON()
+      data: data
     });
   } catch (error) {
     console.error('Register for convention error:', error);
