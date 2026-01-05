@@ -29,23 +29,10 @@ const Landing = () => {
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   // Set page title
   useEffect(() => {
-    document.title = 'Sign Company';
-  }, []);
-
-  // Track mouse for subtle parallax effect
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth - 0.5) * 20,
-        y: (e.clientY / window.innerHeight - 0.5) * 20
-      });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    document.title = 'Sign Nexus by Sign World - Digital Transformation Proposal';
   }, []);
 
   const handleContactSubmit = async (e: React.FormEvent) => {
@@ -139,45 +126,67 @@ const Landing = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 overflow-hidden">
-      {/* Animated background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+    <div className="min-h-screen bg-gray-950 overflow-hidden relative">
+      {/* Background Effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div
-          className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-primary-400/20 to-primary-600/20 dark:from-primary-500/10 dark:to-primary-700/10 rounded-full blur-3xl"
+          className="absolute top-0 left-0 right-0 bottom-0 opacity-40"
           style={{
-            transform: `translate(${mousePosition.x}px, ${mousePosition.y}px)`
-          }}
-        />
-        <div
-          className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-purple-400/20 to-pink-400/20 dark:from-purple-500/10 dark:to-pink-500/10 rounded-full blur-3xl"
-          style={{
-            transform: `translate(${-mousePosition.x}px, ${-mousePosition.y}px)`
+            background: `
+              radial-gradient(circle at 20% 80%, rgba(0, 166, 251, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(255, 107, 107, 0.05) 0%, transparent 50%),
+              radial-gradient(circle at 40% 40%, rgba(0, 166, 251, 0.04) 0%, transparent 50%)
+            `
           }}
         />
       </div>
 
+      {/* Noise Background */}
+      <div
+        className="fixed inset-0 opacity-[0.02] pointer-events-none z-0"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.05) 35px, rgba(255,255,255,.05) 70px)'
+        }}
+      />
+
+      {/* Animated Gradient Orbs */}
+      <div
+        className="fixed -top-64 -right-32 w-[600px] h-[600px] rounded-full blur-[80px] opacity-60 pointer-events-none z-0 animate-float"
+        style={{
+          background: 'radial-gradient(circle, rgba(0, 166, 251, 0.3) 0%, transparent 70%)',
+          animation: 'float 25s infinite ease-in-out'
+        }}
+      />
+      <div
+        className="fixed -bottom-32 -left-32 w-[500px] h-[500px] rounded-full blur-[80px] opacity-60 pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(circle, rgba(255, 107, 107, 0.2) 0%, transparent 70%)',
+          animation: 'float 25s infinite ease-in-out 10s'
+        }}
+      />
+
       {/* Hero Section */}
-      <section className="relative pt-32 pb-24 px-6">
+      <section className="relative pt-32 pb-24 px-6 z-10">
         <div className="container mx-auto max-w-7xl">
-          <div className="text-center relative z-10">
+          <div className="text-center">
             {/* Floating badge */}
-            <div className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-950/50 dark:to-primary-900/50 rounded-full mb-8 border border-primary-200/50 dark:border-primary-800/50 shadow-lg shadow-primary-500/10 animate-fadeInUp">
-              <SparklesIcon className="w-5 h-5 text-primary-600 dark:text-primary-400 mr-2.5 animate-pulse" />
-              <span className="text-sm font-bold text-primary-700 dark:text-primary-300 tracking-wide">
+            <div className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-blue-500/10 to-blue-600/10 rounded-full mb-8 border border-blue-500/30 shadow-lg shadow-blue-500/5 backdrop-blur-md animate-fadeInUp">
+              <SparklesIcon className="w-5 h-5 text-blue-400 mr-2.5 animate-pulse" />
+              <span className="text-sm font-bold text-blue-300 tracking-wide">
                 Franchise Owner Portal
               </span>
             </div>
 
             {/* Main headline */}
-            <h1 className="text-6xl md:text-7xl lg:text-8xl font-black text-gray-900 dark:text-white mb-8 leading-[1.1] tracking-tight animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
+            <h1 className="text-6xl md:text-7xl lg:text-8xl font-black text-white mb-8 leading-[1.1] tracking-tight animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
               Empower Your
-              <span className="block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-primary-600 via-primary-700 to-primary-600 dark:from-primary-400 dark:via-primary-500 dark:to-primary-400 animate-gradient bg-[length:200%_auto]">
+              <span className="block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-400 animate-gradient bg-[length:200%_auto]">
                 SignWorld Business
               </span>
             </h1>
 
             {/* Subtitle */}
-            <p className="text-xl md:text-2xl lg:text-3xl text-gray-600 dark:text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed font-light animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
+            <p className="text-xl md:text-2xl lg:text-3xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed font-light animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
               Your all-in-one platform for business intelligence, training resources,
               and franchise community engagement
             </p>
@@ -186,7 +195,7 @@ const Landing = () => {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
               <button
                 onClick={() => navigate('/login')}
-                className="group relative px-10 py-5 bg-gradient-to-r from-primary-600 via-primary-700 to-primary-600 hover:from-primary-700 hover:via-primary-800 hover:to-primary-700 text-white font-bold rounded-2xl shadow-2xl shadow-primary-500/40 hover:shadow-3xl hover:shadow-primary-500/50 transition-all duration-300 flex items-center space-x-3 transform hover:-translate-y-1 border border-primary-500/20 overflow-hidden bg-[length:200%_auto]"
+                className="group relative px-10 py-5 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-700 hover:via-blue-600 hover:to-cyan-600 text-white font-bold rounded-xl shadow-2xl shadow-blue-500/40 hover:shadow-3xl hover:shadow-blue-500/50 transition-all duration-300 flex items-center space-x-3 transform hover:-translate-y-1 border border-blue-400/20 overflow-hidden bg-[length:200%_auto]"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
                 <span className="relative z-10 text-lg">Access Portal</span>
@@ -195,7 +204,7 @@ const Landing = () => {
 
               <button
                 onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
-                className="group px-10 py-5 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 text-gray-900 dark:text-white font-bold rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center space-x-3 transform hover:-translate-y-1 border-2 border-gray-200 dark:border-gray-700 backdrop-blur-xl"
+                className="group px-10 py-5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center space-x-3 transform hover:-translate-y-1 border border-white/20 backdrop-blur-xl hover:border-white/40"
               >
                 <span className="text-lg">Get in Touch</span>
                 <EnvelopeIcon className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
@@ -206,14 +215,14 @@ const Landing = () => {
       </section>
 
       {/* Benefits Section */}
-      <section className="relative py-24 px-6">
+      <section className="relative py-24 px-6 z-10">
         <div className="container mx-auto max-w-7xl">
           <div className="text-center mb-20">
-            <div className="inline-flex items-center px-5 py-2 bg-primary-50 dark:bg-primary-950/50 rounded-full mb-6 border border-primary-200/50 dark:border-primary-800/50">
-              <CheckCircleIcon className="w-5 h-5 text-primary-600 dark:text-primary-400 mr-2" />
-              <span className="text-sm font-bold text-primary-700 dark:text-primary-300">Why Choose Us</span>
+            <div className="inline-flex items-center px-5 py-2 bg-blue-500/10 rounded-full mb-6 border border-blue-500/30 backdrop-blur-md">
+              <CheckCircleIcon className="w-5 h-5 text-blue-400 mr-2" />
+              <span className="text-sm font-bold text-blue-300">Why Choose Us</span>
             </div>
-            <h2 className="text-5xl md:text-6xl font-black text-gray-900 dark:text-white mb-6">
+            <h2 className="text-5xl md:text-6xl font-black text-white mb-6">
               Built for Your Success
             </h2>
           </div>
@@ -222,17 +231,17 @@ const Landing = () => {
             {benefits.map((benefit, index) => (
               <div
                 key={index}
-                className="group relative p-8 bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-3xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
+                className="group relative p-8 bg-gray-800/40 backdrop-blur-xl rounded-2xl border border-blue-500/20 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:border-blue-500/40"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary-500/0 to-primary-600/0 group-hover:from-primary-500/10 group-hover:to-primary-600/10 rounded-3xl transition-all duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-blue-600/0 group-hover:from-blue-500/10 group-hover:to-blue-600/10 rounded-2xl transition-all duration-500" />
                 <div className="relative">
-                  <div className="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-primary-500/30 group-hover:scale-110 transition-transform duration-500">
+                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-500">
                     <benefit.icon className="w-7 h-7 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                  <h3 className="text-2xl font-bold text-white mb-3">
                     {benefit.title}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg">
+                  <p className="text-gray-300 leading-relaxed text-lg">
                     {benefit.description}
                   </p>
                 </div>
@@ -243,13 +252,13 @@ const Landing = () => {
       </section>
 
       {/* Features Section */}
-      <section className="relative py-24 px-6 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+      <section className="relative py-24 px-6 z-10">
         <div className="container mx-auto max-w-7xl">
           <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-6xl font-black text-gray-900 dark:text-white mb-6">
+            <h2 className="text-5xl md:text-6xl font-black text-white mb-6">
               Everything You Need to Succeed
             </h2>
-            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto font-light">
+            <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto font-light">
               Comprehensive tools and resources designed specifically for SignWorld franchise owners
             </p>
           </div>
@@ -260,15 +269,14 @@ const Landing = () => {
                 key={index}
                 className="group relative overflow-hidden"
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl`} />
-                <div className="relative p-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
-                  <div className={`w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
+                <div className="relative p-8 bg-gray-800/40 backdrop-blur-xl rounded-2xl border border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:border-blue-500/40 group">
+                  <div className={`w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
                     <feature.icon className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                  <h3 className="text-2xl font-bold text-white mb-4">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg">
+                  <p className="text-gray-300 leading-relaxed text-lg">
                     {feature.description}
                   </p>
                 </div>
@@ -279,21 +287,20 @@ const Landing = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-24 px-6">
+      <section className="relative py-24 px-6 z-10">
         <div className="container mx-auto max-w-5xl">
           <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 via-purple-600 to-primary-600 rounded-3xl blur-2xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
-            <div className="relative bg-gradient-to-r from-primary-600 via-primary-700 to-primary-600 rounded-3xl p-12 md:p-16 text-center shadow-2xl border border-primary-500/20 overflow-hidden bg-[length:200%_auto] animate-gradient">
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLW9wYWNpdHk9Ii4xIi8+PC9nPjwvc3ZnPg==')] opacity-20" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 rounded-2xl blur-2xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
+            <div className="relative bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-600 rounded-2xl p-12 md:p-16 text-center shadow-2xl border border-blue-400/20 overflow-hidden bg-[length:200%_auto] animate-gradient">
               <h2 className="relative text-4xl md:text-5xl font-black text-white mb-6">
                 Ready to Get Started?
               </h2>
-              <p className="relative text-xl md:text-2xl text-primary-100 mb-10 font-light max-w-2xl mx-auto">
+              <p className="relative text-xl md:text-2xl text-blue-100 mb-10 font-light max-w-2xl mx-auto">
                 Access your franchise portal and unlock powerful business tools today
               </p>
               <button
                 onClick={() => navigate('/login')}
-                className="relative group/btn px-10 py-5 bg-white text-primary-700 font-bold rounded-2xl shadow-2xl hover:shadow-3xl hover:bg-gray-50 transition-all duration-300 transform hover:-translate-y-1 text-lg"
+                className="relative group/btn px-10 py-5 bg-white text-blue-600 font-bold rounded-xl shadow-2xl hover:shadow-3xl hover:bg-gray-50 transition-all duration-300 transform hover:-translate-y-1 text-lg"
               >
                 <span className="flex items-center space-x-3">
                   <span>Login to Portal</span>
@@ -306,13 +313,13 @@ const Landing = () => {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="relative py-24 px-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+      <section id="contact" className="relative py-24 px-6 z-10">
         <div className="container mx-auto max-w-7xl">
           <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-6xl font-black text-gray-900 dark:text-white mb-6">
+            <h2 className="text-5xl md:text-6xl font-black text-white mb-6">
               Get in Touch
             </h2>
-            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto font-light">
+            <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto font-light">
               Have questions about our franchise portal? We're here to help.
             </p>
           </div>
@@ -341,24 +348,24 @@ const Landing = () => {
                     gradient: 'from-orange-500 to-red-500'
                   }
                 ].map((item, index) => (
-                  <div key={index} className="group flex items-start space-x-5 p-6 bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                  <div key={index} className="group flex items-start space-x-5 p-6 bg-gray-800/40 backdrop-blur-xl rounded-2xl border border-blue-500/20 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:border-blue-500/40">
                     <div className={`flex-shrink-0 w-14 h-14 bg-gradient-to-br ${item.gradient} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                       <item.icon className="w-7 h-7 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-gray-900 dark:text-white mb-2 text-lg">{item.title}</h4>
-                      <p className="text-gray-600 dark:text-gray-300 whitespace-pre-line">{item.value}</p>
+                      <h4 className="font-bold text-white mb-2 text-lg">{item.title}</h4>
+                      <p className="text-gray-300 whitespace-pre-line">{item.value}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="p-8 bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-950/50 dark:to-primary-900/50 rounded-2xl border border-primary-200/50 dark:border-primary-800/50">
-                <h4 className="font-bold text-gray-900 dark:text-white mb-4 text-lg flex items-center">
-                  <ClockIcon className="w-5 h-5 mr-2 text-primary-600 dark:text-primary-400" />
+              <div className="p-8 bg-blue-500/10 rounded-2xl border border-blue-500/30 backdrop-blur-md">
+                <h4 className="font-bold text-white mb-4 text-lg flex items-center">
+                  <ClockIcon className="w-5 h-5 mr-2 text-blue-400" />
                   Business Hours
                 </h4>
-                <div className="space-y-2 text-gray-700 dark:text-gray-300">
+                <div className="space-y-2 text-gray-300">
                   <p className="font-medium">Monday - Friday: 9:00 AM - 6:00 PM EST</p>
                   <p className="font-medium">Saturday - Sunday: Closed</p>
                 </div>
@@ -367,15 +374,15 @@ const Landing = () => {
 
             {/* Contact Form */}
             <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 to-purple-600 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500" />
-              <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl p-8 md:p-10 shadow-2xl border border-gray-200/50 dark:border-gray-700/50">
-                <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500" />
+              <div className="relative bg-gray-800/40 backdrop-blur-xl rounded-2xl p-8 md:p-10 shadow-2xl border border-blue-500/20">
+                <h3 className="text-3xl font-bold text-white mb-8">
                   Send us a Message
                 </h3>
 
                 <form onSubmit={handleContactSubmit} className="space-y-6">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wider">
+                    <label htmlFor="name" className="block text-sm font-bold text-gray-300 mb-3 uppercase tracking-wider">
                       Full Name
                     </label>
                     <input
@@ -385,13 +392,13 @@ const Landing = () => {
                       value={contactForm.name}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-5 py-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all font-medium"
+                      className="w-full px-5 py-4 border-2 border-blue-500/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-900/40 text-white placeholder-gray-500 transition-all font-medium backdrop-blur-sm"
                       placeholder="John Doe"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="email" className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wider">
+                    <label htmlFor="email" className="block text-sm font-bold text-gray-300 mb-3 uppercase tracking-wider">
                       Email Address
                     </label>
                     <input
@@ -401,13 +408,13 @@ const Landing = () => {
                       value={contactForm.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-5 py-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all font-medium"
+                      className="w-full px-5 py-4 border-2 border-blue-500/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-900/40 text-white placeholder-gray-500 transition-all font-medium backdrop-blur-sm"
                       placeholder="john@example.com"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="subject" className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wider">
+                    <label htmlFor="subject" className="block text-sm font-bold text-gray-300 mb-3 uppercase tracking-wider">
                       Subject
                     </label>
                     <input
@@ -417,13 +424,13 @@ const Landing = () => {
                       value={contactForm.subject}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-5 py-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all font-medium"
+                      className="w-full px-5 py-4 border-2 border-blue-500/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-900/40 text-white placeholder-gray-500 transition-all font-medium backdrop-blur-sm"
                       placeholder="How can we help?"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="message" className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wider">
+                    <label htmlFor="message" className="block text-sm font-bold text-gray-300 mb-3 uppercase tracking-wider">
                       Message
                     </label>
                     <textarea
@@ -433,7 +440,7 @@ const Landing = () => {
                       onChange={handleInputChange}
                       required
                       rows={5}
-                      className="w-full px-5 py-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all resize-none font-medium"
+                      className="w-full px-5 py-4 border-2 border-blue-500/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-900/40 text-white placeholder-gray-500 transition-all resize-none font-medium backdrop-blur-sm"
                       placeholder="Tell us more about your inquiry..."
                     />
                   </div>
@@ -441,7 +448,7 @@ const Landing = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="group w-full px-8 py-5 bg-gradient-to-r from-primary-600 via-primary-700 to-primary-600 hover:from-primary-700 hover:via-primary-800 hover:to-primary-700 text-white font-bold rounded-xl shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-1 text-lg overflow-hidden relative bg-[length:200%_auto]"
+                    className="group w-full px-8 py-5 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-600 hover:from-blue-700 hover:via-blue-600 hover:to-cyan-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-1 text-lg overflow-hidden relative bg-[length:200%_auto]"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
                     {isSubmitting ? (
@@ -467,19 +474,19 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="relative py-12 px-6 border-t border-gray-200 dark:border-gray-800 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+      <footer className="relative py-12 px-6 border-t border-blue-500/20 bg-gray-900 z-10">
         <div className="container mx-auto max-w-7xl">
           <div className="text-center space-y-4">
             <img
               src="/logo.png"
               alt="SignWorld Logo"
-              className="h-12 w-auto mx-auto object-contain opacity-60 dark:opacity-40"
+              className="h-12 w-auto mx-auto object-contain opacity-60"
               style={{ maxWidth: '200px' }}
             />
-            <p className="text-gray-600 dark:text-gray-400 font-medium">
+            <p className="text-gray-400 font-medium">
               © {new Date().getFullYear()} SignWorld. All rights reserved.
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">
+            <p className="text-sm text-gray-500">
               Franchise Owner Portal - Business Intelligence & Resources
             </p>
           </div>
@@ -507,6 +514,18 @@ const Landing = () => {
           }
         }
 
+        @keyframes float {
+          0%, 100% {
+            transform: translate(0, 0) rotate(0deg) scale(1);
+          }
+          33% {
+            transform: translate(30px, -30px) rotate(120deg) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) rotate(240deg) scale(0.9);
+          }
+        }
+
         .animate-fadeInUp {
           animation: fadeInUp 0.8s ease-out forwards;
           opacity: 0;
@@ -514,6 +533,10 @@ const Landing = () => {
 
         .animate-gradient {
           animation: gradient 8s ease infinite;
+        }
+
+        .animate-float {
+          animation: float 25s infinite ease-in-out;
         }
       `}</style>
     </div>
