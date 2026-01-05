@@ -55,6 +55,7 @@ const Convention = () => {
   const [isRegistered, setIsRegistered] = useState(false);
   const [hasAddedToCalendar, setHasAddedToCalendar] = useState(false);
   const [registrationLoading, setRegistrationLoading] = useState(false);
+  const [exportingAttendees, setExportingAttendees] = useState(false);
   const [displayConvention, setDisplayConvention] = useState<any>(null);
 
   // Admin state
@@ -1028,6 +1029,61 @@ const Convention = () => {
     }
   };
 
+  const handleExportAttendees = async () => {
+    if (!displayConvention?.attendees || displayConvention.attendees.length === 0) {
+      toast.warning('No attendees to export');
+      return;
+    }
+
+    setExportingAttendees(true);
+    try {
+      // Sort attendees by registration date (newest first)
+      const sortedAttendees = [...displayConvention.attendees].sort(
+        (a, b) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime()
+      );
+
+      // Create CSV header
+      const csvHeader = 'First Name,Last Name,Email,Registration Date\n';
+
+      // Create CSV rows
+      const csvRows = sortedAttendees
+        .map(attendee => {
+          const registeredDate = new Date(attendee.registeredAt).toLocaleDateString('en-US');
+          return `${attendee.firstName},${attendee.lastName},${attendee.email},${registeredDate}`;
+        })
+        .join('\n');
+
+      // Combine header and rows
+      const csvContent = csvHeader + csvRows;
+
+      // Create blob
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+      // Create filename with convention title and current date
+      const today = new Date().toISOString().split('T')[0];
+      const filename = `${displayConvention.title}_Attendees_${today}.csv`;
+
+      // Create temporary download link
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success(`Exported ${sortedAttendees.length} attendee(s) to CSV`);
+    } catch (error) {
+      console.error('Error exporting attendees:', error);
+      toast.error('Failed to export attendees');
+    } finally {
+      setExportingAttendees(false);
+    }
+  };
+
   const getEventTypeIcon = (type: string) => {
     switch (type) {
       case 'keynote': return '🎤';
@@ -1608,7 +1664,7 @@ const Convention = () => {
                       onChange={(value) => setSelectedConvention(value)}
                       options={conventions.map((conv) => ({
                         value: conv._id,
-                        label: `${conv.title} - ${new Date(conv.startDate).toLocaleDateString()}`,
+                        label: `${conv.title} - ${new Date(conv.startDate).toLocaleDateString()} (${conv.attendees?.length || 0} attendee${conv.attendees?.length !== 1 ? 's' : ''})`,
                       }))}
                     />
                     <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -1772,6 +1828,79 @@ const Convention = () => {
                   </button>
                 </div>
               </div>
+              )}
+
+              {/* Attendees Management Section */}
+              {displayConvention && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Registered Attendees</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Total registrations: <span className="font-semibold text-blue-600 dark:text-blue-400">{displayConvention.attendees?.length || 0}</span>
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleExportAttendees}
+                      disabled={exportingAttendees || !displayConvention.attendees?.length}
+                      className="py-2 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      {exportingAttendees ? 'Exporting...' : 'Export to CSV'}
+                    </button>
+                  </div>
+
+                  {displayConvention.attendees && displayConvention.attendees.length > 0 ? (
+                    <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">First Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Last Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Registered Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[...displayConvention.attendees]
+                            .sort((a, b) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime())
+                            .map((attendee, index) => (
+                              <tr
+                                key={index}
+                                className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                              >
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                  {attendee.firstName}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                  {attendee.lastName}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                                  {attendee.email}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                                  {new Date(attendee.registeredAt).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg">
+                      <svg className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                      </svg>
+                      <p className="text-gray-600 dark:text-gray-400">No attendees registered yet</p>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
