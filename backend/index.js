@@ -5,6 +5,7 @@ const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
+const { initConventionReminderJob } = require('./jobs/conventionReminders');
 
 // Load env vars - override any existing environment variables
 dotenv.config({ path: require('path').join(__dirname, '.env'), override: true });
@@ -75,6 +76,9 @@ connectDB().then(() => {
   // Schedule cleanup to run every 24 hours
   setInterval(cleanupDeletedFiles, 24 * 60 * 60 * 1000);
   console.log('🕐 Scheduled auto-cleanup for deleted files (runs every 24 hours)');
+
+  // Initialize convention reminder job
+  initConventionReminderJob();
 }).catch((err) => {
   console.error('❌ Database connection failed:', err.message);
   console.warn('⚠️  Server will continue without database');

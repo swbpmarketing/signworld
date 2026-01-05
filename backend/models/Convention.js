@@ -173,4 +173,19 @@ const conventionSchema = new mongoose.Schema({
   },
 });
 
+// Virtual field for convention status (upcoming, ongoing, past)
+conventionSchema.virtual('status').get(function() {
+  const now = new Date();
+  const start = new Date(this.startDate);
+  const end = new Date(this.endDate);
+
+  if (now < start) return 'upcoming';
+  if (now >= start && now <= end) return 'ongoing';
+  return 'past';
+});
+
+// Ensure virtuals are included in JSON and Object conversions
+conventionSchema.set('toJSON', { virtuals: true });
+conventionSchema.set('toObject', { virtuals: true });
+
 module.exports = mongoose.model('Convention', conventionSchema);

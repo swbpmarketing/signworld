@@ -1138,7 +1138,21 @@ const Convention = () => {
       <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl shadow-lg p-3 sm:p-4 md:p-6 lg:p-8 text-white overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-center">
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold mb-1 sm:mb-2">{displayConvention.title}</h1>
+            <div className="flex flex-wrap items-baseline gap-2 mb-1 sm:mb-2">
+              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold">{displayConvention.title}</h1>
+              {displayConvention.status && (
+                <span className={`
+                  inline-block px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap
+                  ${displayConvention.status === 'upcoming' ? 'bg-blue-400/20 text-blue-100' : ''}
+                  ${displayConvention.status === 'ongoing' ? 'bg-green-400/20 text-green-100' : ''}
+                  ${displayConvention.status === 'past' ? 'bg-gray-400/20 text-gray-100' : ''}
+                `}>
+                  {displayConvention.status === 'upcoming' && '🔜 Upcoming'}
+                  {displayConvention.status === 'ongoing' && '🔴 Live Now'}
+                  {displayConvention.status === 'past' && '✅ Completed'}
+                </span>
+              )}
+            </div>
             <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-3 sm:mb-4 text-primary-100">Innovate. Connect. Grow.</p>
             <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 md:space-x-6 space-y-1.5 sm:space-y-0 text-xs sm:text-sm">
               <div className="flex items-center">
@@ -1459,7 +1473,21 @@ const Convention = () => {
                       <div key={conv._id} className="bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 overflow-hidden">
                         {/* Convention Header */}
                         <div className="bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
-                          <h4 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{conv.title}</h4>
+                          <div className="flex flex-wrap items-baseline gap-2 mb-1">
+                            <h4 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{conv.title}</h4>
+                            {conv.status && (
+                              <span className={`
+                                inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap
+                                ${conv.status === 'upcoming' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' : ''}
+                                ${conv.status === 'ongoing' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : ''}
+                                ${conv.status === 'past' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' : ''}
+                              `}>
+                                {conv.status === 'upcoming' && '🔜 Upcoming'}
+                                {conv.status === 'ongoing' && '🔴 Live Now'}
+                                {conv.status === 'past' && '✅ Completed'}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400">
                             <span className="flex items-center">
                               <CalendarDaysIcon className="h-4 w-4 mr-1" />
