@@ -31,7 +31,14 @@ router.get('/', async (req, res) => {
     const conventions = await Convention.find(filter).sort('-startDate');
 
     // Convert to JSON to include virtuals
-    const conventionsWithStatus = conventions.map(c => c.toJSON());
+    const conventionsWithStatus = conventions.map(c => {
+      const data = c.toJSON({ virtuals: true });
+      // Explicitly set status from virtual getter if not already included
+      if (!data.status) {
+        data.status = c.status;
+      }
+      return data;
+    });
 
     res.json({
       success: true,
@@ -63,9 +70,16 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+    // Force virtual field computation
+    const conventionData = convention.toJSON({ virtuals: true });
+    // Explicitly set status from virtual getter
+    if (!conventionData.status) {
+      conventionData.status = convention.status;
+    }
+
     res.json({
       success: true,
-      data: convention.toJSON()
+      data: conventionData
     });
   } catch (error) {
     console.error('Get convention error:', error);
@@ -120,9 +134,14 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
       console.error('Error creating convention notifications:', notifError);
     }
 
+    const data = convention.toJSON({ virtuals: true });
+    if (!data.status) {
+      data.status = convention.status;
+    }
+
     res.status(201).json({
       success: true,
-      data: convention.toJSON()
+      data: data
     });
   } catch (error) {
     console.error('Create convention error:', error);
@@ -246,7 +265,7 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
     }
 
     // Convert to JSON to include virtuals like status
-    const conventionObj = convention.toJSON();
+    const conventionObj = convention.toJSON({ virtuals: true });
     console.log('Final response data registrationOptions:', conventionObj.registrationOptions);
 
     res.json({
@@ -368,7 +387,7 @@ router.delete('/:id/sponsors/:sponsorId', protect, authorize('admin'), async (re
 
     res.json({
       success: true,
-      data: convention.toJSON()
+      data: convention.toJSON({ virtuals: true })
     });
   } catch (error) {
     console.error('Remove sponsor error:', error);
@@ -435,7 +454,7 @@ router.delete('/:id/schedule/:scheduleId', protect, authorize('admin'), async (r
 
     res.json({
       success: true,
-      data: convention.toJSON()
+      data: convention.toJSON({ virtuals: true })
     });
   } catch (error) {
     console.error('Delete schedule error:', error);
@@ -463,7 +482,7 @@ router.get('/filter/upcoming', async (req, res) => {
     res.json({
       success: true,
       count: conventions.length,
-      data: conventions.map(c => c.toJSON())
+      data: conventions.map(c => c.toJSON({ virtuals: true }))
     });
   } catch (error) {
     console.error('Get upcoming conventions error:', error);
@@ -495,7 +514,7 @@ router.get('/filter/featured', async (req, res) => {
 
     res.json({
       success: true,
-      data: convention.toJSON()
+      data: convention.toJSON({ virtuals: true })
     });
   } catch (error) {
     console.error('Get featured convention error:', error);
@@ -571,7 +590,7 @@ router.delete('/:id/gallery/:imageId', protect, authorize('admin'), async (req, 
 
     res.json({
       success: true,
-      data: convention.toJSON()
+      data: convention.toJSON({ virtuals: true })
     });
   } catch (error) {
     console.error('Delete gallery image error:', error);
@@ -647,7 +666,7 @@ router.delete('/:id/documents/:documentId', protect, authorize('admin'), async (
 
     res.json({
       success: true,
-      data: convention.toJSON()
+      data: convention.toJSON({ virtuals: true })
     });
   } catch (error) {
     console.error('Delete document error:', error);
@@ -733,7 +752,7 @@ router.delete('/:id/speakers/:speakerId', protect, authorize('admin'), async (re
 
     res.json({
       success: true,
-      data: convention.toJSON()
+      data: convention.toJSON({ virtuals: true })
     });
   } catch (error) {
     console.error('Remove speaker error:', error);
