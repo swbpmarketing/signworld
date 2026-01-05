@@ -14,6 +14,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Lazy load all pages for better code splitting
 const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
+const Signup = lazy(() => import('./pages/Signup'));
 const DashboardRouter = lazy(() => import('./pages/DashboardRouter'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const Convention = lazy(() => import('./pages/Convention'));
@@ -85,6 +86,7 @@ function App() {
                 {/* Public routes */}
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
 
                 {/* Protected routes with Layout */}
                 <Route element={<Layout />}>

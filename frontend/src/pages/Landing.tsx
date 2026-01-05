@@ -203,11 +203,11 @@ const Landing = () => {
               </button>
 
               <button
-                onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => navigate('/signup')}
                 className="group px-10 py-5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center space-x-3 transform hover:-translate-y-1 border border-white/20 backdrop-blur-xl hover:border-white/40"
               >
-                <span className="text-lg">Get in Touch</span>
-                <EnvelopeIcon className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
+                <span className="text-lg">Create Account</span>
+                <ArrowRightIcon className="w-6 h-6 group-hover:translate-x-2 transition-transform duration-300" />
               </button>
             </div>
           </div>
