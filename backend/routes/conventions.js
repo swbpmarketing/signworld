@@ -30,10 +30,13 @@ router.get('/', async (req, res) => {
 
     const conventions = await Convention.find(filter).sort('-startDate');
 
+    // Convert to JSON to include virtuals
+    const conventionsWithStatus = conventions.map(c => c.toJSON());
+
     res.json({
       success: true,
-      count: conventions.length,
-      data: conventions
+      count: conventionsWithStatus.length,
+      data: conventionsWithStatus
     });
   } catch (error) {
     console.error('Get conventions error:', error);
@@ -62,7 +65,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Get convention error:', error);
@@ -119,7 +122,7 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
 
     res.status(201).json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Create convention error:', error);
@@ -242,8 +245,8 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
       }
     }
 
-    // Convert Mongoose document to plain JavaScript object to ensure all fields are included
-    const conventionObj = convention.toObject ? convention.toObject() : convention;
+    // Convert to JSON to include virtuals like status
+    const conventionObj = convention.toJSON();
     console.log('Final response data registrationOptions:', conventionObj.registrationOptions);
 
     res.json({
@@ -330,7 +333,7 @@ router.post('/:id/sponsors', protect, authorize('admin'), async (req, res) => {
 
     res.status(201).json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Add sponsor error:', error);
@@ -365,7 +368,7 @@ router.delete('/:id/sponsors/:sponsorId', protect, authorize('admin'), async (re
 
     res.json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Remove sponsor error:', error);
@@ -397,7 +400,7 @@ router.post('/:id/schedule', protect, authorize('admin'), async (req, res) => {
 
     res.status(201).json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Add schedule error:', error);
@@ -432,7 +435,7 @@ router.delete('/:id/schedule/:scheduleId', protect, authorize('admin'), async (r
 
     res.json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Delete schedule error:', error);
@@ -460,7 +463,7 @@ router.get('/filter/upcoming', async (req, res) => {
     res.json({
       success: true,
       count: conventions.length,
-      data: conventions
+      data: conventions.map(c => c.toJSON())
     });
   } catch (error) {
     console.error('Get upcoming conventions error:', error);
@@ -492,7 +495,7 @@ router.get('/filter/featured', async (req, res) => {
 
     res.json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Get featured convention error:', error);
@@ -533,7 +536,7 @@ router.post('/:id/gallery', protect, authorize('admin'), upload.multiple('galler
 
     res.status(201).json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Upload gallery error:', error);
@@ -568,7 +571,7 @@ router.delete('/:id/gallery/:imageId', protect, authorize('admin'), async (req, 
 
     res.json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Delete gallery image error:', error);
@@ -609,7 +612,7 @@ router.post('/:id/documents', protect, authorize('admin'), upload.multiple('docu
 
     res.status(201).json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Upload documents error:', error);
@@ -644,7 +647,7 @@ router.delete('/:id/documents/:documentId', protect, authorize('admin'), async (
 
     res.json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Delete document error:', error);
@@ -695,7 +698,7 @@ router.post('/:id/speakers', protect, authorize('admin'), upload.single('image')
 
     res.status(201).json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Add speaker error:', error);
@@ -730,7 +733,7 @@ router.delete('/:id/speakers/:speakerId', protect, authorize('admin'), async (re
 
     res.json({
       success: true,
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Remove speaker error:', error);
@@ -815,7 +818,7 @@ router.post('/:id/register', protect, async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Successfully registered for convention',
-      data: convention
+      data: convention.toJSON()
     });
   } catch (error) {
     console.error('Register for convention error:', error);
