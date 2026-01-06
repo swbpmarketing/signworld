@@ -24,6 +24,12 @@ interface Event {
   onlineLink?: string;
   organizer?: string;
   organizerId?: string; // ID of the user who created the event
+  attendeesList?: Array<{
+    userId: string;
+    userName: string;
+    status: 'pending' | 'confirmed' | 'declined';
+  }>;
+  userRsvpStatus?: 'confirmed' | 'declined' | 'pending' | null;
 }
 
 const Calendar = () => {
@@ -41,6 +47,7 @@ const Calendar = () => {
   const [selectedEventType, setSelectedEventType] = useState<Event['type'] | 'all'>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [rsvpLoading, setRsvpLoading] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -106,7 +113,7 @@ const Calendar = () => {
   const mapCalendarEventToEvent = (calendarEvent: CalendarEvent): Event => {
     const startDate = new Date(calendarEvent.startDate);
     const endDate = new Date(calendarEvent.endDate);
-    
+
     // Format time display
     const timeFormat = 'h:mm a';
     let time: string;
@@ -117,7 +124,18 @@ const Calendar = () => {
       // Multi-day event
       time = `${format(startDate, 'MMM d, yyyy h:mm a')} - ${format(endDate, 'MMM d, yyyy h:mm a')}`;
     }
-    
+
+    // Extract attendees list and check user's RSVP status
+    const attendeesList = calendarEvent.attendees?.map(a => ({
+      userId: a.user._id,
+      userName: a.user.name,
+      status: a.status
+    })) || [];
+
+    const userRsvp = calendarEvent.attendees?.find(
+      a => a.user._id === currentUserId
+    );
+
     return {
       id: calendarEvent._id,
       title: calendarEvent.title,
@@ -131,7 +149,9 @@ const Calendar = () => {
       isOnline: calendarEvent.isOnline,
       onlineLink: calendarEvent.onlineLink,
       organizer: calendarEvent.organizer?.name,
-      organizerId: calendarEvent.organizer?._id
+      organizerId: calendarEvent.organizer?._id,
+      attendeesList: attendeesList,
+      userRsvpStatus: userRsvp?.status || null
     };
   };
 
@@ -157,6 +177,39 @@ const Calendar = () => {
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  // Handle event RSVP
+  const handleEventRsvp = async (eventId: string, status: 'confirmed' | 'declined') => {
+    try {
+      setRsvpLoading(eventId);
+
+      // Call the existing RSVP API
+      const updatedEvent = await calendarService.rsvpToEvent(eventId, status);
+
+      // Map and update local state
+      const mappedEvent = mapCalendarEventToEvent(updatedEvent);
+      setEvents(prevEvents =>
+        prevEvents.map(evt => evt.id === eventId ? mappedEvent : evt)
+      );
+
+      // Update selected event if it's currently displayed
+      if (selectedEvent?.id === eventId) {
+        setSelectedEvent(mappedEvent);
+      }
+
+      // Show success message
+      toast.success(
+        status === 'confirmed'
+          ? 'Successfully joined the event! Check your email for details.'
+          : 'RSVP updated successfully.'
+      );
+    } catch (error) {
+      console.error('Error updating RSVP:', error);
+      toast.error('Failed to update RSVP. Please try again.');
+    } finally {
+      setRsvpLoading(null);
+    }
+  };
 
   // Handle form input changes
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -734,12 +787,26 @@ const Calendar = () => {
                   Created by {selectedEvent.organizer || 'Unknown'}
                 </div>
               )}
-              <button
-                onClick={() => toast.success('Joined event successfully!')}
-                className="flex-1 px-5 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg hover:shadow-lg transition-all duration-200 text-center font-semibold transform hover:-translate-y-0.5"
-              >
-                Join Event
-              </button>
+              {/* Dynamic RSVP Button */}
+              {selectedEvent.userRsvpStatus === 'confirmed' ? (
+                // Already registered - show cancel option
+                <button
+                  onClick={() => handleEventRsvp(selectedEvent.id, 'declined')}
+                  disabled={rsvpLoading === selectedEvent.id}
+                  className="flex-1 px-5 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 text-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {rsvpLoading === selectedEvent.id ? 'Updating...' : 'Registered - Click to Cancel'}
+                </button>
+              ) : (
+                // Not registered - show join button
+                <button
+                  onClick={() => handleEventRsvp(selectedEvent.id, 'confirmed')}
+                  disabled={rsvpLoading === selectedEvent.id}
+                  className="flex-1 px-5 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg hover:shadow-lg transition-all duration-200 text-center font-semibold transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  {rsvpLoading === selectedEvent.id ? 'Joining...' : 'Join Event'}
+                </button>
+              )}
             </div>
           </div>
         </div>
