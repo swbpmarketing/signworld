@@ -37,8 +37,23 @@ router.get('/stats', protect, async (req, res) => {
       ? ((newOwnersThisMonth / ownersLastMonth) * 100).toFixed(1)
       : '+0';
 
-    // Get upcoming events count (events user is attending with confirmed RSVP)
-    const [upcomingEvents, upcomingThisWeek] = await Promise.all([
+    // Get ALL upcoming events count (global)
+    const [totalUpcomingEvents, totalUpcomingThisWeek] = await Promise.all([
+      Event.countDocuments({
+        isPublished: true,
+        startDate: { $gte: now }
+      }),
+      Event.countDocuments({
+        isPublished: true,
+        startDate: {
+          $gte: now,
+          $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+        }
+      })
+    ]);
+
+    // Get user's upcoming events count (events user is attending with confirmed RSVP)
+    const [userUpcomingEvents, userUpcomingThisWeek] = await Promise.all([
       Event.countDocuments({
         isPublished: true,
         startDate: { $gte: now },
@@ -91,9 +106,14 @@ router.get('/stats', protect, async (req, res) => {
           changeType: newOwnersThisMonth > 0 ? 'positive' : 'neutral'
         },
         events: {
-          total: upcomingEvents,
-          change: `${upcomingThisWeek} this week`,
-          changeType: upcomingThisWeek > 0 ? 'neutral' : 'neutral'
+          total: totalUpcomingEvents,
+          change: `${totalUpcomingThisWeek} this week`,
+          changeType: totalUpcomingThisWeek > 0 ? 'positive' : 'neutral'
+        },
+        myRsvps: {
+          total: userUpcomingEvents,
+          change: `${userUpcomingThisWeek} this week`,
+          changeType: userUpcomingThisWeek > 0 ? 'positive' : 'neutral'
         },
         library: {
           total: totalLibraryFiles,
