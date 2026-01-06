@@ -1,18 +1,25 @@
 const nodemailer = require('nodemailer');
 
-// Create Brevo SMTP transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp-relay.brevo.com',
-  port: process.env.EMAIL_PORT || 587,
-  secure: false, // Use TLS
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
-});
-
 // Default sender email
 const DEFAULT_FROM = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'SignWorld <noreply@signworld.com>';
+
+// Lazy initialization of transporter - create on first use to ensure environment vars are loaded
+let transporter = null;
+
+function getTransporter() {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp-relay.brevo.com',
+      port: process.env.EMAIL_PORT || 587,
+      secure: false, // Use TLS
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+  }
+  return transporter;
+}
 
 class EmailService {
   /**
@@ -20,7 +27,7 @@ class EmailService {
    */
   async sendWelcomeEmail({ to, name }) {
     try {
-      const info = await transporter.sendMail({
+      const info = await getTransporter().sendMail({
         from: DEFAULT_FROM,
         to,
         subject: 'Welcome to SignWorld Dashboard',
@@ -40,7 +47,7 @@ class EmailService {
    */
   async sendEventReminder({ to, name, event, reminderTime }) {
     try {
-      const info = await transporter.sendMail({
+      const info = await getTransporter().sendMail({
         from: DEFAULT_FROM,
         to,
         subject: `Reminder: ${event.title} - ${reminderTime}`,
@@ -62,7 +69,7 @@ class EmailService {
     try {
       const adminEmail = process.env.ADMIN_EMAIL || 'admin@signworld.com';
 
-      const info = await transporter.sendMail({
+      const info = await getTransporter().sendMail({
         from: DEFAULT_FROM,
         to: adminEmail,
         replyTo: email,
@@ -85,7 +92,7 @@ class EmailService {
     try {
       const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
-      const info = await transporter.sendMail({
+      const info = await getTransporter().sendMail({
         from: DEFAULT_FROM,
         to,
         subject: 'Password Reset Request - SignWorld Dashboard',
@@ -107,7 +114,7 @@ class EmailService {
     try {
       const threadUrl = `${process.env.CLIENT_URL}/forum/thread/${thread._id}`;
 
-      const info = await transporter.sendMail({
+      const info = await getTransporter().sendMail({
         from: DEFAULT_FROM,
         to,
         subject: `New reply in: ${thread.title}`,
@@ -127,7 +134,7 @@ class EmailService {
    */
   async sendConventionRegistrationEmail({ to, name, convention }) {
     try {
-      const info = await transporter.sendMail({
+      const info = await getTransporter().sendMail({
         from: DEFAULT_FROM,
         to,
         subject: `Registration Confirmed: ${convention.title}`,
@@ -147,7 +154,7 @@ class EmailService {
    */
   async sendConventionDateChangeEmail({ to, name, convention, oldStartDate, oldEndDate }) {
     try {
-      const info = await transporter.sendMail({
+      const info = await getTransporter().sendMail({
         from: DEFAULT_FROM,
         to,
         subject: `Schedule Change: ${convention.title}`,

@@ -7,8 +7,6 @@ import {
   PaperClipIcon,
   FaceSmileIcon,
   EllipsisHorizontalIcon,
-  PhoneIcon,
-  VideoCameraIcon,
   CheckIcon,
   ChevronLeftIcon,
   Bars3Icon,
@@ -708,12 +706,6 @@ const Chat = () => {
                 </div>
               </div>
               <div className="flex items-center gap-1 lg:gap-2">
-                <button className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                  <PhoneIcon className="h-5 w-5" />
-                </button>
-                <button className="hidden sm:block p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                  <VideoCameraIcon className="h-5 w-5" />
-                </button>
                 <button className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                   <EllipsisHorizontalIcon className="h-5 w-5" />
                 </button>

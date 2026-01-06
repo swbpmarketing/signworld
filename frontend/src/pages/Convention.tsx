@@ -660,7 +660,7 @@ const Convention = () => {
     }
   };
 
-  const handleAddRegistrationOption = () => {
+  const handleAddRegistrationOption = async () => {
     console.log('handleAddRegistrationOption called');
     console.log('newRegistrationOption:', newRegistrationOption);
     console.log('selectedConvention:', selectedConvention);
@@ -693,30 +693,90 @@ const Convention = () => {
 
     console.log('updatedOptions:', updatedOptions);
 
-    // Update conventions list with updated convention
-    setConventions(prev => {
-      const updated = prev.map(c =>
-        c._id === selectedConvention
-          ? { ...c, registrationOptions: updatedOptions }
-          : c
-      );
-      console.log('Updated conventions list:', updated);
-      return updated;
-    });
+    // Save to API immediately
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/conventions/${selectedConvention}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          registrationOptions: updatedOptions
+        })
+      });
 
-    setNewRegistrationOption({ name: '', price: '', description: '' });
-    console.log('Option form cleared');
+      const data = await response.json();
+
+      if (data.success) {
+        // Update conventions list with updated convention
+        setConventions(prev => {
+          const updated = prev.map(c =>
+            c._id === selectedConvention
+              ? { ...c, registrationOptions: updatedOptions }
+              : c
+          );
+          console.log('Updated conventions list:', updated);
+          return updated;
+        });
+
+        setNewRegistrationOption({ name: '', price: '', description: '' });
+        console.log('Option form cleared');
+        toast.success('Registration option added successfully!');
+      } else {
+        toast.error(`Failed to add option: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      console.error('Error adding registration option:', error);
+      toast.error(`Failed to add option: ${error.message || 'Network error'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteRegistrationOption = (index: number) => {
+  const handleDeleteRegistrationOption = async (index: number) => {
     const selectedConv = conventions.find(c => c._id === selectedConvention);
-    if (selectedConv?.registrationOptions) {
-      const updatedOptions = selectedConv.registrationOptions.filter((_, i) => i !== index);
-      setConventions(prev => prev.map(c =>
-        c._id === selectedConvention
-          ? { ...c, registrationOptions: updatedOptions }
-          : c
-      ));
+    if (!selectedConv?.registrationOptions) {
+      toast.warning('No options to delete');
+      return;
+    }
+
+    const updatedOptions = selectedConv.registrationOptions.filter((_, i) => i !== index);
+
+    // Save to API immediately
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/conventions/${selectedConvention}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          registrationOptions: updatedOptions
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setConventions(prev => prev.map(c =>
+          c._id === selectedConvention
+            ? { ...c, registrationOptions: updatedOptions }
+            : c
+        ));
+        toast.success('Registration option deleted successfully!');
+      } else {
+        toast.error(`Failed to delete option: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      console.error('Error deleting registration option:', error);
+      toast.error(`Failed to delete option: ${error.message || 'Network error'}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1018,6 +1078,23 @@ const Convention = () => {
       if (data.success) {
         setIsRegistered(true);
         toast.success('Successfully registered for the convention! Check your email for details.');
+
+        // Fetch updated convention data to refresh attendees list
+        try {
+          const updatedResponse = await fetch(`${API_URL}/conventions/${displayConvention._id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          const updatedData = await updatedResponse.json();
+          if (updatedData.success && updatedData.data) {
+            setDisplayConvention(updatedData.data);
+            console.log('Convention data updated with new attendees');
+          }
+        } catch (fetchError) {
+          console.error('Error fetching updated convention data:', fetchError);
+          // Don't show error to user, registration was successful
+        }
       } else {
         toast.error(`Registration failed: ${data.error || 'Unknown error'}`);
       }

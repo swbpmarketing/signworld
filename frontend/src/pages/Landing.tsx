@@ -126,7 +126,7 @@ const Landing = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-950 overflow-hidden relative">
+    <div className="min-h-screen overflow-hidden relative" style={{ backgroundColor: '#0A0B0D' }}>
       {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div
@@ -164,6 +164,65 @@ const Landing = () => {
           animation: 'float 25s infinite ease-in-out 10s'
         }}
       />
+
+      {/* Animated Grid Pattern */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0 opacity-10"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(0, 166, 251, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 166, 251, 0.2) 1px, transparent 1px)',
+          backgroundSize: '50px 50px',
+          animation: 'gridMove 15s linear infinite'
+        }}
+      />
+
+      {/* Additional Animated Orbs */}
+      <div
+        className="fixed top-1/4 left-1/3 w-[400px] h-[400px] rounded-full blur-[80px] opacity-40 pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(circle, rgba(0, 166, 251, 0.15) 0%, transparent 70%)',
+          animation: 'float 30s infinite ease-in-out 5s'
+        }}
+      />
+
+      {/* Shooting Stars */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div
+          className="absolute w-1 h-1 bg-white rounded-full blur-sm"
+          style={{
+            top: '20%',
+            left: '-100px',
+            boxShadow: '0 0 10px rgba(255, 255, 255, 0.8)',
+            animation: 'shootingStar 3s linear infinite'
+          }}
+        />
+        <div
+          className="absolute w-1 h-1 bg-white rounded-full blur-sm"
+          style={{
+            top: '40%',
+            left: '-100px',
+            boxShadow: '0 0 10px rgba(0, 166, 251, 0.8)',
+            animation: 'shootingStar 4s linear infinite 1s'
+          }}
+        />
+        <div
+          className="absolute w-0.5 h-0.5 bg-white rounded-full blur-sm"
+          style={{
+            top: '60%',
+            left: '-100px',
+            boxShadow: '0 0 8px rgba(255, 255, 255, 0.6)',
+            animation: 'shootingStar 3.5s linear infinite 2s'
+          }}
+        />
+        <div
+          className="absolute w-1 h-1 bg-white rounded-full blur-sm"
+          style={{
+            top: '30%',
+            left: '-100px',
+            boxShadow: '0 0 10px rgba(0, 166, 251, 0.8)',
+            animation: 'shootingStar 5s linear infinite 0.5s'
+          }}
+        />
+      </div>
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-24 px-6 z-10">
@@ -251,7 +310,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Features Section - Interactive Hover-Reveal Cards */}
       <section className="relative py-24 px-6 z-10">
         <div className="container mx-auto max-w-7xl">
           <div className="text-center mb-20">
@@ -263,20 +322,26 @@ const Landing = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="space-y-6">
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="group relative overflow-hidden"
+                className="group relative flex items-center gap-6 p-6 rounded-xl bg-gray-800/20 border border-gray-700/30 hover:border-gray-700/60 transition-all duration-500 hover:bg-gray-800/40 overflow-hidden"
               >
-                <div className="relative p-8 bg-gray-800/40 backdrop-blur-xl rounded-2xl border border-gray-700/50 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:border-blue-500/40 group">
-                  <div className={`w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
-                    <feature.icon className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">
+                {/* Vertical Gradient Anchor Line */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+
+                {/* Icon Container */}
+                <div className={`flex-shrink-0 w-16 h-16 bg-gradient-to-br ${feature.gradient} rounded-lg flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-500`}>
+                  <feature.icon className="w-8 h-8 text-white" />
+                </div>
+
+                {/* Content */}
+                <div className="flex-grow">
+                  <h3 className="text-lg font-bold text-white mb-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-400 group-hover:to-cyan-400 transition-all duration-500">
                     {feature.title}
                   </h3>
-                  <p className="text-gray-300 leading-relaxed text-lg">
+                  <p className="text-gray-300 leading-relaxed text-sm group-hover:text-gray-100 transition-colors duration-500">
                     {feature.description}
                   </p>
                 </div>
@@ -287,26 +352,59 @@ const Landing = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-24 px-6 z-10">
+      <section className="relative py-32 px-6 z-10 overflow-hidden">
         <div className="container mx-auto max-w-5xl">
+          {/* Animated background orbs */}
+          <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(0, 166, 251, 0.2) 0%, transparent 70%)', animation: 'float 20s infinite ease-in-out' }} />
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full blur-3xl opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(100, 150, 200, 0.15) 0%, transparent 70%)', animation: 'float 25s infinite ease-in-out 5s' }} />
+
           <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 rounded-2xl blur-2xl opacity-50 group-hover:opacity-75 transition-opacity duration-500" />
-            <div className="relative bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-600 rounded-2xl p-12 md:p-16 text-center shadow-2xl border border-blue-400/20 overflow-hidden bg-[length:200%_auto] animate-gradient">
-              <h2 className="relative text-4xl md:text-5xl font-black text-white mb-6">
-                Ready to Get Started?
-              </h2>
-              <p className="relative text-xl md:text-2xl text-blue-100 mb-10 font-light max-w-2xl mx-auto">
-                Access your franchise portal and unlock powerful business tools today
-              </p>
-              <button
-                onClick={() => navigate('/login')}
-                className="relative group/btn px-10 py-5 bg-white text-blue-600 font-bold rounded-xl shadow-2xl hover:shadow-3xl hover:bg-gray-50 transition-all duration-300 transform hover:-translate-y-1 text-lg"
-              >
-                <span className="flex items-center space-x-3">
-                  <span>Login to Portal</span>
-                  <ArrowRightIcon className="w-6 h-6 group-hover/btn:translate-x-2 transition-transform duration-300" />
-                </span>
-              </button>
+            {/* Enhanced outer glow - toned down */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-slate-500 via-blue-400 to-slate-500 rounded-3xl blur-3xl opacity-30 group-hover:opacity-50 transition-opacity duration-700" />
+
+            {/* Secondary glow layer - more subtle */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-300/15 to-slate-500/15 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-700" />
+
+            <div className="relative bg-gradient-to-br from-slate-700 to-blue-700 rounded-3xl p-12 md:p-20 text-center shadow-2xl border border-slate-500/20 overflow-hidden">
+              {/* Subtle light streaks */}
+              <div className="absolute top-0 left-1/4 w-1 h-20 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+              <div className="absolute top-0 right-1/4 w-1 h-20 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+
+              <div className="relative">
+                <h2 className="relative text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+                  Grow Your Franchise
+                  <span className="block mt-1 text-transparent bg-clip-text bg-gradient-to-r from-slate-200 via-slate-100 to-blue-300">
+                    Faster
+                  </span>
+                </h2>
+
+                <p className="relative text-base md:text-lg text-slate-300 mb-12 max-w-2xl mx-auto leading-relaxed font-normal">
+                  Tools, insights, and automation built for franchise owners.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-6 items-center justify-center">
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="relative group/btn px-12 py-4 bg-white text-slate-700 font-bold rounded-xl shadow-2xl hover:shadow-3xl hover:bg-slate-50 transition-all duration-300 transform hover:-translate-y-1 text-lg overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover/btn:translate-x-[200%] transition-transform duration-1000" />
+                    <span className="flex items-center space-x-3 relative z-10">
+                      <span>Access Portal</span>
+                      <ArrowRightIcon className="w-6 h-6 group-hover/btn:translate-x-2 transition-transform duration-300" />
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate('/signup')}
+                    className="relative group/btn px-12 py-4 bg-white/10 hover:bg-white/15 text-slate-100 font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 text-lg border border-white/15 backdrop-blur-md"
+                  >
+                    <span className="flex items-center space-x-3">
+                      <span>Create Account</span>
+                      <ArrowRightIcon className="w-6 h-6 group-hover/btn:translate-x-2 transition-transform duration-300" />
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -523,6 +621,32 @@ const Landing = () => {
           }
           66% {
             transform: translate(-20px, 20px) rotate(240deg) scale(0.9);
+          }
+        }
+
+        @keyframes gridMove {
+          0% {
+            background-position: 0 0;
+          }
+          100% {
+            background-position: 50px 50px;
+          }
+        }
+
+        @keyframes shootingStar {
+          0% {
+            left: -100px;
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          90% {
+            opacity: 1;
+          }
+          100% {
+            left: 100%;
+            opacity: 0;
           }
         }
 
