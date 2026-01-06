@@ -184,16 +184,45 @@ const Login = () => {
             </form>
 
             {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/30 backdrop-blur-md text-center">
-              <p className="text-xs text-blue-300 font-medium">
+            <div className="mt-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/30 backdrop-blur-md">
+              <p className="text-xs text-blue-300 font-medium text-center mb-4">
                 📝 Demo Credentials
               </p>
-              <p className="text-xs text-gray-300 mt-2">
-                Email: <span className="font-semibold">admin@signcompany.com</span>
-              </p>
-              <p className="text-xs text-gray-300">
-                Password: <span className="font-semibold">admin123</span>
-              </p>
+
+              <div className="space-y-3">
+                {/* Admin */}
+                <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
+                  <p className="text-xs font-semibold text-blue-300 mb-1">Admin</p>
+                  <p className="text-xs text-gray-300">
+                    Email: <span className="font-semibold text-gray-100">admin@signcompany.com</span>
+                  </p>
+                  <p className="text-xs text-gray-300">
+                    Password: <span className="font-semibold text-gray-100">admin123</span>
+                  </p>
+                </div>
+
+                {/* Owner */}
+                <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
+                  <p className="text-xs font-semibold text-green-300 mb-1">Owner</p>
+                  <p className="text-xs text-gray-300">
+                    Email: <span className="font-semibold text-gray-100">owner@signcompany.com</span>
+                  </p>
+                  <p className="text-xs text-gray-300">
+                    Password: <span className="font-semibold text-gray-100">owner123</span>
+                  </p>
+                </div>
+
+                {/* Vendor */}
+                <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
+                  <p className="text-xs font-semibold text-purple-300 mb-1">Vendor</p>
+                  <p className="text-xs text-gray-300">
+                    Email: <span className="font-semibold text-gray-100">vendor@signcompany.com</span>
+                  </p>
+                  <p className="text-xs text-gray-300">
+                    Password: <span className="font-semibold text-gray-100">vendor123</span>
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Signup Link */}
