@@ -37,17 +37,29 @@ router.get('/stats', protect, async (req, res) => {
       ? ((newOwnersThisMonth / ownersLastMonth) * 100).toFixed(1)
       : '+0';
 
-    // Get upcoming events count
+    // Get upcoming events count (events user is attending with confirmed RSVP)
     const [upcomingEvents, upcomingThisWeek] = await Promise.all([
       Event.countDocuments({
         isPublished: true,
-        startDate: { $gte: now }
+        startDate: { $gte: now },
+        'attendees': {
+          $elemMatch: {
+            user: req.user._id,
+            status: 'confirmed'
+          }
+        }
       }),
       Event.countDocuments({
         isPublished: true,
         startDate: {
           $gte: now,
           $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+        },
+        'attendees': {
+          $elemMatch: {
+            user: req.user._id,
+            status: 'confirmed'
+          }
         }
       })
     ]);
