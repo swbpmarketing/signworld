@@ -26,6 +26,7 @@ const notificationSchema = new mongoose.Schema({
       'new_video',              // New video posted
       'new_event',              // New event created
       'new_convention',         // New convention
+      'convention_registered',  // User registered for a convention
       'event_reminder',         // Event reminder
       'mention',                // Someone mentioned you
       'system'                  // System notification
