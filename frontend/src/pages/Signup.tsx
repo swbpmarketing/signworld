@@ -44,6 +44,9 @@ const Signup = () => {
     try {
       setLoading(true);
 
+      // Combine firstName and lastName into name
+      const fullName = `${data.firstName} ${data.lastName}`.trim();
+
       // Call signup API
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -51,16 +54,16 @@ const Signup = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          firstName: data.firstName,
-          lastName: data.lastName,
+          name: fullName,
           email: data.email,
           password: data.password,
+          role: 'owner', // Default role for new signups
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Signup failed');
+        throw new Error(error.error || error.message || 'Signup failed');
       }
 
       const result = await response.json();
