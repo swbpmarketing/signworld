@@ -849,8 +849,8 @@ const Chat = () => {
                               active ? 'bg-gray-100 dark:bg-gray-700' : ''
                             } flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200`}
                           >
-                            <ArchiveBoxIcon className="h-5 w-5 text-gray-400" />
-                            Archive conversation
+                            <ArchiveBoxIcon className="h-4 w-4 text-gray-400" />
+                            Archive
                           </button>
                         )}
                       </Menu.Item>
@@ -862,8 +862,8 @@ const Chat = () => {
                               active ? 'bg-red-50 dark:bg-red-900/20' : ''
                             } flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400`}
                           >
-                            <TrashIcon className="h-5 w-5" />
-                            Delete conversation
+                            <TrashIcon className="h-4 w-4" />
+                            Delete
                           </button>
                         )}
                       </Menu.Item>
