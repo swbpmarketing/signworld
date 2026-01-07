@@ -334,4 +334,76 @@ router.get('/my-permissions', protect, async (req, res) => {
   }
 });
 
+// @desc    Get specific user's permissions (for admin preview)
+// @route   GET /api/settings/user-permissions/:userId
+// @access  Private/Admin
+router.get('/user-permissions/:userId', protect, authorize('admin'), async (req, res) => {
+  try {
+    const targetUser = await User.findById(req.params.userId);
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    // Don't allow previewing other admins
+    if (targetUser.role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Cannot preview admin accounts',
+      });
+    }
+
+    // Don't allow previewing inactive users
+    if (!targetUser.isActive) {
+      return res.status(403).json({
+        success: false,
+        error: 'Cannot preview inactive users',
+      });
+    }
+
+    const settings = await SystemSettings.getSettings();
+    const userRole = targetUser.role;
+
+    // Get role-based permissions from settings
+    const rolePermissions = settings.rolePermissions?.[userRole] || {};
+
+    // Get user-specific permission overrides (if any)
+    const userPermissions = targetUser.permissions || {};
+
+    // Merge role permissions with user-specific overrides
+    const finalPermissions = {};
+    Object.keys(rolePermissions).forEach(key => {
+      finalPermissions[key] = userPermissions[key] !== undefined ? userPermissions[key] : rolePermissions[key];
+    });
+
+    // Never allow these in preview mode
+    finalPermissions.canManageUsers = false;
+    finalPermissions.canManageSettings = false;
+    finalPermissions.canApprovePending = false;
+
+    res.json({
+      success: true,
+      data: {
+        permissions: finalPermissions,
+        user: {
+          id: targetUser._id,
+          name: targetUser.name,
+          email: targetUser.email,
+          role: targetUser.role,
+          company: targetUser.company,
+        }
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching user permissions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error fetching user permissions',
+    });
+  }
+});
+
 module.exports = router;

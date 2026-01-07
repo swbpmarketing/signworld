@@ -103,6 +103,23 @@ const userSchema = new mongoose.Schema({
     marketplaceUpdates: { type: Boolean, default: true },
     weeklyDigest: { type: Boolean, default: false },
   },
+  // Optional user-specific permission overrides
+  permissions: {
+    canAccessDashboard: { type: Boolean },
+    canAccessLibrary: { type: Boolean },
+    canUploadToLibrary: { type: Boolean },
+    canAccessForum: { type: Boolean },
+    canPostInForum: { type: Boolean },
+    canAccessChat: { type: Boolean },
+    canAccessEvents: { type: Boolean },
+    canAccessEquipment: { type: Boolean },
+    canListEquipment: { type: Boolean },
+    canAccessBrags: { type: Boolean },
+    canPostBrags: { type: Boolean },
+    canAccessVideos: { type: Boolean },
+    canAccessDirectory: { type: Boolean },
+    canAccessPartners: { type: Boolean },
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -20,13 +20,28 @@ const api = axios.create({
   },
 });
 
-// Add auth token to requests
+// Add auth token and preview context to requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Add preview context header if in preview mode
+    // This is used by backend to filter data for the previewed user
+    try {
+      const previewStateJson = sessionStorage.getItem('preview-mode-state');
+      if (previewStateJson) {
+        const previewState = JSON.parse(previewStateJson);
+        if (previewState.type === 'user' && previewState.userId) {
+          config.headers['X-Preview-User-Id'] = previewState.userId;
+        }
+      }
+    } catch (e) {
+      // sessionStorage not available or invalid JSON
+    }
+
     return config;
   },
   (error) => {

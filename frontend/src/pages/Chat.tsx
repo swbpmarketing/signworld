@@ -110,6 +110,10 @@ const Chat = () => {
 
     // Handle new message event
     const handleNewMessage = (data: { conversationId: string; message: Message }) => {
+      // Skip if this is your own message (already added in handleSendMessage)
+      if (data.message.sender === currentUserId || (data.message.sender as any)?._id === currentUserId) {
+        return;
+      }
 
       // If we're viewing this conversation, add the message
       if (selectedContact?.conversationId === data.conversationId) {
@@ -318,6 +322,7 @@ const Chat = () => {
   const fetchMessagesQuietly = async (conversationId: string) => {
     try {
       const { messages: data } = await getMessages(conversationId);
+      console.log('Fetched messages from server:', data.map(m => ({ id: m._id, isDeleted: m.isDeleted, content: m.content })));
       setMessages(data);
     } catch (error) {
       // Silent fail for background refresh
@@ -580,14 +585,22 @@ const Chat = () => {
   const handleDeleteMessage = async (messageId: string) => {
     setDeletingMessageId(messageId);
     try {
+      // Call API to delete on backend
       await deleteMessage(messageId);
-      setMessages(prev =>
-        prev.map(msg =>
-          msg._id === messageId
-            ? { ...msg, isDeleted: true, content: '' }
-            : msg
-        )
-      );
+      console.log('Message deleted on backend, messageId:', messageId);
+
+      // Update local state to mark message as deleted
+      setMessages(prev => {
+        const updated = prev.map(msg => {
+          if (msg._id === messageId) {
+            console.log('Marking message as deleted locally:', messageId);
+            return { ...msg, isDeleted: true, content: '' };
+          }
+          return msg;
+        });
+        console.log('Updated messages array (after delete):', updated.map(m => ({ id: m._id, isDeleted: m.isDeleted, content: m.content })));
+        return updated;
+      });
       toast.success('Message unsent');
     } catch (error) {
       console.error('Failed to delete message:', error);
@@ -633,12 +646,63 @@ const Chat = () => {
     }
   };
 
-  // Handle emoji reaction (placeholder for now)
-  const handleReaction = (messageId: string, emoji: string) => {
-    console.log('Reaction:', messageId, emoji);
+  // Handle emoji reaction - one reaction per user per message
+  const handleReaction = async (messageId: string, emoji: string) => {
     setShowEmojiPicker(null);
-    toast.success(`Reacted with ${emoji}`);
-    // TODO: Implement actual reaction API
+    try {
+      const token = localStorage.getItem('token');
+      const message = messages.find(m => m._id === messageId);
+
+      if (!message) return;
+
+      // Check if user already has a reaction on this message
+      const userExistingReaction = message.reactions?.find(r =>
+        r.users.some((u: any) => (u._id || u) === currentUserId)
+      );
+
+      // If user has an existing reaction and it's different from the one they're clicking
+      // First remove the old reaction
+      if (userExistingReaction && userExistingReaction.emoji !== emoji) {
+        try {
+          await fetch(`/api/chat/messages/${messageId}/reactions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ emoji: userExistingReaction.emoji })
+          });
+        } catch (error) {
+          console.error('Error removing old reaction:', error);
+        }
+      }
+
+      // Now add/toggle the new reaction
+      const response = await fetch(`/api/chat/messages/${messageId}/reactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ emoji })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add reaction');
+      }
+
+      const data = await response.json();
+
+      // Update the message in state with the new reaction
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          msg._id === messageId ? { ...msg, reactions: data.data.reactions } : msg
+        )
+      );
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+      toast.error('Failed to add reaction');
+    }
   };
 
   const filteredContacts = contacts.filter(contact => {
@@ -892,11 +956,15 @@ const Chat = () => {
                   </div>
                 ) : (
                   messages.map((message, index) => {
-                    const isOwn = message.sender._id === currentUserId;
+                    // Skip if message doesn't have sender data (except deleted messages)
+                    if (!message.sender && !message.isDeleted) return null;
+
+                    const senderId = message.sender?._id || message.sender;
+                    const isOwn = senderId === currentUserId;
                     const prevMessage = messages[index - 1];
                     const msgDate = new Date(message.createdAt);
                     const showTimestamp = index === 0 ||
-                      (msgDate.getTime() - new Date(prevMessage.createdAt).getTime() > 1000 * 60 * 60);
+                      (prevMessage && msgDate.getTime() - new Date(prevMessage.createdAt).getTime() > 1000 * 60 * 60);
                     const isHovered = hoveredMessageId === message._id;
                     const isEditing = editingMessageId === message._id;
                     const isDeleting = deletingMessageId === message._id;
@@ -1151,6 +1219,26 @@ const Chat = () => {
                               )}
                             </div>
 
+                            {/* Message Reactions - Outside bubble */}
+                            {!message.isDeleted && message.reactions && message.reactions.length > 0 && (
+                              <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                                {message.reactions.map((reaction, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={() => handleReaction(message._id, reaction.emoji)}
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors ${
+                                      reaction.users.some((u: any) => (u._id || u) === currentUserId)
+                                        ? isOwn ? 'bg-primary-600 text-white' : 'bg-gray-300 dark:bg-gray-600'
+                                        : isOwn ? 'bg-primary-500/50 text-white hover:bg-primary-600' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-500'
+                                    }`}
+                                  >
+                                    <span className="text-base">{reaction.emoji}</span>
+                                    <span className="text-xs">{reaction.users.length}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
                             {/* Message Actions Menu - for own messages */}
                             {isOwn && !message.isDeleted && (
                               <div className={`flex items-center gap-1 transition-all duration-200 ${
@@ -1177,7 +1265,7 @@ const Chat = () => {
 
                                   {/* Emoji picker popup */}
                                   {showEmojiPicker === message._id && (
-                                    <div className="absolute bottom-full left-0 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-10">
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-50 whitespace-nowrap">
                                       {quickEmojis.map((emoji) => (
                                         <button
                                           key={emoji}
@@ -1219,7 +1307,7 @@ const Chat = () => {
 
                                   {/* Emoji picker popup */}
                                   {showEmojiPicker === message._id && (
-                                    <div className="absolute bottom-full left-0 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-10">
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-50 whitespace-nowrap">
                                       {quickEmojis.map((emoji) => (
                                         <button
                                           key={emoji}

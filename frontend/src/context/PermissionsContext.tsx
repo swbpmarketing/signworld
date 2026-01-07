@@ -108,7 +108,7 @@ export const usePermissions = () => {
 
 export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const { isPreviewMode, previewRole } = usePreviewMode();
+  const { isPreviewMode, previewState } = usePreviewMode();
   const [permissions, setPermissions] = useState<Permissions | null>(null);
 
   // Fetch user's own permissions
@@ -133,6 +133,17 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch specific user's permissions for user preview mode
+  const { data: userPreviewData, isLoading: userPreviewLoading } = useQuery({
+    queryKey: ['user-permissions', previewState.userId],
+    queryFn: async () => {
+      const response = await api.get(`/settings/user-permissions/${previewState.userId}`);
+      return response.data?.data as { permissions: Permissions; user: any };
+    },
+    enabled: user?.role === 'admin' && previewState.type === 'user' && !!previewState.userId,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Determine which permissions to use based on preview mode
   useEffect(() => {
     if (!user) {
@@ -140,9 +151,15 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return;
     }
 
-    // If admin is in preview mode, use the previewed role's permissions
-    if (isPreviewMode && previewRole && user.role === 'admin' && rolePermissions) {
-      const previewPermissions = rolePermissions[previewRole];
+    // If admin is previewing a specific user
+    if (isPreviewMode && previewState.type === 'user' && user.role === 'admin' && userPreviewData) {
+      setPermissions(userPreviewData.permissions);
+      return;
+    }
+
+    // If admin is in role-based preview mode, use the previewed role's permissions
+    if (isPreviewMode && previewState.type === 'role' && user.role === 'admin' && rolePermissions && previewState.role) {
+      const previewPermissions = rolePermissions[previewState.role];
       if (previewPermissions) {
         setPermissions({
           ...previewPermissions,
@@ -173,7 +190,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
           setPermissions(defaultOwnerPermissions);
       }
     }
-  }, [user, isPreviewMode, previewRole, myPermissions, rolePermissions]);
+  }, [user, isPreviewMode, previewState, myPermissions, rolePermissions, userPreviewData]);
 
   const hasPermission = useCallback((permission: keyof Permissions): boolean => {
     // Admin always has all permissions when not in preview mode
@@ -188,8 +205,8 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     refetchMyPermissions();
   }, [refetchMyPermissions]);
 
-  // Include rolePermissionsLoading for admin users who need those permissions for preview mode
-  const isLoading = myPermissionsLoading || (user?.role === 'admin' && rolePermissionsLoading);
+  // Include rolePermissionsLoading and userPreviewLoading for admin users who need those permissions for preview mode
+  const isLoading = myPermissionsLoading || (user?.role === 'admin' && (rolePermissionsLoading || userPreviewLoading));
 
   const contextValue = useMemo(() => ({
     permissions,

@@ -224,7 +224,11 @@ router.get('/admin/stats', protect, authorize('admin'), async (req, res) => {
 // @access  Private
 router.get('/user/my-stories', protect, async (req, res) => {
   try {
-    const brags = await Brag.find({ author: req.user.id })
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user.id;
+
+    const brags = await Brag.find({ author: targetUserId })
       .populate('moderatedBy', 'name email')
       .sort('-createdAt');
 
@@ -247,7 +251,11 @@ router.get('/user/my-stories', protect, async (req, res) => {
 router.get('/user/my-stats', protect, async (req, res) => {
   try {
     const mongoose = require('mongoose');
-    const userId = new mongoose.Types.ObjectId(req.user.id);
+
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user.id;
+    const userId = new mongoose.Types.ObjectId(targetUserId);
 
     // Count user's stories (published only)
     const publishedStories = await Brag.countDocuments({

@@ -43,6 +43,13 @@ const messageSchema = new mongoose.Schema({
     default: false,
   },
   deletedAt: Date,
+  reactions: [{
+    emoji: String,
+    users: [{
+      type: mongoose.Schema.ObjectId,
+      ref: 'User',
+    }],
+  }],
   createdAt: {
     type: Date,
     default: Date.now,

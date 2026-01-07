@@ -38,7 +38,10 @@ router.get('/popular', protect, async (req, res) => {
  */
 router.get('/', protect, async (req, res) => {
   try {
-    const stats = await equipmentStatsService.getUserStats(req.user._id);
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
+
+    const stats = await equipmentStatsService.getUserStats(targetUserId);
 
     if (!stats) {
       return res.status(500).json({
@@ -67,6 +70,8 @@ router.get('/', protect, async (req, res) => {
  */
 router.post('/sync-cart', protect, async (req, res) => {
   try {
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
     const { cartItems } = req.body;
 
     if (!Array.isArray(cartItems)) {
@@ -76,7 +81,7 @@ router.post('/sync-cart', protect, async (req, res) => {
       });
     }
 
-    const stats = await equipmentStatsService.syncCart(req.user._id, cartItems);
+    const stats = await equipmentStatsService.syncCart(targetUserId, cartItems);
 
     if (!stats) {
       return res.status(500).json({
@@ -105,6 +110,8 @@ router.post('/sync-cart', protect, async (req, res) => {
  */
 router.post('/sync-wishlist', protect, async (req, res) => {
   try {
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
     const { wishlistItems } = req.body;
 
     if (!Array.isArray(wishlistItems)) {
@@ -114,7 +121,7 @@ router.post('/sync-wishlist', protect, async (req, res) => {
       });
     }
 
-    const stats = await equipmentStatsService.syncWishlist(req.user._id, wishlistItems);
+    const stats = await equipmentStatsService.syncWishlist(targetUserId, wishlistItems);
 
     if (!stats) {
       return res.status(500).json({
@@ -143,10 +150,12 @@ router.post('/sync-wishlist', protect, async (req, res) => {
  */
 router.post('/cart/:equipmentId', protect, async (req, res) => {
   try {
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
     const { equipmentId } = req.params;
     const { quantity } = req.body;
 
-    const stats = await equipmentStatsService.addToCart(req.user._id, equipmentId, quantity || 1);
+    const stats = await equipmentStatsService.addToCart(targetUserId, equipmentId, quantity || 1);
 
     if (!stats) {
       return res.status(500).json({
@@ -174,9 +183,11 @@ router.post('/cart/:equipmentId', protect, async (req, res) => {
  */
 router.post('/wishlist/:equipmentId', protect, async (req, res) => {
   try {
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
     const { equipmentId } = req.params;
 
-    const stats = await equipmentStatsService.addToWishlist(req.user._id, equipmentId);
+    const stats = await equipmentStatsService.addToWishlist(targetUserId, equipmentId);
 
     if (!stats) {
       return res.status(500).json({
@@ -204,9 +215,11 @@ router.post('/wishlist/:equipmentId', protect, async (req, res) => {
  */
 router.delete('/wishlist/:equipmentId', protect, async (req, res) => {
   try {
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
     const { equipmentId } = req.params;
 
-    const stats = await equipmentStatsService.removeFromWishlist(req.user._id, equipmentId);
+    const stats = await equipmentStatsService.removeFromWishlist(targetUserId, equipmentId);
 
     if (!stats) {
       return res.status(500).json({
@@ -234,9 +247,11 @@ router.delete('/wishlist/:equipmentId', protect, async (req, res) => {
  */
 router.post('/quote-request/:equipmentId', protect, async (req, res) => {
   try {
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
     const { equipmentId } = req.params;
 
-    const stats = await equipmentStatsService.addQuoteRequest(req.user._id, equipmentId);
+    const stats = await equipmentStatsService.addQuoteRequest(targetUserId, equipmentId);
 
     if (!stats) {
       return res.status(500).json({
@@ -264,7 +279,10 @@ router.post('/quote-request/:equipmentId', protect, async (req, res) => {
  */
 router.post('/clear-cart', protect, async (req, res) => {
   try {
-    const stats = await equipmentStatsService.clearCart(req.user._id);
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
+
+    const stats = await equipmentStatsService.clearCart(targetUserId);
 
     if (!stats) {
       return res.status(500).json({

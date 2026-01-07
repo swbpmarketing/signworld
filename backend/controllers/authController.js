@@ -151,7 +151,9 @@ exports.login = async (req, res) => {
 // @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user.id;
+    const user = await User.findById(targetUserId);
 
     res.status(200).json({
       success: true,
@@ -170,6 +172,9 @@ exports.getMe = async (req, res) => {
 // @access  Private
 exports.updateDetails = async (req, res) => {
   try {
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user.id;
+
     const fieldsToUpdate = {
       name: req.body.name,
       email: req.body.email,
@@ -182,7 +187,7 @@ exports.updateDetails = async (req, res) => {
       mentoring: req.body.mentoring,
     };
 
-    const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
+    const user = await User.findByIdAndUpdate(targetUserId, fieldsToUpdate, {
       new: true,
       runValidators: true,
     });
@@ -204,7 +209,10 @@ exports.updateDetails = async (req, res) => {
 // @access  Private
 exports.updatePassword = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('+password');
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user.id;
+
+    const user = await User.findById(targetUserId).select('+password');
 
     // Check current password
     if (!(await user.matchPassword(req.body.currentPassword))) {

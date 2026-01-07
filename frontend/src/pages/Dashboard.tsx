@@ -29,10 +29,11 @@ import SatisfactionOverview from '../components/analytics/SatisfactionOverview';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { getEffectiveRole } = usePreviewMode();
+  const { getEffectiveRole, getPreviewedUser, isPreviewMode } = usePreviewMode();
   const navigate = useNavigate();
   const effectiveRole = getEffectiveRole();
-  const isAdmin = effectiveRole === 'admin';
+  const isAdmin = effectiveRole === 'admin' && !isPreviewMode;
+  const previewedUser = getPreviewedUser();
 
   // Fetch dashboard stats
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
@@ -77,16 +78,17 @@ const Dashboard = () => {
   });
 
   // Map stats data to display format
+  // For regular users and preview mode, show user-specific events instead of total owners
   const stats = statsData ? [
     {
-      name: 'Total Owners',
-      value: statsData.owners.total.toString(),
-      icon: UserGroupIcon,
-      change: statsData.owners.change,
-      changeType: statsData.owners.changeType
+      name: isAdmin ? 'Total Owners' : 'My Events',
+      value: isAdmin ? statsData.owners.total.toString() : (statsData.myRsvps?.total || 0).toString(),
+      icon: isAdmin ? UserGroupIcon : CalendarIcon,
+      change: isAdmin ? statsData.owners.change : (statsData.myRsvps?.change || '0'),
+      changeType: isAdmin ? statsData.owners.changeType : (statsData.myRsvps?.changeType || 'neutral')
     },
     {
-      name: 'Upcoming Events',
+      name: isAdmin ? 'Upcoming Events' : 'Available Events',
       value: statsData.events.total.toString(),
       icon: CalendarIcon,
       change: statsData.events.change,
@@ -179,11 +181,17 @@ const Dashboard = () => {
             {isAdmin && <ShieldCheckIcon className="h-8 w-8 text-white/80" />}
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                {isAdmin ? 'Admin Dashboard' : `Welcome back, ${user?.name}!`}
+                {isAdmin
+                  ? (isPreviewMode && previewedUser
+                      ? `Previewing: ${previewedUser.name}`
+                      : 'Admin Dashboard')
+                  : `Welcome back, ${previewedUser?.name || user?.name}!`}
               </h1>
               <p className="mt-2 text-lg text-white/80">
                 {isAdmin
-                  ? `Hello ${user?.name}! Here's your system overview.`
+                  ? (isPreviewMode && previewedUser
+                      ? `${previewedUser.role === 'owner' ? 'Owner' : 'Vendor'} view • ${previewedUser.email}`
+                      : `Hello ${user?.name}! Here's your system overview.`)
                   : "Here's what's happening in your Sign Company network today."
                 }
               </p>

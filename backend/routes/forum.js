@@ -92,8 +92,12 @@ router.get('/', async (req, res) => {
 // @access  Private
 router.get('/my-threads', protect, async (req, res) => {
   try {
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
+
     // Use .lean() for better performance on read-only query
-    const threads = await ForumThread.find({ author: req.user._id })
+    const threads = await ForumThread.find({ author: targetUserId })
       .populate('author', 'name email role')
       .populate('lastReplyBy', 'name email')
       .sort('-createdAt')

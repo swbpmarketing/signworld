@@ -35,6 +35,7 @@ import {
 } from "@heroicons/react/24/outline";
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import AISearchModal from "./AISearchModal";
+import UserSelectionModal from "./UserSelectionModal";
 import { NotificationPanel } from "./NotificationPanel";
 import { useNotifications } from "../hooks/useNotifications";
 
@@ -260,13 +261,14 @@ Breadcrumb.displayName = 'Breadcrumb';
 const Layout = () => {
   const { user, logout, loading } = useAuth();
   const { darkMode, toggleDarkMode } = useDarkMode();
-  const { previewRole, isPreviewMode, startPreview, exitPreview, getEffectiveRole } = usePreviewMode();
+  const { previewState, isPreviewMode, startPreview, startUserPreview, exitPreview, getEffectiveRole, getPreviewedUser } = usePreviewMode();
   const { hasPermission, permissions } = usePermissions();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const [userSelectionModalOpen, setUserSelectionModalOpen] = useState(false);
 
   // Get the effective role for UI (actual role or preview role)
   const effectiveRole = getEffectiveRole();
@@ -358,7 +360,9 @@ const Layout = () => {
           <div className="flex items-center justify-center gap-3">
             <EyeIcon className="h-5 w-5" />
             <span className="font-medium">
-              Preview Mode: Viewing as {previewRole === 'owner' ? 'Owner' : 'Vendor'}
+              {previewState.type === 'role'
+                ? `Preview Mode: Viewing as ${previewState.role === 'owner' ? 'Owner' : 'Vendor'}`
+                : `Preview Mode: Viewing as ${previewState.userName} (${previewState.userEmail})`}
             </span>
             <button
               onClick={exitPreview}
@@ -627,47 +631,68 @@ const Layout = () => {
                   {user?.role === 'admin' && (
                     <>
                       <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
-                      <div className="px-4 py-2">
-                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                          Preview As
+                      <div className="px-4 py-2 space-y-3">
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Preview Mode
                         </p>
-                        <div className="flex gap-2">
+
+                        {/* Role-based preview */}
+                        <div>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">By Role</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                startPreview('owner');
+                                handleUserMenuClose();
+                              }}
+                              className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                previewState.type === 'role' && previewState.role === 'owner'
+                                  ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 cursor-default'
+                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300'
+                              }`}
+                            >
+                              Owner
+                            </button>
+                            <button
+                              onClick={() => {
+                                startPreview('vendor');
+                                handleUserMenuClose();
+                              }}
+                              className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                previewState.type === 'role' && previewState.role === 'vendor'
+                                  ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 cursor-default'
+                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300'
+                              }`}
+                            >
+                              Vendor
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* User-specific preview */}
+                        <div>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">As Specific User</p>
                           <button
                             onClick={() => {
-                              startPreview('owner');
+                              setUserSelectionModalOpen(true);
                               handleUserMenuClose();
                             }}
-                            disabled={previewRole === 'owner'}
-                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                              previewRole === 'owner'
-                                ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 cursor-default'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:hover:text-indigo-300'
-                            }`}
+                            className="w-full text-sm px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium"
                           >
-                            Owner
-                          </button>
-                          <button
-                            onClick={() => {
-                              startPreview('vendor');
-                              handleUserMenuClose();
-                            }}
-                            disabled={previewRole === 'vendor'}
-                            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                              previewRole === 'vendor'
-                                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 cursor-default'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300'
-                            }`}
-                          >
-                            Vendor
+                            {previewState.type === 'user'
+                              ? `Change User (${previewState.userName})`
+                              : 'Select User...'}
                           </button>
                         </div>
+
+                        {/* Exit preview */}
                         {isPreviewMode && (
                           <button
                             onClick={() => {
                               exitPreview();
                               handleUserMenuClose();
                             }}
-                            className="w-full mt-2 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                            className="w-full px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                           >
                             Exit Preview Mode
                           </button>
@@ -708,6 +733,16 @@ const Layout = () => {
         userRole={user?.role}
         userName={user?.name}
         userCompany={user?.company}
+      />
+
+      {/* User Selection Modal for Preview */}
+      <UserSelectionModal
+        isOpen={userSelectionModalOpen}
+        onClose={() => setUserSelectionModalOpen(false)}
+        onSelectUser={(selectedUser) => {
+          startUserPreview(selectedUser._id, selectedUser.name, selectedUser.email, selectedUser.role);
+          setUserSelectionModalOpen(false);
+        }}
       />
     </div>
   );

@@ -61,7 +61,9 @@ router.get('/stats', async (req, res) => {
 // @access  Private/Vendor
 router.get('/vendor-stats', protect, authorize('vendor', 'admin'), async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const vendorId = previewUserId || req.user.id;
 
     // Get all vendor's equipment with inquiries
     const equipment = await Equipment.find({ vendorId });
@@ -253,7 +255,10 @@ router.get('/vendor-stats', protect, authorize('vendor', 'admin'), async (req, r
 // @access  Private/Vendor
 router.get('/my-listings', protect, authorize('vendor', 'admin'), async (req, res) => {
   try {
-    const query = req.user.role === 'admin' ? {} : { vendorId: req.user.id };
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user.id;
+    const query = (req.user.role === 'admin' && !previewUserId) ? {} : { vendorId: targetUserId };
 
     const equipment = await Equipment.find(query)
       .sort({ createdAt: -1 })
@@ -375,7 +380,9 @@ router.get('/', async (req, res) => {
 // @access  Private/Vendor
 router.get('/vendor-inquiries', protect, authorize('vendor', 'admin'), async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const vendorId = previewUserId || req.user.id;
 
     // Get all vendor's equipment with inquiries
     const equipment = await Equipment.find({ vendorId }).select('name price images inquiries');

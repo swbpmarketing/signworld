@@ -40,8 +40,12 @@ const upload = multer({
 // @access  Private
 router.get('/conversations', protect, async (req, res) => {
   try {
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
+
     const conversations = await Conversation.find({
-      participants: req.user._id,
+      participants: targetUserId,
       isActive: true,
     })
       .populate('participants', 'name email role avatar')
@@ -51,12 +55,12 @@ router.get('/conversations', protect, async (req, res) => {
     // Format conversations with unread counts for current user
     const formattedConversations = conversations.map(conv => {
       const unreadEntry = conv.unreadCounts.find(
-        uc => uc.user.toString() === req.user._id.toString()
+        uc => uc.user.toString() === targetUserId.toString()
       );
 
       // Get the other participant for direct chats
       const otherParticipant = conv.participants.find(
-        p => p._id.toString() !== req.user._id.toString()
+        p => p._id.toString() !== targetUserId.toString()
       );
 
       return {
@@ -137,10 +141,14 @@ router.get('/conversations/:id/messages', protect, async (req, res) => {
     const { page = 1, limit = 50 } = req.query;
     const skip = (page - 1) * limit;
 
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
+
     // Verify user is a participant
     const conversation = await Conversation.findOne({
       _id: req.params.id,
-      participants: req.user._id,
+      participants: targetUserId,
     });
 
     if (!conversation) {
@@ -151,9 +159,9 @@ router.get('/conversations/:id/messages', protect, async (req, res) => {
     }
 
     // Get messages with pagination (newest first for infinite scroll)
+    // Include deleted messages so frontend can display them as "Message unsent"
     const messages = await Message.find({
       conversation: req.params.id,
-      isDeleted: false,
     })
       .populate('sender', 'name email role avatar')
       .sort({ createdAt: -1 })
@@ -163,9 +171,10 @@ router.get('/conversations/:id/messages', protect, async (req, res) => {
     // Reverse to show oldest first in UI
     messages.reverse();
 
+    console.log(`GET /chat/conversations/${req.params.id}/messages - Returning ${messages.length} messages (including ${messages.filter(m => m.isDeleted).length} deleted)`);
+
     const total = await Message.countDocuments({
       conversation: req.params.id,
-      isDeleted: false,
     });
 
     res.status(200).json({
@@ -202,10 +211,14 @@ router.post('/conversations/:id/messages', protect, async (req, res) => {
       });
     }
 
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
+
     // Verify user is a participant
     const conversation = await Conversation.findOne({
       _id: req.params.id,
-      participants: req.user._id,
+      participants: targetUserId,
     });
 
     if (!conversation) {
@@ -301,10 +314,14 @@ router.post('/conversations/:id/messages/upload', protect, upload.single('file')
       });
     }
 
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
+
     // Verify user is a participant
     const conversation = await Conversation.findOne({
       _id: req.params.id,
-      participants: req.user._id,
+      participants: targetUserId,
     });
 
     if (!conversation) {
@@ -606,6 +623,94 @@ router.delete('/conversations/:id', protect, async (req, res) => {
   }
 });
 
+// Emoji mapping
+const emojiMap = {
+  'thumbs up': '👍',
+  'heart': '❤️',
+  'laugh': '😂',
+  'surprised': '😲',
+  'sad': '😢',
+  'pray': '🙏',
+};
+
+// @desc    Add a reaction to a message
+// @route   POST /api/chat/messages/:id/reactions
+// @access  Private
+router.post('/messages/:id/reactions', protect, async (req, res) => {
+  try {
+    const { emoji } = req.body;
+
+    if (!emoji) {
+      return res.status(400).json({
+        success: false,
+        error: 'Emoji is required',
+      });
+    }
+
+    const message = await Message.findById(req.params.id);
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        error: 'Message not found',
+      });
+    }
+
+    // Convert emoji name to actual emoji
+    const actualEmoji = emojiMap[emoji] || emoji;
+
+    // Initialize reactions array if it doesn't exist
+    if (!message.reactions) {
+      message.reactions = [];
+    }
+
+    // Check if user has already reacted with this emoji
+    const existingReaction = message.reactions.find(
+      r => r.emoji === actualEmoji
+    );
+
+    if (existingReaction) {
+      // Check if user already reacted
+      const userIndex = existingReaction.users.findIndex(
+        u => u.toString() === req.user._id.toString()
+      );
+
+      if (userIndex > -1) {
+        // Remove user's reaction (toggle off)
+        existingReaction.users.splice(userIndex, 1);
+        // Remove reaction if no users left
+        if (existingReaction.users.length === 0) {
+          message.reactions = message.reactions.filter(
+            r => r.emoji !== actualEmoji
+          );
+        }
+      } else {
+        // Add user's reaction
+        existingReaction.users.push(req.user._id);
+      }
+    } else {
+      // Create new reaction
+      message.reactions.push({
+        emoji: actualEmoji,
+        users: [req.user._id],
+      });
+    }
+
+    await message.save();
+
+    res.status(200).json({
+      success: true,
+      data: message,
+    });
+  } catch (error) {
+    console.error('Error adding reaction:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to add reaction',
+    });
+  }
+});
+
 // @desc    Edit a message
 // @route   PUT /api/chat/messages/:id
 // @access  Private
@@ -689,9 +794,17 @@ router.delete('/messages/:id', protect, async (req, res) => {
     message.deletedAt = new Date();
     await message.save();
 
+    console.log(`Message ${req.params.id} marked as deleted`);
+
+    // Fetch the message again with populated sender for consistent response format
+    const updatedMessage = await Message.findById(req.params.id)
+      .populate('sender', 'name email role avatar');
+
+    console.log(`Retrieved deleted message: isDeleted=${updatedMessage.isDeleted}, sender=${updatedMessage.sender?.name}`);
+
     res.status(200).json({
       success: true,
-      message: 'Message deleted',
+      data: updatedMessage,
     });
   } catch (error) {
     console.error('Error deleting message:', error);

@@ -18,6 +18,10 @@ router.get('/stats', protect, async (req, res) => {
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
+
     // Get total owners count and growth
     const [totalOwners, newOwnersThisMonth, ownersLastMonth] = await Promise.all([
       User.countDocuments({ role: 'owner', isActive: true }),
@@ -59,7 +63,7 @@ router.get('/stats', protect, async (req, res) => {
         startDate: { $gte: now },
         'attendees': {
           $elemMatch: {
-            user: req.user._id,
+            user: targetUserId,
             status: 'confirmed'
           }
         }
@@ -72,7 +76,7 @@ router.get('/stats', protect, async (req, res) => {
         },
         'attendees': {
           $elemMatch: {
-            user: req.user._id,
+            user: targetUserId,
             status: 'confirmed'
           }
         }
@@ -142,82 +146,155 @@ router.get('/stats', protect, async (req, res) => {
 router.get('/activity', protect, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
+
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const targetUserId = previewUserId || req.user._id;
+    const isPreviewMode = !!previewUserId;
+
     const activities = [];
 
-    // Get recent events
-    const recentEvents = await Event.find({
-      isPublished: true,
-      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-    })
-    .sort({ createdAt: -1 })
-    .limit(3)
-    .select('title createdAt');
+    // If in preview mode, show user-specific activity
+    // Otherwise show global activity
+    if (isPreviewMode) {
+      // Get user's recent forum threads
+      const userThreads = await ForumThread.find({
+        author: targetUserId,
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      })
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .select('title createdAt');
 
-    recentEvents.forEach(event => {
-      activities.push({
-        id: `event-${event._id}`,
-        type: 'event',
-        message: `New event: ${event.title}`,
-        time: getTimeAgo(event.createdAt),
-        timestamp: event.createdAt
+      userThreads.forEach(thread => {
+        activities.push({
+          id: `forum-${thread._id}`,
+          type: 'forum',
+          message: `Your discussion: ${thread.title}`,
+          time: getTimeAgo(thread.createdAt),
+          timestamp: thread.createdAt
+        });
       });
-    });
 
-    // Get recent owners
-    const recentOwners = await User.find({
-      role: 'owner',
-      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-    })
-    .sort({ createdAt: -1 })
-    .limit(3)
-    .select('name createdAt');
+      // Get user's recent event RSVPs
+      const userEvents = await Event.find({
+        isPublished: true,
+        'attendees': {
+          $elemMatch: {
+            user: targetUserId,
+            status: { $in: ['confirmed', 'pending'] }
+          }
+        },
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      })
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .select('title createdAt');
 
-    recentOwners.forEach(owner => {
-      activities.push({
-        id: `owner-${owner._id}`,
-        type: 'owner',
-        message: `${owner.name} joined the network`,
-        time: getTimeAgo(owner.createdAt),
-        timestamp: owner.createdAt
+      userEvents.forEach(event => {
+        activities.push({
+          id: `event-${event._id}`,
+          type: 'event',
+          message: `Event you're attending: ${event.title}`,
+          time: getTimeAgo(event.createdAt),
+          timestamp: event.createdAt
+        });
       });
-    });
 
-    // Get recent library files
-    const recentFiles = await LibraryFile.find({
-      isActive: true,
-      updatedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-    })
-    .sort({ updatedAt: -1 })
-    .limit(2)
-    .select('title updatedAt');
+      // Get library files user has accessed/downloaded
+      const userFiles = await LibraryFile.find({
+        isActive: true,
+        updatedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      })
+      .sort({ updatedAt: -1 })
+      .limit(2)
+      .select('title updatedAt');
 
-    recentFiles.forEach(file => {
-      activities.push({
-        id: `file-${file._id}`,
-        type: 'file',
-        message: `Resource updated: ${file.title}`,
-        time: getTimeAgo(file.updatedAt),
-        timestamp: file.updatedAt
+      userFiles.forEach(file => {
+        activities.push({
+          id: `file-${file._id}`,
+          type: 'file',
+          message: `Available resource: ${file.title}`,
+          time: getTimeAgo(file.updatedAt),
+          timestamp: file.updatedAt
+        });
       });
-    });
+    } else {
+      // Get recent events (global)
+      const recentEvents = await Event.find({
+        isPublished: true,
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      })
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .select('title createdAt');
 
-    // Get recent forum threads
-    const recentThreads = await ForumThread.find({
-      createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-    })
-    .sort({ createdAt: -1 })
-    .limit(2)
-    .select('title createdAt');
-
-    recentThreads.forEach(thread => {
-      activities.push({
-        id: `forum-${thread._id}`,
-        type: 'forum',
-        message: `New discussion: ${thread.title}`,
-        time: getTimeAgo(thread.createdAt),
-        timestamp: thread.createdAt
+      recentEvents.forEach(event => {
+        activities.push({
+          id: `event-${event._id}`,
+          type: 'event',
+          message: `New event: ${event.title}`,
+          time: getTimeAgo(event.createdAt),
+          timestamp: event.createdAt
+        });
       });
-    });
+
+      // Get recent owners
+      const recentOwners = await User.find({
+        role: 'owner',
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      })
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .select('name createdAt');
+
+      recentOwners.forEach(owner => {
+        activities.push({
+          id: `owner-${owner._id}`,
+          type: 'owner',
+          message: `${owner.name} joined the network`,
+          time: getTimeAgo(owner.createdAt),
+          timestamp: owner.createdAt
+        });
+      });
+
+      // Get recent library files
+      const recentFiles = await LibraryFile.find({
+        isActive: true,
+        updatedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      })
+      .sort({ updatedAt: -1 })
+      .limit(2)
+      .select('title updatedAt');
+
+      recentFiles.forEach(file => {
+        activities.push({
+          id: `file-${file._id}`,
+          type: 'file',
+          message: `Resource updated: ${file.title}`,
+          time: getTimeAgo(file.updatedAt),
+          timestamp: file.updatedAt
+        });
+      });
+
+      // Get recent forum threads
+      const recentThreads = await ForumThread.find({
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      })
+      .sort({ createdAt: -1 })
+      .limit(2)
+      .select('title createdAt');
+
+      recentThreads.forEach(thread => {
+        activities.push({
+          id: `forum-${thread._id}`,
+          type: 'forum',
+          message: `New discussion: ${thread.title}`,
+          time: getTimeAgo(thread.createdAt),
+          timestamp: thread.createdAt
+        });
+      });
+    }
 
     // Sort all activities by timestamp and limit
     const sortedActivities = activities
