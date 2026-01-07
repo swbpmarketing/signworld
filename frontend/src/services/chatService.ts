@@ -144,13 +144,48 @@ export const getChatUsers = async (search?: string): Promise<ChatUser[]> => {
   }
 };
 
-// Delete a message
-export const deleteMessage = async (messageId: string): Promise<void> => {
+// Delete a message (soft delete - marks as unsent)
+export const deleteMessage = async (messageId: string): Promise<Message> => {
   try {
-    await api.delete(`/chat/messages/${messageId}`);
+    const response = await api.delete(`/chat/messages/${messageId}`);
+    return response.data.data;
   } catch (error: any) {
     console.error('Error deleting message:', error);
     throw new Error(error.response?.data?.error || 'Failed to delete message');
+  }
+};
+
+// Edit a message
+export const editMessage = async (
+  messageId: string,
+  content: string
+): Promise<Message> => {
+  try {
+    const response = await api.put(`/chat/messages/${messageId}`, { content });
+    return response.data.data;
+  } catch (error: any) {
+    console.error('Error editing message:', error);
+    throw new Error(error.response?.data?.error || 'Failed to edit message');
+  }
+};
+
+// Delete a conversation
+export const deleteConversation = async (conversationId: string): Promise<void> => {
+  try {
+    await api.delete(`/chat/conversations/${conversationId}`);
+  } catch (error: any) {
+    console.error('Error deleting conversation:', error);
+    throw new Error(error.response?.data?.error || 'Failed to delete conversation');
+  }
+};
+
+// Archive a conversation
+export const archiveConversation = async (conversationId: string): Promise<void> => {
+  try {
+    await api.post(`/chat/conversations/${conversationId}/archive`);
+  } catch (error: any) {
+    console.error('Error archiving conversation:', error);
+    throw new Error(error.response?.data?.error || 'Failed to archive conversation');
   }
 };
 

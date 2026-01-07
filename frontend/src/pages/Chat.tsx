@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import socketService from '../services/socketService';
 import {
@@ -12,8 +12,12 @@ import {
   Bars3Icon,
   PlusIcon,
   XMarkIcon,
+  PencilIcon,
+  TrashIcon,
+  ArchiveBoxIcon,
 } from '@heroicons/react/24/outline';
 import { CheckIcon as CheckSolidIcon } from '@heroicons/react/24/solid';
+import { Menu, Transition } from '@headlessui/react';
 import { useAuth } from '../context/AuthContext';
 import {
   getConversations,
@@ -23,6 +27,10 @@ import {
   markAsRead,
   getOrCreateConversation,
   getChatUsers,
+  deleteMessage,
+  editMessage,
+  deleteConversation,
+  archiveConversation,
 } from '../services/chatService';
 import type { Conversation, Message, ChatUser } from '../services/chatService';
 import toast from 'react-hot-toast';
@@ -59,9 +67,18 @@ const Chat = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [previewImage, setPreviewImage] = useState<{ url: string; filename: string } | null>(null);
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
   const currentUserId = user?._id || user?.id || '';
+
+  // Common emojis for quick reactions
+  const quickEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   // Fetch conversations on mount
   useEffect(() => {
@@ -520,6 +537,110 @@ const Chat = () => {
     return `${date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} @ ${timeStr}`;
   };
 
+  // Focus edit input when entering edit mode
+  useEffect(() => {
+    if (editingMessageId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingMessageId]);
+
+  // Handle message edit
+  const handleStartEdit = (message: Message) => {
+    setEditingMessageId(message._id);
+    setEditingContent(message.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingContent('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMessageId || !editingContent.trim()) return;
+
+    try {
+      const updatedMessage = await editMessage(editingMessageId, editingContent.trim());
+      setMessages(prev =>
+        prev.map(msg =>
+          msg._id === editingMessageId
+            ? { ...msg, content: updatedMessage.content, isEdited: true }
+            : msg
+        )
+      );
+      toast.success('Message updated');
+      handleCancelEdit();
+    } catch (error) {
+      console.error('Failed to edit message:', error);
+      toast.error('Failed to edit message');
+    }
+  };
+
+  // Handle message delete (unsend)
+  const handleDeleteMessage = async (messageId: string) => {
+    setDeletingMessageId(messageId);
+    try {
+      await deleteMessage(messageId);
+      setMessages(prev =>
+        prev.map(msg =>
+          msg._id === messageId
+            ? { ...msg, isDeleted: true, content: '' }
+            : msg
+        )
+      );
+      toast.success('Message unsent');
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+      toast.error('Failed to unsend message');
+    } finally {
+      setDeletingMessageId(null);
+    }
+  };
+
+  // Handle conversation delete
+  const handleDeleteConversation = async () => {
+    if (!selectedContact?.conversationId) return;
+
+    if (!window.confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await deleteConversation(selectedContact.conversationId);
+      setContacts(prev => prev.filter(c => c.conversationId !== selectedContact.conversationId));
+      setSelectedContact(null);
+      setMessages([]);
+      toast.success('Conversation deleted');
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+      toast.error('Failed to delete conversation');
+    }
+  };
+
+  // Handle conversation archive
+  const handleArchiveConversation = async () => {
+    if (!selectedContact?.conversationId) return;
+
+    try {
+      await archiveConversation(selectedContact.conversationId);
+      setContacts(prev => prev.filter(c => c.conversationId !== selectedContact.conversationId));
+      setSelectedContact(null);
+      setMessages([]);
+      toast.success('Conversation archived');
+    } catch (error) {
+      console.error('Failed to archive conversation:', error);
+      toast.error('Failed to archive conversation');
+    }
+  };
+
+  // Handle emoji reaction (placeholder for now)
+  const handleReaction = (messageId: string, emoji: string) => {
+    console.log('Reaction:', messageId, emoji);
+    setShowEmojiPicker(null);
+    toast.success(`Reacted with ${emoji}`);
+    // TODO: Implement actual reaction API
+  };
+
   const filteredContacts = contacts.filter(contact => {
     // Search filter
     const matchesSearch = contact.name.toLowerCase().includes(searchInput.toLowerCase()) ||
@@ -706,9 +827,49 @@ const Chat = () => {
                 </div>
               </div>
               <div className="flex items-center gap-1 lg:gap-2">
-                <button className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                  <EllipsisHorizontalIcon className="h-5 w-5" />
-                </button>
+                <Menu as="div" className="relative">
+                  <Menu.Button className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <EllipsisHorizontalIcon className="h-5 w-5" />
+                  </Menu.Button>
+                  <Transition
+                    as={Fragment}
+                    enter="transition ease-out duration-100"
+                    enterFrom="transform opacity-0 scale-95"
+                    enterTo="transform opacity-100 scale-100"
+                    leave="transition ease-in duration-75"
+                    leaveFrom="transform opacity-100 scale-100"
+                    leaveTo="transform opacity-0 scale-95"
+                  >
+                    <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-50 py-1">
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
+                            onClick={handleArchiveConversation}
+                            className={`${
+                              active ? 'bg-gray-100 dark:bg-gray-700' : ''
+                            } flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200`}
+                          >
+                            <ArchiveBoxIcon className="h-5 w-5 text-gray-400" />
+                            Archive conversation
+                          </button>
+                        )}
+                      </Menu.Item>
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
+                            onClick={handleDeleteConversation}
+                            className={`${
+                              active ? 'bg-red-50 dark:bg-red-900/20' : ''
+                            } flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400`}
+                          >
+                            <TrashIcon className="h-5 w-5" />
+                            Delete conversation
+                          </button>
+                        )}
+                      </Menu.Item>
+                    </Menu.Items>
+                  </Transition>
+                </Menu>
               </div>
             </header>
 
@@ -736,6 +897,9 @@ const Chat = () => {
                     const msgDate = new Date(message.createdAt);
                     const showTimestamp = index === 0 ||
                       (msgDate.getTime() - new Date(prevMessage.createdAt).getTime() > 1000 * 60 * 60);
+                    const isHovered = hoveredMessageId === message._id;
+                    const isEditing = editingMessageId === message._id;
+                    const isDeleting = deletingMessageId === message._id;
 
                     return (
                       <div key={message._id}>
@@ -746,170 +910,330 @@ const Chat = () => {
                             </span>
                           </div>
                         )}
-                        <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}
+                          onMouseEnter={() => setHoveredMessageId(message._id)}
+                          onMouseLeave={() => {
+                            setHoveredMessageId(null);
+                            if (showEmojiPicker === message._id) setShowEmojiPicker(null);
+                          }}
+                        >
                           <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[75%] md:max-w-[70%] ${isOwn ? 'flex-row-reverse' : ''}`}>
                             {!isOwn && (
                               <div className="hidden sm:flex h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                                 {selectedContact.avatar}
                               </div>
                             )}
-                            <div
-                              className={`px-4 py-3 rounded-2xl ${
-                                isOwn
-                                  ? 'bg-primary-600 text-white rounded-br-md'
-                                  : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-md shadow-sm border border-gray-100 dark:border-gray-600'
-                              }`}
-                            >
-                              {/* File Attachments */}
-                              {message.attachments && message.attachments.length > 0 && (
-                                <div className="mb-2 space-y-2">
-                                  {message.attachments.map((attachment, idx) => (
-                                    attachment.fileType.startsWith('image/') ? (
-                                      <button
-                                        key={idx}
-                                        type="button"
-                                        onClick={() => setPreviewImage({ url: attachment.url, filename: attachment.filename })}
-                                        className={`block p-2 rounded-lg transition-colors cursor-pointer ${
-                                          isOwn
-                                            ? 'bg-primary-500/50 hover:bg-primary-500/70'
-                                            : 'bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500'
-                                        }`}
-                                      >
-                                        <img
-                                          src={attachment.url}
-                                          alt={attachment.filename}
-                                          className="max-w-[200px] max-h-[150px] rounded object-cover"
-                                        />
-                                      </button>
+
+                            {/* Message Actions Menu - shows on hover for own messages */}
+                            {isOwn && !message.isDeleted && (
+                              <div className={`flex items-center gap-1 transition-all duration-200 ${
+                                isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2 pointer-events-none'
+                              }`}>
+                                {/* Edit button */}
+                                <button
+                                  onClick={() => handleStartEdit(message)}
+                                  className="p-1.5 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                  title="Edit message"
+                                >
+                                  <PencilIcon className="h-4 w-4" />
+                                </button>
+
+                                {/* Emoji reaction button */}
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setShowEmojiPicker(showEmojiPicker === message._id ? null : message._id)}
+                                    className="p-1.5 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                    title="Add reaction"
+                                  >
+                                    <FaceSmileIcon className="h-4 w-4" />
+                                  </button>
+
+                                  {/* Emoji picker popup */}
+                                  {showEmojiPicker === message._id && (
+                                    <div className="absolute bottom-full right-0 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-10">
+                                      {quickEmojis.map((emoji) => (
+                                        <button
+                                          key={emoji}
+                                          onClick={() => handleReaction(message._id, emoji)}
+                                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors text-lg"
+                                        >
+                                          {emoji}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Delete/Unsend button */}
+                                <button
+                                  onClick={() => handleDeleteMessage(message._id)}
+                                  disabled={isDeleting}
+                                  className="p-1.5 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+                                  title="Unsend message"
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+
+                            <div className="flex flex-col">
+                              {/* Edited label */}
+                              {message.isEdited && !message.isDeleted && (
+                                <span className={`text-xs mb-1 ${isOwn ? 'text-right text-gray-400' : 'text-left text-gray-400 dark:text-gray-500'}`}>
+                                  edited
+                                </span>
+                              )}
+
+                              {/* Deleted/Unsent message - Glassmorphism effect */}
+                              {message.isDeleted ? (
+                                <div
+                                  className={`px-4 py-3 rounded-2xl backdrop-blur-md bg-white/30 dark:bg-gray-800/30 border border-white/40 dark:border-gray-600/40 shadow-lg ${
+                                    isOwn ? 'rounded-br-md' : 'rounded-bl-md'
+                                  }`}
+                                  style={{
+                                    backdropFilter: 'blur(12px)',
+                                    WebkitBackdropFilter: 'blur(12px)',
+                                  }}
+                                >
+                                  <p className="text-sm italic text-gray-500 dark:text-gray-400">
+                                    Message unsent
+                                  </p>
+                                  <div className="flex items-center justify-end gap-1 mt-1 text-gray-400 dark:text-gray-500">
+                                    <span className="text-xs">
+                                      {msgDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : isEditing ? (
+                                /* Edit mode */
+                                <div className={`px-4 py-3 rounded-2xl bg-white dark:bg-gray-700 border-2 border-primary-500 shadow-lg ${
+                                  isOwn ? 'rounded-br-md' : 'rounded-bl-md'
+                                }`}>
+                                  <input
+                                    ref={editInputRef}
+                                    type="text"
+                                    value={editingContent}
+                                    onChange={(e) => setEditingContent(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSaveEdit();
+                                      } else if (e.key === 'Escape') {
+                                        handleCancelEdit();
+                                      }
+                                    }}
+                                    className="w-full bg-transparent text-sm text-gray-900 dark:text-gray-100 focus:outline-none"
+                                  />
+                                  <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                    <button
+                                      onClick={handleCancelEdit}
+                                      className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      onClick={handleSaveEdit}
+                                      disabled={!editingContent.trim()}
+                                      className="px-3 py-1 text-xs bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                      Save
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* Normal message bubble */
+                                <div
+                                  className={`px-4 py-3 rounded-2xl transition-all duration-200 ${
+                                    isOwn
+                                      ? 'bg-primary-600 text-white rounded-br-md'
+                                      : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-md shadow-sm border border-gray-100 dark:border-gray-600'
+                                  } ${isHovered && isOwn ? 'ring-2 ring-primary-400/50' : ''}`}
+                                >
+                                  {/* File Attachments */}
+                                  {message.attachments && message.attachments.length > 0 && (
+                                    <div className="mb-2 space-y-2">
+                                      {message.attachments.map((attachment, idx) => (
+                                        attachment.fileType.startsWith('image/') ? (
+                                          <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => setPreviewImage({ url: attachment.url, filename: attachment.filename })}
+                                            className={`block p-2 rounded-lg transition-colors cursor-pointer ${
+                                              isOwn
+                                                ? 'bg-primary-500/50 hover:bg-primary-500/70'
+                                                : 'bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500'
+                                            }`}
+                                          >
+                                            <img
+                                              src={attachment.url}
+                                              alt={attachment.filename}
+                                              className="max-w-[200px] max-h-[150px] rounded object-cover"
+                                            />
+                                          </button>
+                                        ) : (
+                                          <a
+                                            key={idx}
+                                            href={attachment.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
+                                              isOwn
+                                                ? 'bg-primary-500/50 hover:bg-primary-500/70'
+                                                : 'bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500'
+                                            }`}
+                                          >
+                                            <span className="text-xl">{getFileIcon(attachment.fileType)}</span>
+                                            <div className="min-w-0 flex-1">
+                                              <p className="text-sm font-medium truncate">{attachment.filename}</p>
+                                              <p className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                {formatFileSize(attachment.fileSize)}
+                                              </p>
+                                            </div>
+                                          </a>
+                                        )
+                                      ))}
+                                    </div>
+                                  )}
+                                  {/* Message Content */}
+                                  {message.content && !message.content.startsWith('Sent a file:') && (
+                                    message.content.startsWith('📦 Equipment Inquiry') ? (
+                                      // Special rendering for equipment inquiry messages
+                                      (() => {
+                                        // Parse the inquiry message
+                                        const lines = message.content.split('\n').filter((l: string) => l.trim() && !l.includes('━'));
+                                        const productLine = lines.find((l: string) => l.startsWith('Product:'));
+                                        const brandLine = lines.find((l: string) => l.startsWith('Brand:'));
+                                        const priceLine = lines.find((l: string) => l.startsWith('Price:'));
+                                        const contactLine = lines.find((l: string) => l.startsWith('Contact:'));
+                                        const companyLine = lines.find((l: string) => l.startsWith('Company:'));
+
+                                        // Get the actual message (everything that's not a labeled line)
+                                        const inquiryMessage = lines.filter((l: string) =>
+                                          !l.startsWith('📦') &&
+                                          !l.startsWith('Product:') &&
+                                          !l.startsWith('Brand:') &&
+                                          !l.startsWith('Price:') &&
+                                          !l.startsWith('Contact:') &&
+                                          !l.startsWith('Company:')
+                                        ).join(' ').trim();
+
+                                        return (
+                                          <div className={`rounded-lg overflow-hidden ${isOwn ? 'bg-primary-700/50' : 'bg-gray-100 dark:bg-gray-700/50'}`}>
+                                            {/* Header */}
+                                            <div className={`px-3 py-2 ${isOwn ? 'bg-primary-800/50' : 'bg-gray-200 dark:bg-gray-600/50'}`}>
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-lg">📦</span>
+                                                <span className={`text-sm font-semibold ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                                                  Equipment Inquiry
+                                                </span>
+                                              </div>
+                                            </div>
+                                            {/* Product Details */}
+                                            <div className="px-3 py-2 space-y-1">
+                                              {productLine && (
+                                                <div className="flex justify-between items-center">
+                                                  <span className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>Product</span>
+                                                  <span className={`text-sm font-medium ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                                                    {productLine.replace('Product:', '').trim()}
+                                                  </span>
+                                                </div>
+                                              )}
+                                              {brandLine && (
+                                                <div className="flex justify-between items-center">
+                                                  <span className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>Brand</span>
+                                                  <span className={`text-sm ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                                                    {brandLine.replace('Brand:', '').trim()}
+                                                  </span>
+                                                </div>
+                                              )}
+                                              {priceLine && (
+                                                <div className="flex justify-between items-center">
+                                                  <span className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>Price</span>
+                                                  <span className={`text-sm font-semibold ${isOwn ? 'text-green-300' : 'text-green-600 dark:text-green-400'}`}>
+                                                    {priceLine.replace('Price:', '').trim()}
+                                                  </span>
+                                                </div>
+                                              )}
+                                            </div>
+                                            {/* Message */}
+                                            {inquiryMessage && (
+                                              <div className={`px-3 py-2 border-t ${isOwn ? 'border-primary-600/50' : 'border-gray-200 dark:border-gray-600/50'}`}>
+                                                <p className={`text-sm ${isOwn ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}>
+                                                  "{inquiryMessage}"
+                                                </p>
+                                              </div>
+                                            )}
+                                            {/* Contact Info */}
+                                            {(contactLine || companyLine) && (
+                                              <div className={`px-3 py-2 border-t ${isOwn ? 'border-primary-600/50 bg-primary-800/30' : 'border-gray-200 dark:border-gray-600/50 bg-gray-100 dark:bg-gray-700/30'}`}>
+                                                <div className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                  {contactLine && <div>{contactLine.replace('Contact:', '').trim()}</div>}
+                                                  {companyLine && <div>{companyLine.replace('Company:', '').trim()}</div>}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })()
                                     ) : (
-                                      <a
-                                        key={idx}
-                                        href={attachment.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
-                                          isOwn
-                                            ? 'bg-primary-500/50 hover:bg-primary-500/70'
-                                            : 'bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500'
-                                        }`}
-                                      >
-                                        <span className="text-xl">{getFileIcon(attachment.fileType)}</span>
-                                        <div className="min-w-0 flex-1">
-                                          <p className="text-sm font-medium truncate">{attachment.filename}</p>
-                                          <p className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>
-                                            {formatFileSize(attachment.fileSize)}
-                                          </p>
-                                        </div>
-                                      </a>
+                                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{message.content}</p>
                                     )
-                                  ))}
+                                  )}
+                                  <div className={`flex items-center justify-end gap-1 mt-1 ${
+                                    isOwn ? 'text-primary-200' : 'text-gray-400 dark:text-gray-500'
+                                  }`}>
+                                    <span className="text-xs">
+                                      {msgDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                    </span>
+                                    {isOwn && (
+                                      <span className="flex items-center">
+                                        {message.readBy.length > 1 ? (
+                                          <span className="flex -space-x-1">
+                                            <CheckSolidIcon className="h-3 w-3" />
+                                            <CheckSolidIcon className="h-3 w-3" />
+                                          </span>
+                                        ) : (
+                                          <CheckIcon className="h-3 w-3" />
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               )}
-                              {/* Message Content */}
-                              {message.content && !message.content.startsWith('Sent a file:') && (
-                                message.content.startsWith('📦 Equipment Inquiry') ? (
-                                  // Special rendering for equipment inquiry messages
-                                  (() => {
-                                    // Parse the inquiry message
-                                    const lines = message.content.split('\n').filter((l: string) => l.trim() && !l.includes('━'));
-                                    const productLine = lines.find((l: string) => l.startsWith('Product:'));
-                                    const brandLine = lines.find((l: string) => l.startsWith('Brand:'));
-                                    const priceLine = lines.find((l: string) => l.startsWith('Price:'));
-                                    const contactLine = lines.find((l: string) => l.startsWith('Contact:'));
-                                    const companyLine = lines.find((l: string) => l.startsWith('Company:'));
-
-                                    // Get the actual message (everything that's not a labeled line)
-                                    const inquiryMessage = lines.filter((l: string) =>
-                                      !l.startsWith('📦') &&
-                                      !l.startsWith('Product:') &&
-                                      !l.startsWith('Brand:') &&
-                                      !l.startsWith('Price:') &&
-                                      !l.startsWith('Contact:') &&
-                                      !l.startsWith('Company:')
-                                    ).join(' ').trim();
-
-                                    return (
-                                      <div className={`rounded-lg overflow-hidden ${isOwn ? 'bg-primary-700/50' : 'bg-gray-100 dark:bg-gray-700/50'}`}>
-                                        {/* Header */}
-                                        <div className={`px-3 py-2 ${isOwn ? 'bg-primary-800/50' : 'bg-gray-200 dark:bg-gray-600/50'}`}>
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-lg">📦</span>
-                                            <span className={`text-sm font-semibold ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
-                                              Equipment Inquiry
-                                            </span>
-                                          </div>
-                                        </div>
-                                        {/* Product Details */}
-                                        <div className="px-3 py-2 space-y-1">
-                                          {productLine && (
-                                            <div className="flex justify-between items-center">
-                                              <span className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>Product</span>
-                                              <span className={`text-sm font-medium ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
-                                                {productLine.replace('Product:', '').trim()}
-                                              </span>
-                                            </div>
-                                          )}
-                                          {brandLine && (
-                                            <div className="flex justify-between items-center">
-                                              <span className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>Brand</span>
-                                              <span className={`text-sm ${isOwn ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
-                                                {brandLine.replace('Brand:', '').trim()}
-                                              </span>
-                                            </div>
-                                          )}
-                                          {priceLine && (
-                                            <div className="flex justify-between items-center">
-                                              <span className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>Price</span>
-                                              <span className={`text-sm font-semibold ${isOwn ? 'text-green-300' : 'text-green-600 dark:text-green-400'}`}>
-                                                {priceLine.replace('Price:', '').trim()}
-                                              </span>
-                                            </div>
-                                          )}
-                                        </div>
-                                        {/* Message */}
-                                        {inquiryMessage && (
-                                          <div className={`px-3 py-2 border-t ${isOwn ? 'border-primary-600/50' : 'border-gray-200 dark:border-gray-600/50'}`}>
-                                            <p className={`text-sm ${isOwn ? 'text-white' : 'text-gray-700 dark:text-gray-200'}`}>
-                                              "{inquiryMessage}"
-                                            </p>
-                                          </div>
-                                        )}
-                                        {/* Contact Info */}
-                                        {(contactLine || companyLine) && (
-                                          <div className={`px-3 py-2 border-t ${isOwn ? 'border-primary-600/50 bg-primary-800/30' : 'border-gray-200 dark:border-gray-600/50 bg-gray-100 dark:bg-gray-700/30'}`}>
-                                            <div className={`text-xs ${isOwn ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'}`}>
-                                              {contactLine && <div>{contactLine.replace('Contact:', '').trim()}</div>}
-                                              {companyLine && <div>{companyLine.replace('Company:', '').trim()}</div>}
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })()
-                                ) : (
-                                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{message.content}</p>
-                                )
-                              )}
-                              <div className={`flex items-center justify-end gap-1 mt-1 ${
-                                isOwn ? 'text-primary-200' : 'text-gray-400 dark:text-gray-500'
-                              }`}>
-                                <span className="text-xs">
-                                  {msgDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                                </span>
-                                {isOwn && (
-                                  <span className="flex items-center">
-                                    {message.readBy.length > 1 ? (
-                                      <span className="flex -space-x-1">
-                                        <CheckSolidIcon className="h-3 w-3" />
-                                        <CheckSolidIcon className="h-3 w-3" />
-                                      </span>
-                                    ) : (
-                                      <CheckIcon className="h-3 w-3" />
-                                    )}
-                                  </span>
-                                )}
-                              </div>
                             </div>
+
+                            {/* Message Actions Menu - for received messages (only reaction) */}
+                            {!isOwn && !message.isDeleted && (
+                              <div className={`flex items-center gap-1 transition-all duration-200 ${
+                                isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 pointer-events-none'
+                              }`}>
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setShowEmojiPicker(showEmojiPicker === message._id ? null : message._id)}
+                                    className="p-1.5 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                    title="Add reaction"
+                                  >
+                                    <FaceSmileIcon className="h-4 w-4" />
+                                  </button>
+
+                                  {/* Emoji picker popup */}
+                                  {showEmojiPicker === message._id && (
+                                    <div className="absolute bottom-full left-0 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-10">
+                                      {quickEmojis.map((emoji) => (
+                                        <button
+                                          key={emoji}
+                                          onClick={() => handleReaction(message._id, emoji)}
+                                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors text-lg"
+                                        >
+                                          {emoji}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
