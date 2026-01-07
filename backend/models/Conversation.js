@@ -46,6 +46,10 @@ const conversationSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  isArchived: {
+    type: Boolean,
+    default: false,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

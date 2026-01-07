@@ -527,6 +527,142 @@ router.get('/users', protect, async (req, res) => {
   }
 });
 
+// @desc    Archive a conversation
+// @route   POST /api/chat/conversations/:id/archive
+// @access  Private
+router.post('/conversations/:id/archive', protect, async (req, res) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id);
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        error: 'Conversation not found',
+      });
+    }
+
+    // Check if user is a participant
+    const isParticipant = conversation.participants.some(p => p.toString() === req.user._id.toString());
+    if (!isParticipant) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to archive this conversation',
+      });
+    }
+
+    conversation.isArchived = true;
+    await conversation.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Conversation archived',
+    });
+  } catch (error) {
+    console.error('Error archiving conversation:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to archive conversation',
+    });
+  }
+});
+
+// @desc    Delete a conversation
+// @route   DELETE /api/chat/conversations/:id
+// @access  Private
+router.delete('/conversations/:id', protect, async (req, res) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id);
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        error: 'Conversation not found',
+      });
+    }
+
+    // Check if user is a participant
+    const isParticipant = conversation.participants.some(p => p.toString() === req.user._id.toString());
+    if (!isParticipant) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to delete this conversation',
+      });
+    }
+
+    // Delete the conversation and all its messages
+    await Message.deleteMany({ conversation: req.params.id });
+    await Conversation.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Conversation deleted',
+    });
+  } catch (error) {
+    console.error('Error deleting conversation:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete conversation',
+    });
+  }
+});
+
+// @desc    Edit a message
+// @route   PUT /api/chat/messages/:id
+// @access  Private
+router.put('/messages/:id', protect, async (req, res) => {
+  try {
+    const { content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Message content cannot be empty',
+      });
+    }
+
+    const message = await Message.findById(req.params.id);
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        error: 'Message not found',
+      });
+    }
+
+    // Only sender can edit their own message
+    if (message.sender.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to edit this message',
+      });
+    }
+
+    // Don't allow editing deleted messages
+    if (message.isDeleted) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot edit a deleted message',
+      });
+    }
+
+    message.content = content.trim();
+    message.isEdited = true;
+    message.editedAt = new Date();
+    await message.save();
+
+    res.status(200).json({
+      success: true,
+      data: message,
+    });
+  } catch (error) {
+    console.error('Error editing message:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to edit message',
+    });
+  }
+});
+
 // @desc    Delete a message (soft delete)
 // @route   DELETE /api/chat/messages/:id
 // @access  Private
