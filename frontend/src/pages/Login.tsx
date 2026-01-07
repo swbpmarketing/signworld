@@ -216,7 +216,7 @@ const Login = () => {
                 <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
                   <p className="text-xs font-semibold text-purple-300 mb-1">Vendor</p>
                   <p className="text-xs text-gray-300">
-                    Email: <span className="font-semibold text-gray-100">vendor@signcompany.com</span>
+                    Email: <span className="font-semibold text-gray-100">vendor@example.com</span>
                   </p>
                   <p className="text-xs text-gray-300">
                     Password: <span className="font-semibold text-gray-100">vendor123</span>
