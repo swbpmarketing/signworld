@@ -925,58 +925,6 @@ const Chat = () => {
                               </div>
                             )}
 
-                            {/* Message Actions Menu - shows on hover for own messages */}
-                            {isOwn && !message.isDeleted && (
-                              <div className={`flex items-center gap-1 transition-all duration-200 ${
-                                isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2 pointer-events-none'
-                              }`}>
-                                {/* Edit button */}
-                                <button
-                                  onClick={() => handleStartEdit(message)}
-                                  className="p-1.5 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                                  title="Edit message"
-                                >
-                                  <PencilIcon className="h-4 w-4" />
-                                </button>
-
-                                {/* Emoji reaction button */}
-                                <div className="relative">
-                                  <button
-                                    onClick={() => setShowEmojiPicker(showEmojiPicker === message._id ? null : message._id)}
-                                    className="p-1.5 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                                    title="Add reaction"
-                                  >
-                                    <FaceSmileIcon className="h-4 w-4" />
-                                  </button>
-
-                                  {/* Emoji picker popup */}
-                                  {showEmojiPicker === message._id && (
-                                    <div className="absolute bottom-full right-0 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-10">
-                                      {quickEmojis.map((emoji) => (
-                                        <button
-                                          key={emoji}
-                                          onClick={() => handleReaction(message._id, emoji)}
-                                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors text-lg"
-                                        >
-                                          {emoji}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Delete/Unsend button */}
-                                <button
-                                  onClick={() => handleDeleteMessage(message._id)}
-                                  disabled={isDeleting}
-                                  className="p-1.5 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
-                                  title="Unsend message"
-                                >
-                                  <TrashIcon className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
-
                             <div className="flex flex-col">
                               {/* Edited label */}
                               {message.isEdited && !message.isDeleted && (
@@ -1203,18 +1151,70 @@ const Chat = () => {
                               )}
                             </div>
 
+                            {/* Message Actions Menu - for own messages */}
+                            {isOwn && !message.isDeleted && (
+                              <div className={`flex items-center gap-1 transition-all duration-200 ${
+                                isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 pointer-events-none'
+                              }`}>
+                                {/* Edit button */}
+                                <button
+                                  onClick={() => handleStartEdit(message)}
+                                  className="p-1 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                  title="Edit message"
+                                >
+                                  <PencilIcon className="h-3 w-3" />
+                                </button>
+
+                                {/* Emoji reaction button */}
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setShowEmojiPicker(showEmojiPicker === message._id ? null : message._id)}
+                                    className="p-1 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                    title="Add reaction"
+                                  >
+                                    <FaceSmileIcon className="h-3 w-3" />
+                                  </button>
+
+                                  {/* Emoji picker popup */}
+                                  {showEmojiPicker === message._id && (
+                                    <div className="absolute bottom-full left-0 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-10">
+                                      {quickEmojis.map((emoji) => (
+                                        <button
+                                          key={emoji}
+                                          onClick={() => handleReaction(message._id, emoji)}
+                                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors text-lg"
+                                        >
+                                          {emoji}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Delete/Unsend button */}
+                                <button
+                                  onClick={() => handleDeleteMessage(message._id)}
+                                  disabled={isDeleting}
+                                  className="p-1 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+                                  title="Unsend message"
+                                >
+                                  <TrashIcon className="h-3 w-3" />
+                                </button>
+                              </div>
+                            )}
+
                             {/* Message Actions Menu - for received messages (only reaction) */}
                             {!isOwn && !message.isDeleted && (
                               <div className={`flex items-center gap-1 transition-all duration-200 ${
-                                isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 pointer-events-none'
+                                isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2 pointer-events-none'
                               }`}>
                                 <div className="relative">
                                   <button
                                     onClick={() => setShowEmojiPicker(showEmojiPicker === message._id ? null : message._id)}
-                                    className="p-1.5 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                    className="p-1 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                                     title="Add reaction"
                                   >
-                                    <FaceSmileIcon className="h-4 w-4" />
+                                    <FaceSmileIcon className="h-3 w-3" />
                                   </button>
 
                                   {/* Emoji picker popup */}
