@@ -34,6 +34,30 @@ import {
 import toast from 'react-hot-toast';
 import CustomSelect from '../components/CustomSelect';
 
+// Helper function to get headers with auth token and preview mode
+const getHeaders = () => {
+  const headers: Record<string, string> = {};
+  const token = localStorage.getItem('token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Add preview context header if in preview mode
+  try {
+    const previewStateJson = sessionStorage.getItem('preview-mode-state');
+    if (previewStateJson) {
+      const previewState = JSON.parse(previewStateJson);
+      if (previewState.type === 'user' && previewState.userId) {
+        headers['X-Preview-User-Id'] = previewState.userId;
+      }
+    }
+  } catch (e) {
+    // sessionStorage not available or invalid JSON
+  }
+
+  return headers;
+};
+
 interface Reply {
   _id: string;
   content: string;
@@ -205,7 +229,9 @@ const Forum = () => {
         ...(searchQuery && { search: searchQuery }),
       });
 
-      const response = await fetch(`/api/forum?${queryParams}`);
+      const response = await fetch(`/api/forum?${queryParams}`, {
+        headers: getHeaders(),
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -232,7 +258,9 @@ const Forum = () => {
   const fetchThreadDetails = async (threadId: string) => {
     try {
       setLoadingThread(true);
-      const response = await fetch(`/api/forum/${threadId}`);
+      const response = await fetch(`/api/forum/${threadId}`, {
+        headers: getHeaders(),
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -253,7 +281,9 @@ const Forum = () => {
   // Fetch forum stats
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/forum/stats/overview');
+      const response = await fetch('/api/forum/stats/overview', {
+        headers: getHeaders(),
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -276,11 +306,8 @@ const Forum = () => {
 
     try {
       setLoadingMyThreads(true);
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/forum/my-threads', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: getHeaders(),
       });
       const data = await response.json();
 
@@ -320,12 +347,11 @@ const Forum = () => {
 
     try {
       setUpdatingThread(true);
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/forum/${editingThread._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          ...getHeaders(),
         },
         body: JSON.stringify({
           title: editThreadData.title.trim(),
@@ -371,12 +397,9 @@ const Forum = () => {
 
     try {
       setDeletingThreadId(threadId);
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/forum/${threadId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: getHeaders(),
       });
 
       const data = await response.json();
@@ -429,7 +452,7 @@ const Forum = () => {
     setPage(1);
     fetchThreads(1, false);
     fetchStats();
-  }, [selectedCategory, sortBy]);
+  }, [selectedCategory, sortBy, effectiveRole]);
 
   // Debounced search
   useEffect(() => {
@@ -543,6 +566,13 @@ const Forum = () => {
     }
   };
 
+  // Refetch my threads when preview mode changes and showMyThreads is active
+  useEffect(() => {
+    if (showMyThreads) {
+      fetchMyThreads();
+    }
+  }, [effectiveRole, showMyThreads]);
+
   // Check for thread query param from notification and open modal
   useEffect(() => {
     const threadId = searchParams.get('thread');
@@ -550,11 +580,8 @@ const Forum = () => {
       // Fetch and open the thread modal
       const openThreadFromParam = async () => {
         try {
-          const token = localStorage.getItem('token');
           const response = await fetch(`/api/forum/${threadId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
+            headers: getHeaders(),
           });
           const data = await response.json();
           if (data.success && data.data) {
@@ -709,12 +736,9 @@ const Forum = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/forum/${threadId}/like`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: getHeaders(),
       });
 
       const data = await response.json();
@@ -770,13 +794,12 @@ const Forum = () => {
 
     try {
       setSubmittingReply(true);
-      const token = localStorage.getItem('token');
 
       const response = await fetch(`/api/forum/${selectedThread._id}/replies`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          ...getHeaders(),
         },
         body: JSON.stringify({
           content: newReply,
@@ -833,12 +856,11 @@ const Forum = () => {
     if (!selectedThread) return;
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/forum/${selectedThread._id}/replies/${replyId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          ...getHeaders(),
         },
         body: JSON.stringify({ content: editedReplyContent }),
       });
@@ -871,12 +893,9 @@ const Forum = () => {
     if (!replyToDelete || !selectedThread) return;
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/forum/${selectedThread._id}/replies/${replyToDelete}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: getHeaders(),
       });
 
       const data = await response.json();
@@ -912,12 +931,9 @@ const Forum = () => {
     if (!selectedThread) return;
 
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/forum/${selectedThread._id}/replies/${replyId}/like`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: getHeaders(),
       });
 
       const data = await response.json();

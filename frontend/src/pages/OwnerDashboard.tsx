@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import { useQuery } from '@tanstack/react-query';
 import { getDashboardStats, getRecentActivity } from '../services/dashboardService';
 import { useNavigate, Link } from 'react-router-dom';
@@ -22,8 +23,10 @@ import {
 
 const OwnerDashboard = () => {
   const { user } = useAuth();
+  const { getPreviewedUser } = usePreviewMode();
   const navigate = useNavigate();
   const [selectedEventType, setSelectedEventType] = useState<'all' | 'rsvp' | null>(null);
+  const previewedUser = getPreviewedUser();
 
   // Fetch dashboard stats
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
@@ -162,7 +165,7 @@ const OwnerDashboard = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                Welcome back, {user?.name}!
+                Welcome back, {previewedUser?.name || user?.name}!
               </h1>
               <p className="mt-2 text-lg text-primary-100">
                 Here's what's happening in your Sign Company network.

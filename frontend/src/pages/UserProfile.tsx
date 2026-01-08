@@ -73,7 +73,7 @@ const UserProfile = () => {
 
   // Fetch full user profile
   const { data: profileData } = useQuery({
-    queryKey: ['userProfile'],
+    queryKey: ['userProfile', effectiveRole],
     queryFn: getCurrentUser,
   });
 

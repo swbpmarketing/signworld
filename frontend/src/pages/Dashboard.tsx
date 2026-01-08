@@ -1,6 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { usePreviewMode } from '../context/PreviewModeContext';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { getDashboardStats, getRecentActivity } from '../services/dashboardService';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/axios';
@@ -29,22 +30,33 @@ import SatisfactionOverview from '../components/analytics/SatisfactionOverview';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { getEffectiveRole, getPreviewedUser, isPreviewMode } = usePreviewMode();
+  const { getEffectiveRole, getPreviewedUser, isPreviewMode, previewState } = usePreviewMode();
   const navigate = useNavigate();
   const effectiveRole = getEffectiveRole();
-  const isAdmin = effectiveRole === 'admin' && !isPreviewMode;
-  const previewedUser = getPreviewedUser();
+  const isActualAdmin = user?.role === 'admin';
+  const isAdmin = isActualAdmin && !isPreviewMode;
+
+  // Get previewed user - this will be called fresh on each render
+  const previewedUser = isPreviewMode && previewState.type === 'user'
+    ? {
+        id: previewState.userId || '',
+        name: previewState.userName || '',
+        email: previewState.userEmail || '',
+        role: previewState.userRole || 'owner' as const,
+      }
+    : null;
+
 
   // Fetch dashboard stats
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
-    queryKey: ['dashboard-stats'],
+    queryKey: ['dashboard-stats', previewedUser?.id],
     queryFn: getDashboardStats,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Fetch recent activity
   const { data: activities = [], isLoading: isLoadingActivity } = useQuery({
-    queryKey: ['dashboard-activity'],
+    queryKey: ['dashboard-activity', previewedUser?.id],
     queryFn: () => getRecentActivity(8),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
@@ -175,23 +187,21 @@ const Dashboard = () => {
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
-      <div className={`bg-gradient-to-r ${isAdmin ? 'from-purple-600 to-purple-700' : 'from-primary-600 to-primary-700'} rounded-xl shadow-lg overflow-hidden`}>
+      <div className={`bg-gradient-to-r ${isAdmin && !isPreviewMode ? 'from-purple-600 to-purple-700' : 'from-primary-600 to-primary-700'} rounded-xl shadow-lg overflow-hidden`}>
         <div className="px-6 py-8 sm:px-8 sm:py-10">
           <div className="flex items-center gap-3">
-            {isAdmin && <ShieldCheckIcon className="h-8 w-8 text-white/80" />}
+            {isAdmin && !isPreviewMode && <ShieldCheckIcon className="h-8 w-8 text-white/80" />}
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                {isAdmin
-                  ? (isPreviewMode && previewedUser
-                      ? `Previewing: ${previewedUser.name}`
-                      : 'Admin Dashboard')
+                {isAdmin && !isPreviewMode
+                  ? 'Admin Dashboard'
                   : `Welcome back, ${previewedUser?.name || user?.name}!`}
               </h1>
               <p className="mt-2 text-lg text-white/80">
-                {isAdmin
-                  ? (isPreviewMode && previewedUser
-                      ? `${previewedUser.role === 'owner' ? 'Owner' : 'Vendor'} view • ${previewedUser.email}`
-                      : `Hello ${user?.name}! Here's your system overview.`)
+                {isAdmin && !isPreviewMode
+                  ? `Hello ${user?.name}! Here's your system overview.`
+                  : isPreviewMode && previewedUser
+                  ? `Viewing as: ${previewedUser.role === 'owner' ? 'Owner' : 'Vendor'} • ${previewedUser.email}`
                   : "Here's what's happening in your Sign Company network today."
                 }
               </p>

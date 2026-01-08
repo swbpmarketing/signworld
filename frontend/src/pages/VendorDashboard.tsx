@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import axios from 'axios';
 import {
   BuildingStorefrontIcon,
@@ -79,7 +80,9 @@ interface DashboardStats {
 
 const VendorDashboard = () => {
   const { user } = useAuth();
+  const { getPreviewedUser } = usePreviewMode();
   const [partner, setPartner] = useState<Partner | null>(null);
+  const previewedUser = getPreviewedUser();
   const [loading, setLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
@@ -326,7 +329,7 @@ const VendorDashboard = () => {
               )}
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                  Welcome back, {user?.name}!
+                  Welcome back, {previewedUser?.name || user?.name}!
                 </h1>
                 <p className="mt-1 text-lg text-primary-100">
                   {partner.name} - Partner Portal

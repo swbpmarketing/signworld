@@ -22,11 +22,19 @@ router.get('/', optionalProtect, async (req, res) => {
       status = 'published'
     } = req.query;
 
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const isPreviewMode = !!previewUserId;
+
     // Build query - only show published stories for non-admins
     const query = {};
 
-    // If user is admin, they can see all statuses
-    if (req.query.status && req.user && req.user.role === 'admin') {
+    // In preview mode, show what the previewed user would see (published stories only)
+    if (isPreviewMode) {
+      query.isPublished = true;
+      query.status = 'approved';
+    } else if (req.query.status && req.user && req.user.role === 'admin') {
+      // Admin viewing without preview - can see all statuses
       if (status === 'all') {
         query.isPublished = { $in: [true, false] };
       } else if (status === 'pending') {
@@ -131,6 +139,47 @@ router.get('/', optionalProtect, async (req, res) => {
 // @access  Public
 router.get('/stats', async (req, res) => {
   try {
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const isPreviewMode = !!previewUserId;
+
+    const mongoose = require('mongoose');
+
+    // If in preview mode, return the previewed user's stats
+    if (isPreviewMode) {
+      const userId = new mongoose.Types.ObjectId(previewUserId);
+
+      const publishedStories = await Brag.countDocuments({
+        author: userId,
+        isPublished: true,
+        status: 'approved'
+      });
+
+      // Get total views, likes, and comments for user's published stories
+      const stats = await Brag.aggregate([
+        { $match: { author: userId, isPublished: true, status: 'approved' } },
+        {
+          $group: {
+            _id: null,
+            totalViews: { $sum: '$views' },
+            totalLikes: { $sum: { $size: '$likes' } },
+            totalComments: { $sum: { $size: '$comments' } }
+          }
+        }
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          publishedStories,
+          totalViews: stats[0]?.totalViews || 0,
+          totalLikes: stats[0]?.totalLikes || 0,
+          totalComments: stats[0]?.totalComments || 0
+        }
+      });
+    }
+
+    // Otherwise, return public global stats
     const publishedStories = await Brag.countDocuments({ isPublished: true, status: 'approved' });
 
     // Get total views, likes, and comments for published stories only
@@ -169,6 +218,60 @@ router.get('/stats', async (req, res) => {
 // @access  Private (admin only)
 router.get('/admin/stats', protect, authorize('admin'), async (req, res) => {
   try {
+    // Check if admin is previewing as a specific user
+    const previewUserId = req.headers['x-preview-user-id'];
+    const isPreviewMode = !!previewUserId;
+
+    const mongoose = require('mongoose');
+
+    // If in preview mode, return the previewed user's stats
+    if (isPreviewMode) {
+      const userId = new mongoose.Types.ObjectId(previewUserId);
+
+      const totalStories = await Brag.countDocuments({ author: userId });
+      const publishedStories = await Brag.countDocuments({
+        author: userId,
+        isPublished: true,
+        status: 'approved'
+      });
+      const pendingStories = await Brag.countDocuments({
+        author: userId,
+        status: 'pending'
+      });
+      const rejectedStories = await Brag.countDocuments({
+        author: userId,
+        status: 'rejected'
+      });
+
+      // Get total views and likes for user's stories
+      const stats = await Brag.aggregate([
+        { $match: { author: userId } },
+        {
+          $group: {
+            _id: null,
+            totalViews: { $sum: '$views' },
+            totalLikes: { $sum: { $size: '$likes' } },
+            totalComments: { $sum: { $size: '$comments' } }
+          }
+        }
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          totalStories,
+          publishedStories,
+          pendingStories,
+          rejectedStories,
+          totalViews: stats[0]?.totalViews || 0,
+          totalLikes: stats[0]?.totalLikes || 0,
+          totalComments: stats[0]?.totalComments || 0,
+          topContributors: []
+        }
+      });
+    }
+
+    // Otherwise, return all admin stats
     const totalStories = await Brag.countDocuments();
     const publishedStories = await Brag.countDocuments({ isPublished: true });
     const pendingStories = await Brag.countDocuments({ status: 'pending' });

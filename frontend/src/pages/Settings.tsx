@@ -164,7 +164,7 @@ const Settings = () => {
 
   // Fetch notification preferences
   const { data: fetchedNotifPrefs } = useQuery({
-    queryKey: ['notification-preferences'],
+    queryKey: ['notification-preferences', effectiveRole],
     queryFn: async () => {
       const response = await api.get('/settings/notifications');
       return response.data?.data;

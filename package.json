@@ -5,7 +5,7 @@
   "main": "backend/index.js",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "cross-env PORT=9000 nodemon backend/index.js",
+    "server": "cross-env PORT=9002 nodemon backend/index.js",
     "client": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
     "build:gh-pages": "./scripts/build-gh-pages.sh",

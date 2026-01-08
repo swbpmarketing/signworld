@@ -30,16 +30,22 @@ api.interceptors.request.use(
 
     // Add preview context header if in preview mode
     // This is used by backend to filter data for the previewed user
-    try {
-      const previewStateJson = sessionStorage.getItem('preview-mode-state');
-      if (previewStateJson) {
-        const previewState = JSON.parse(previewStateJson);
-        if (previewState.type === 'user' && previewState.userId) {
-          config.headers['X-Preview-User-Id'] = previewState.userId;
+    // IMPORTANT: Do NOT add preview header to auth-related endpoints
+    // to prevent preview mode from affecting authentication
+    const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/auth');
+
+    if (!isAuthEndpoint) {
+      try {
+        const previewStateJson = sessionStorage.getItem('preview-mode-state');
+        if (previewStateJson) {
+          const previewState = JSON.parse(previewStateJson);
+          if (previewState.type === 'user' && previewState.userId) {
+            config.headers['X-Preview-User-Id'] = previewState.userId;
+          }
         }
+      } catch (e) {
+        // sessionStorage not available or invalid JSON
       }
-    } catch (e) {
-      // sessionStorage not available or invalid JSON
     }
 
     return config;

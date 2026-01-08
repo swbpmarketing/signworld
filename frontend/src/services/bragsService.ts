@@ -11,12 +11,29 @@ const bragsAPI = axios.create({
   timeout: 30000, // 30 seconds for file uploads
 });
 
-// Add auth token to requests
+// Add auth token and preview context to requests
 bragsAPI.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Add preview context header if in preview mode
+  const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/auth');
+  if (!isAuthEndpoint) {
+    try {
+      const previewStateJson = sessionStorage.getItem('preview-mode-state');
+      if (previewStateJson) {
+        const previewState = JSON.parse(previewStateJson);
+        if (previewState.type === 'user' && previewState.userId) {
+          config.headers['X-Preview-User-Id'] = previewState.userId;
+        }
+      }
+    } catch (e) {
+      // sessionStorage not available or invalid JSON
+    }
+  }
+
   return config;
 });
 

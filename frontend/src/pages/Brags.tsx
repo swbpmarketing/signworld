@@ -39,7 +39,7 @@ import {
   type GetBragsParams
 } from '../services/bragsService';
 import { useAuth } from '../context/AuthContext';
-import { usePreviewMode } from '../context/PreviewModeContext';
+import { usePreviewMode, type PreviewModeContextType } from '../context/PreviewModeContext';
 import { usePermissions } from '../hooks/usePermissions';
 import toast from 'react-hot-toast';
 import CustomSelect from '../components/CustomSelect';
@@ -59,7 +59,7 @@ const categories = [
 const Brags = () => {
   const { user } = useAuth();
   const { getEffectiveRole } = usePreviewMode();
-  const { canManage, canEditItem, canDeleteItem } = usePermissions();
+  const { canManage, canEditItem } = usePermissions();
   const effectiveRole = getEffectiveRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState('All Stories');
@@ -377,7 +377,7 @@ const Brags = () => {
     if (canManage('successStories')) {
       fetchPendingStories();
     }
-  }, [user, canManage]);
+  }, [user, canManage, effectiveRole]);
 
   // Re-fetch when filters change
   useEffect(() => {
