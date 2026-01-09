@@ -3,7 +3,7 @@ const router = express.Router();
 const Equipment = require('../models/Equipment');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-const { protect, authorize, handlePreviewMode } = require('../middleware/auth');
+const { protect, authorize, handlePreviewMode, blockPreviewWrites } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 // @desc    Get equipment statistics
@@ -919,7 +919,7 @@ router.post('/:id/inquiry', protect, async (req, res) => {
 // @desc    Save/sync equipment cart
 // @route   POST /api/equipment/cart
 // @access  Private
-router.post('/cart', protect, async (req, res) => {
+router.post('/cart', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
     const { items } = req.body; // items: [{ equipmentId, quantity }]
 
@@ -963,7 +963,7 @@ router.post('/cart', protect, async (req, res) => {
 // @desc    Save/sync equipment wishlist
 // @route   POST /api/equipment/wishlist
 // @access  Private
-router.post('/wishlist', protect, async (req, res) => {
+router.post('/wishlist', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
     const { items } = req.body; // items: [equipmentId, ...]
 
