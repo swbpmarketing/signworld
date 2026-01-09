@@ -151,8 +151,9 @@ exports.login = async (req, res) => {
 // @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user.id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user.id;
     const user = await User.findById(targetUserId);
 
     res.status(200).json({
@@ -172,8 +173,9 @@ exports.getMe = async (req, res) => {
 // @access  Private
 exports.updateDetails = async (req, res) => {
   try {
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user.id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user.id;
 
     const fieldsToUpdate = {
       name: req.body.name,
@@ -209,8 +211,9 @@ exports.updateDetails = async (req, res) => {
 // @access  Private
 exports.updatePassword = async (req, res) => {
   try {
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user.id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user.id;
 
     const user = await User.findById(targetUserId).select('+password');
 

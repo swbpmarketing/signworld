@@ -5,7 +5,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-const { protect } = require('../middleware/auth');
+const { protect, handlePreviewMode, blockPreviewWrites } = require('../middleware/auth');
 const { uploadToS3 } = require('../utils/s3');
 
 // Configure multer for file uploads
@@ -38,11 +38,18 @@ const upload = multer({
 // @desc    Get all conversations for current user
 // @route   GET /api/chat/conversations
 // @access  Private
-router.get('/conversations', protect, async (req, res) => {
+router.get('/conversations', protect, handlePreviewMode, async (req, res) => {
   try {
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    // Fetch conversations for the TARGET user (to show their conversations)
+    // In preview mode: show previewed user's conversations
+    // Otherwise: show authenticated user's conversations
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
+
+    // IMPORTANT: Always send authenticated user ID to frontend
+    // Frontend MUST use this for message ownership calculations, not the target user
+    const authenticatedUserId = req.user._id;
 
     const conversations = await Conversation.find({
       participants: targetUserId,
@@ -52,7 +59,7 @@ router.get('/conversations', protect, async (req, res) => {
       .populate('lastMessage')
       .sort({ lastMessageAt: -1 });
 
-    // Format conversations with unread counts for current user
+    // Format conversations with unread counts for target user
     const formattedConversations = conversations.map(conv => {
       const unreadEntry = conv.unreadCounts.find(
         uc => uc.user.toString() === targetUserId.toString()
@@ -75,6 +82,8 @@ router.get('/conversations', protect, async (req, res) => {
         lastMessagePreview: conv.lastMessagePreview,
         unreadCount: unreadEntry?.count || 0,
         createdAt: conv.createdAt,
+        displayUserId: targetUserId.toString(), // User ID to use for display perspective (previewed user in preview mode)
+        authenticatedUserId: authenticatedUserId.toString(), // Authenticated user (for permissions/ops)
       };
     });
 
@@ -94,7 +103,7 @@ router.get('/conversations', protect, async (req, res) => {
 // @desc    Get or create conversation with a user
 // @route   POST /api/chat/conversations
 // @access  Private
-router.post('/conversations', protect, async (req, res) => {
+router.post('/conversations', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
     const { participantId } = req.body;
 
@@ -136,16 +145,20 @@ router.post('/conversations', protect, async (req, res) => {
 // @desc    Get messages for a conversation
 // @route   GET /api/chat/conversations/:id/messages
 // @access  Private
-router.get('/conversations/:id/messages', protect, async (req, res) => {
+router.get('/conversations/:id/messages', protect, handlePreviewMode, async (req, res) => {
   try {
     const { page = 1, limit = 50 } = req.query;
     const skip = (page - 1) * limit;
 
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    // Verify with TARGET user (previewed or authenticated)
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
 
-    // Verify user is a participant
+    // Track authenticated user for frontend (used for message ownership, not targeting)
+    const authenticatedUserId = req.user._id;
+
+    // Verify target user is a participant in this conversation
     const conversation = await Conversation.findOne({
       _id: req.params.id,
       participants: targetUserId,
@@ -171,8 +184,6 @@ router.get('/conversations/:id/messages', protect, async (req, res) => {
     // Reverse to show oldest first in UI
     messages.reverse();
 
-    console.log(`GET /chat/conversations/${req.params.id}/messages - Returning ${messages.length} messages (including ${messages.filter(m => m.isDeleted).length} deleted)`);
-
     const total = await Message.countDocuments({
       conversation: req.params.id,
     });
@@ -180,6 +191,8 @@ router.get('/conversations/:id/messages', protect, async (req, res) => {
     res.status(200).json({
       success: true,
       data: messages,
+      displayUserId: targetUserId.toString(), // User ID for display perspective (previewed user in preview mode)
+      authenticatedUserId: authenticatedUserId.toString(), // Authenticated user ID
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -200,7 +213,7 @@ router.get('/conversations/:id/messages', protect, async (req, res) => {
 // @desc    Send a message
 // @route   POST /api/chat/conversations/:id/messages
 // @access  Private
-router.post('/conversations/:id/messages', protect, async (req, res) => {
+router.post('/conversations/:id/messages', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
     const { content } = req.body;
 
@@ -212,8 +225,9 @@ router.post('/conversations/:id/messages', protect, async (req, res) => {
     }
 
     // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
 
     // Verify user is a participant
     const conversation = await Conversation.findOne({
@@ -302,7 +316,7 @@ router.post('/conversations/:id/messages', protect, async (req, res) => {
 // @desc    Send a message with file attachment
 // @route   POST /api/chat/conversations/:id/messages/upload
 // @access  Private
-router.post('/conversations/:id/messages/upload', protect, upload.single('file'), async (req, res) => {
+router.post('/conversations/:id/messages/upload', protect, handlePreviewMode, blockPreviewWrites, upload.single('file'), async (req, res) => {
   try {
     const { content } = req.body;
     const file = req.file;
@@ -315,8 +329,9 @@ router.post('/conversations/:id/messages/upload', protect, upload.single('file')
     }
 
     // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
 
     // Verify user is a participant
     const conversation = await Conversation.findOne({
@@ -430,7 +445,7 @@ router.post('/conversations/:id/messages/upload', protect, upload.single('file')
 // @desc    Mark conversation as read
 // @route   POST /api/chat/conversations/:id/read
 // @access  Private
-router.post('/conversations/:id/read', protect, async (req, res) => {
+router.post('/conversations/:id/read', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
     const conversation = await Conversation.findOne({
       _id: req.params.id,
@@ -476,7 +491,7 @@ router.post('/conversations/:id/read', protect, async (req, res) => {
 // @desc    Get unread message count
 // @route   GET /api/chat/unread
 // @access  Private
-router.get('/unread', protect, async (req, res) => {
+router.get('/unread', protect, handlePreviewMode, async (req, res) => {
   try {
     const conversations = await Conversation.find({
       participants: req.user._id,
@@ -509,7 +524,7 @@ router.get('/unread', protect, async (req, res) => {
 // @desc    Get all users for starting new chat
 // @route   GET /api/chat/users
 // @access  Private
-router.get('/users', protect, async (req, res) => {
+router.get('/users', protect, handlePreviewMode, async (req, res) => {
   try {
     const { search } = req.query;
 
@@ -547,7 +562,7 @@ router.get('/users', protect, async (req, res) => {
 // @desc    Archive a conversation
 // @route   POST /api/chat/conversations/:id/archive
 // @access  Private
-router.post('/conversations/:id/archive', protect, async (req, res) => {
+router.post('/conversations/:id/archive', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
     const conversation = await Conversation.findById(req.params.id);
 
@@ -586,7 +601,7 @@ router.post('/conversations/:id/archive', protect, async (req, res) => {
 // @desc    Delete a conversation
 // @route   DELETE /api/chat/conversations/:id
 // @access  Private
-router.delete('/conversations/:id', protect, async (req, res) => {
+router.delete('/conversations/:id', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
     const conversation = await Conversation.findById(req.params.id);
 
@@ -636,7 +651,7 @@ const emojiMap = {
 // @desc    Add a reaction to a message
 // @route   POST /api/chat/messages/:id/reactions
 // @access  Private
-router.post('/messages/:id/reactions', protect, async (req, res) => {
+router.post('/messages/:id/reactions', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
     const { emoji } = req.body;
 
@@ -714,7 +729,7 @@ router.post('/messages/:id/reactions', protect, async (req, res) => {
 // @desc    Edit a message
 // @route   PUT /api/chat/messages/:id
 // @access  Private
-router.put('/messages/:id', protect, async (req, res) => {
+router.put('/messages/:id', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
     const { content } = req.body;
 
@@ -771,7 +786,7 @@ router.put('/messages/:id', protect, async (req, res) => {
 // @desc    Delete a message (soft delete)
 // @route   DELETE /api/chat/messages/:id
 // @access  Private
-router.delete('/messages/:id', protect, async (req, res) => {
+router.delete('/messages/:id', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
     const message = await Message.findById(req.params.id);
 

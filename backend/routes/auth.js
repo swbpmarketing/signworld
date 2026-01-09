@@ -7,7 +7,7 @@ const {
   updateDetails,
   updatePassword,
 } = require('../controllers/authController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, handlePreviewMode, blockPreviewWrites } = require('../middleware/auth');
 const { validate } = require('../middleware/validation');
 
 const router = express.Router();
@@ -45,13 +45,15 @@ router.post(
 
 router.post('/login', loginValidation, validate, login);
 
-router.get('/me', protect, getMe);
+router.get('/me', protect, handlePreviewMode, getMe);
 
-router.put('/updatedetails', protect, updateDetails);
+router.put('/updatedetails', protect, handlePreviewMode, blockPreviewWrites, updateDetails);
 
 router.put(
   '/updatepassword',
   protect,
+  handlePreviewMode,
+  blockPreviewWrites,
   updatePasswordValidation,
   validate,
   updatePassword

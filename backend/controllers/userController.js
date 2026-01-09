@@ -3,7 +3,7 @@ const SystemSettings = require('../models/SystemSettings');
 const { sendWelcomeEmail } = require('../utils/emailService');
 
 // Import models for stats aggregation
-let Brag, ForumThread, Event, Message;
+let Brag, ForumThread, Event, Message, Analytics;
 try {
   Brag = require('../models/Brag');
 } catch (e) { Brag = null; }
@@ -16,6 +16,9 @@ try {
 try {
   Message = require('../models/Message');
 } catch (e) { Message = null; }
+try {
+  Analytics = require('../models/Analytics');
+} catch (e) { Analytics = null; }
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -260,7 +263,11 @@ exports.uploadPhoto = async (req, res) => {
 // @access  Private (Owner)
 exports.getOwnerStats = async (req, res) => {
   try {
-    const userId = req.user._id;
+    // Determine target user (preview or actual)
+    const targetUserId = req.previewMode && req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
+    const userId = targetUserId;
     const { dateRange = 'last30days' } = req.query;
 
     // Calculate date range
@@ -322,7 +329,39 @@ exports.getOwnerStats = async (req, res) => {
     if (user) {
       stats.engagement.averageRating = user.rating?.averageRating || user.stats?.averageRating || 0;
       stats.engagement.totalReviews = user.rating?.totalRatings || user.stats?.totalRatings || 0;
-      stats.engagement.profileViews = user.stats?.profileViews || Math.floor(Math.random() * 200) + 50;
+    }
+
+    // Get actual profile views from Analytics collection (not random!)
+    if (Analytics) {
+      try {
+        // Query Analytics for profile_view events where userId is the target
+        const profileViewCount = await Analytics.countDocuments({
+          userId: userId,
+          eventType: 'profile_view',
+          createdAt: { $gte: startDate }
+        });
+        stats.engagement.profileViews = profileViewCount;
+
+        // Calculate profile views trend: compare current period to previous period
+        const prevStartDate = new Date(startDate);
+        const periodDays = Math.floor((new Date() - startDate) / (1000 * 60 * 60 * 24));
+        prevStartDate.setDate(prevStartDate.getDate() - periodDays);
+        const prevEndDate = new Date(startDate);
+        prevEndDate.setDate(prevEndDate.getDate() - 1);
+
+        const prevProfileViewCount = await Analytics.countDocuments({
+          userId: userId,
+          eventType: 'profile_view',
+          createdAt: { $gte: prevStartDate, $lte: prevEndDate }
+        });
+
+        // Calculate percentage change
+        stats.trends.profileViewsTrend = prevProfileViewCount > 0
+          ? Math.round(((profileViewCount - prevProfileViewCount) / prevProfileViewCount) * 100)
+          : profileViewCount > 0 ? 100 : 0;
+      } catch (e) {
+        // Silent fail - stats remain at default (0 views, 0 trend)
+      }
     }
 
     // Get brags (success stories) stats if model exists
@@ -430,8 +469,8 @@ exports.getOwnerStats = async (req, res) => {
     stats.equipment.wishlistItems = 5;
     stats.equipment.quoteRequests = 1;
 
-    // Calculate trends (default neutral trends)
-    stats.trends.profileViewsTrend = 12;
+    // Note: profileViewsTrend is calculated above from Analytics data
+    // Set other trends to reasonable defaults
     stats.trends.engagementTrend = 8;
     stats.trends.activityTrend = 5;
 

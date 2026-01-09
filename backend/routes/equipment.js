@@ -3,7 +3,7 @@ const router = express.Router();
 const Equipment = require('../models/Equipment');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, handlePreviewMode } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 // @desc    Get equipment statistics
@@ -59,11 +59,12 @@ router.get('/stats', async (req, res) => {
 // @desc    Get vendor's equipment statistics for reports
 // @route   GET /api/equipment/vendor-stats
 // @access  Private/Vendor
-router.get('/vendor-stats', protect, authorize('vendor', 'admin'), async (req, res) => {
+router.get('/vendor-stats', protect, authorize('vendor', 'admin'), handlePreviewMode, async (req, res) => {
   try {
     // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const vendorId = previewUserId || req.user.id;
+    const vendorId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user.id;
 
     // Get all vendor's equipment with inquiries
     const equipment = await Equipment.find({ vendorId });
@@ -253,12 +254,12 @@ router.get('/vendor-stats', protect, authorize('vendor', 'admin'), async (req, r
 // @desc    Get vendor's own equipment listings
 // @route   GET /api/equipment/my-listings
 // @access  Private/Vendor
-router.get('/my-listings', protect, authorize('vendor', 'admin'), async (req, res) => {
+router.get('/my-listings', protect, authorize('vendor', 'admin'), handlePreviewMode, async (req, res) => {
   try {
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user.id;
-    const query = (req.user.role === 'admin' && !previewUserId) ? {} : { vendorId: targetUserId };
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user.id;
+    const query = (req.user.role === 'admin' && !req.previewMode.active) ? {} : { vendorId: targetUserId };
 
     const equipment = await Equipment.find(query)
       .sort({ createdAt: -1 })
@@ -378,11 +379,12 @@ router.get('/', async (req, res) => {
 // @desc    Get all inquiries for vendor's equipment
 // @route   GET /api/equipment/vendor-inquiries
 // @access  Private/Vendor
-router.get('/vendor-inquiries', protect, authorize('vendor', 'admin'), async (req, res) => {
+router.get('/vendor-inquiries', protect, authorize('vendor', 'admin'), handlePreviewMode, async (req, res) => {
   try {
     // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const vendorId = previewUserId || req.user.id;
+    const vendorId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user.id;
 
     // Get all vendor's equipment with inquiries
     const equipment = await Equipment.find({ vendorId }).select('name price images inquiries');

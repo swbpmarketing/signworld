@@ -3,7 +3,7 @@ const router = express.Router();
 const ForumThread = require('../models/ForumThread');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-const { protect } = require('../middleware/auth');
+const { protect, handlePreviewMode } = require('../middleware/auth');
 const { forumFiles } = require('../middleware/upload');
 
 // @desc    Get all forum threads with pagination and filtering
@@ -90,11 +90,12 @@ router.get('/', async (req, res) => {
 // @desc    Get user's own forum threads
 // @route   GET /api/forum/my-threads
 // @access  Private
-router.get('/my-threads', protect, async (req, res) => {
+router.get('/my-threads', protect, handlePreviewMode, async (req, res) => {
   try {
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    // Determine target user (preview or actual)
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
 
     // Use .lean() for better performance on read-only query
     const threads = await ForumThread.find({ author: targetUserId })

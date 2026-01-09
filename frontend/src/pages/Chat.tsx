@@ -19,6 +19,7 @@ import {
 import { CheckIcon as CheckSolidIcon } from '@heroicons/react/24/solid';
 import { Menu, Transition } from '@headlessui/react';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import {
   getConversations,
   getMessages,
@@ -49,6 +50,7 @@ interface Contact {
 
 const Chat = () => {
   const { user } = useAuth();
+  const { isPreviewMode } = usePreviewMode();
   const [searchParams] = useSearchParams();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
@@ -72,10 +74,27 @@ const Chat = () => {
   const [editingContent, setEditingContent] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [displayUserId, setDisplayUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
+
+  // currentUserId is the authenticated user (used for permissions and backend operations)
   const currentUserId = user?._id || user?.id || '';
+
+  // displayUserId determines message alignment perspective:
+  // - In preview mode: shows previewed user's perspective (their messages on right)
+  // - In normal mode: same as currentUserId
+  // This is DISPLAY ONLY - actual message senders never change
+  // The displayUserId is fetched from the backend response which knows the target user
+
+  // Verify currentUserId is set
+  if (!currentUserId) {
+    return <div>Loading user information...</div>;
+  }
+
+  // Use displayUserId for message alignment, fall back to currentUserId if not set
+  const messageOwnerUserId = displayUserId || currentUserId;
 
   // Common emojis for quick reactions
   const quickEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -275,6 +294,8 @@ const Chat = () => {
   };
 
   const formatConversationToContact = (conv: Conversation): Contact => {
+    // Find the "other" participant by excluding the authenticated user (currentUserId)
+    // Even in preview mode, conversation structure is based on actual participants
     const otherUser = conv.otherParticipant || conv.participants.find(p => p._id !== currentUserId);
     const initials = otherUser?.name
       ?.split(' ')
@@ -299,18 +320,27 @@ const Chat = () => {
   const fetchMessages = async (conversationId: string) => {
     try {
       setLoadingMessages(true);
-      const { messages: data } = await getMessages(conversationId);
+      const response = await getMessages(conversationId);
+      const { messages: data, authenticatedUserId, displayUserId: backendDisplayUserId } = response as any;
+
       setMessages(data);
 
-      // Mark as read
-      await markAsRead(conversationId);
+      // Set displayUserId from backend (includes previewed user in preview mode)
+      if (backendDisplayUserId) {
+        setDisplayUserId(backendDisplayUserId);
+      }
 
-      // Update unread count in contacts
-      setContacts(prev =>
-        prev.map(c =>
-          c.conversationId === conversationId ? { ...c, unreadCount: 0 } : c
-        )
-      );
+      // Mark as read (skip in preview mode - write operations not allowed)
+      if (!isPreviewMode) {
+        await markAsRead(conversationId);
+
+        // Update unread count in contacts
+        setContacts(prev =>
+          prev.map(c =>
+            c.conversationId === conversationId ? { ...c, unreadCount: 0 } : c
+          )
+        );
+      }
     } catch (error) {
       console.error('Failed to load messages:', error);
       toast.error('Failed to load messages');
@@ -959,8 +989,12 @@ const Chat = () => {
                     // Skip if message doesn't have sender data (except deleted messages)
                     if (!message.sender && !message.isDeleted) return null;
 
+                    // Message alignment is based on display context (previewed user in preview mode)
+                    // In preview mode: shows previewed user's perspective (their messages on right)
+                    // In normal mode: shows authenticated user's perspective
+                    // messageOwnerUserId comes from backend and reflects the viewing context
                     const senderId = message.sender?._id || message.sender;
-                    const isOwn = senderId === currentUserId;
+                    const isOwn = senderId === messageOwnerUserId;
                     const prevMessage = messages[index - 1];
                     const msgDate = new Date(message.createdAt);
                     const showTimestamp = index === 0 ||

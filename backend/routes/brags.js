@@ -3,13 +3,13 @@ const router = express.Router();
 const Brag = require('../models/Brag');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-const { protect, authorize, optionalProtect } = require('../middleware/auth');
+const { protect, authorize, optionalProtect, handlePreviewMode } = require('../middleware/auth');
 const { bragFiles } = require('../middleware/upload');
 
 // @desc    Get all success stories with pagination and filtering
 // @route   GET /api/brags
 // @access  Public (only published stories) / Admin can see all
-router.get('/', optionalProtect, async (req, res) => {
+router.get('/', optionalProtect, handlePreviewMode, async (req, res) => {
   try {
     const {
       page = 1,
@@ -22,9 +22,7 @@ router.get('/', optionalProtect, async (req, res) => {
       status = 'published'
     } = req.query;
 
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const isPreviewMode = !!previewUserId;
+    const isPreviewMode = req.previewMode.active;
 
     // Build query - only show published stories for non-admins
     const query = {};
@@ -216,17 +214,16 @@ router.get('/stats', async (req, res) => {
 // @desc    Get success stories statistics (detailed)
 // @route   GET /api/brags/admin/stats
 // @access  Private (admin only)
-router.get('/admin/stats', protect, authorize('admin'), async (req, res) => {
+router.get('/admin/stats', protect, authorize('admin'), handlePreviewMode, async (req, res) => {
   try {
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const isPreviewMode = !!previewUserId;
+    const isPreviewMode = req.previewMode.active;
+    const previewedUserId = req.previewMode.active ? req.previewMode.previewUser._id : null;
 
     const mongoose = require('mongoose');
 
     // If in preview mode, return the previewed user's stats
     if (isPreviewMode) {
-      const userId = new mongoose.Types.ObjectId(previewUserId);
+      const userId = new mongoose.Types.ObjectId(previewedUserId);
 
       const totalStories = await Brag.countDocuments({ author: userId });
       const publishedStories = await Brag.countDocuments({
@@ -325,11 +322,11 @@ router.get('/admin/stats', protect, authorize('admin'), async (req, res) => {
 // @desc    Get user's own success stories
 // @route   GET /api/brags/user/my-stories
 // @access  Private
-router.get('/user/my-stories', protect, async (req, res) => {
+router.get('/user/my-stories', protect, handlePreviewMode, async (req, res) => {
   try {
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user.id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user.id;
 
     const brags = await Brag.find({ author: targetUserId })
       .populate('moderatedBy', 'name email')
@@ -351,13 +348,13 @@ router.get('/user/my-stories', protect, async (req, res) => {
 // @desc    Get user's own success stories statistics
 // @route   GET /api/brags/user/my-stats
 // @access  Private
-router.get('/user/my-stats', protect, async (req, res) => {
+router.get('/user/my-stats', protect, handlePreviewMode, async (req, res) => {
   try {
     const mongoose = require('mongoose');
 
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user.id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user.id;
     const userId = new mongoose.Types.ObjectId(targetUserId);
 
     // Count user's stories (published only)

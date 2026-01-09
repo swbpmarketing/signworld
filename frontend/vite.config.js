@@ -12,7 +12,7 @@ export default defineConfig({
     strictPort: false,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:9002',
         changeOrigin: true,
         secure: false,
         ws: true,
@@ -29,7 +29,7 @@ export default defineConfig({
         }
       },
       '/socket.io': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:9002',
         changeOrigin: true,
         ws: true,
         secure: false

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
+const { protect, handlePreviewMode, blockPreviewWrites } = require('../middleware/auth');
 const equipmentStatsService = require('../services/equipmentStatsService');
 
 /**
@@ -8,7 +8,7 @@ const equipmentStatsService = require('../services/equipmentStatsService');
  * Get popular equipment by cart/wishlist/quote interactions
  * @access Private
  */
-router.get('/popular', protect, async (req, res) => {
+router.get('/popular', protect, handlePreviewMode, async (req, res) => {
   try {
     const stats = await equipmentStatsService.getPopularEquipment();
 
@@ -36,10 +36,11 @@ router.get('/popular', protect, async (req, res) => {
  * Get user equipment stats
  * @access Private
  */
-router.get('/', protect, async (req, res) => {
+router.get('/', protect, handlePreviewMode, async (req, res) => {
   try {
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
 
     const stats = await equipmentStatsService.getUserStats(targetUserId);
 
@@ -68,10 +69,11 @@ router.get('/', protect, async (req, res) => {
  * @access Private
  * @body cartItems - Array of items from localStorage
  */
-router.post('/sync-cart', protect, async (req, res) => {
+router.post('/sync-cart', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
     const { cartItems } = req.body;
 
     if (!Array.isArray(cartItems)) {
@@ -108,10 +110,11 @@ router.post('/sync-cart', protect, async (req, res) => {
  * @access Private
  * @body wishlistItems - Array of equipment IDs
  */
-router.post('/sync-wishlist', protect, async (req, res) => {
+router.post('/sync-wishlist', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
     const { wishlistItems } = req.body;
 
     if (!Array.isArray(wishlistItems)) {
@@ -148,10 +151,11 @@ router.post('/sync-wishlist', protect, async (req, res) => {
  * @access Private
  * @body quantity - Quantity to add (default: 1)
  */
-router.post('/cart/:equipmentId', protect, async (req, res) => {
+router.post('/cart/:equipmentId', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
     const { equipmentId } = req.params;
     const { quantity } = req.body;
 
@@ -181,10 +185,11 @@ router.post('/cart/:equipmentId', protect, async (req, res) => {
  * Add item to wishlist
  * @access Private
  */
-router.post('/wishlist/:equipmentId', protect, async (req, res) => {
+router.post('/wishlist/:equipmentId', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
     const { equipmentId } = req.params;
 
     const stats = await equipmentStatsService.addToWishlist(targetUserId, equipmentId);
@@ -213,10 +218,11 @@ router.post('/wishlist/:equipmentId', protect, async (req, res) => {
  * Remove item from wishlist
  * @access Private
  */
-router.delete('/wishlist/:equipmentId', protect, async (req, res) => {
+router.delete('/wishlist/:equipmentId', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
     const { equipmentId } = req.params;
 
     const stats = await equipmentStatsService.removeFromWishlist(targetUserId, equipmentId);
@@ -245,10 +251,11 @@ router.delete('/wishlist/:equipmentId', protect, async (req, res) => {
  * Add quote request
  * @access Private
  */
-router.post('/quote-request/:equipmentId', protect, async (req, res) => {
+router.post('/quote-request/:equipmentId', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
     const { equipmentId } = req.params;
 
     const stats = await equipmentStatsService.addQuoteRequest(targetUserId, equipmentId);
@@ -277,10 +284,11 @@ router.post('/quote-request/:equipmentId', protect, async (req, res) => {
  * Clear cart
  * @access Private
  */
-router.post('/clear-cart', protect, async (req, res) => {
+router.post('/clear-cart', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
   try {
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
 
     const stats = await equipmentStatsService.clearCart(targetUserId);
 

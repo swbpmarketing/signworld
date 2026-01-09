@@ -79,7 +79,7 @@ export const getMessages = async (
   conversationId: string,
   page: number = 1,
   limit: number = 50
-): Promise<{ messages: Message[]; pagination: PaginationInfo }> => {
+): Promise<{ messages: Message[]; pagination: PaginationInfo; displayUserId?: string; authenticatedUserId?: string }> => {
   try {
     const response = await api.get(`/chat/conversations/${conversationId}/messages`, {
       params: { page, limit },
@@ -87,6 +87,8 @@ export const getMessages = async (
     return {
       messages: response.data.data,
       pagination: response.data.pagination,
+      displayUserId: response.data.displayUserId,
+      authenticatedUserId: response.data.authenticatedUserId,
     };
   } catch (error: any) {
     console.error('Error fetching messages:', error);
@@ -115,6 +117,11 @@ export const markAsRead = async (conversationId: string): Promise<void> => {
   try {
     await api.post(`/chat/conversations/${conversationId}/read`);
   } catch (error: any) {
+    // Silently fail if in preview mode (403 Forbidden)
+    if (error.response?.status === 403) {
+      console.debug('Write operations blocked in preview mode');
+      return;
+    }
     console.error('Error marking as read:', error);
     throw new Error(error.response?.data?.error || 'Failed to mark as read');
   }

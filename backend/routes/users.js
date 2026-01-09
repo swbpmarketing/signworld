@@ -8,7 +8,7 @@ const {
   uploadPhoto,
   getOwnerStats,
 } = require('../controllers/userController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, handlePreviewMode } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 const router = express.Router();
@@ -17,7 +17,7 @@ const router = express.Router();
 router.use(protect);
 
 // Owner stats route (must be before /:id route) - restricted to admin and owner roles
-router.get('/owner-stats', authorize('admin', 'owner'), getOwnerStats);
+router.get('/owner-stats', authorize('admin', 'owner'), handlePreviewMode, getOwnerStats);
 
 // Search users for preview modal (must be before /:id route)
 router.get('/search/preview', authorize('admin'), async (req, res) => {

@@ -730,9 +730,9 @@ const Layout = () => {
       <AISearchModal
         isOpen={searchModalOpen}
         onClose={handleSearchModalClose}
-        userRole={user?.role}
-        userName={user?.name}
-        userCompany={user?.company}
+        userRole={effectiveRole}
+        userName={isPreviewMode && getPreviewedUser()?.name ? getPreviewedUser()?.name : user?.name}
+        userCompany={isPreviewMode && getPreviewedUser()?.name ? '' : user?.company}
       />
 
       {/* User Selection Modal for Preview */}

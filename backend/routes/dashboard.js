@@ -6,100 +6,185 @@ const Video = require('../models/Video');
 const LibraryFile = require('../models/LibraryFile');
 const ForumThread = require('../models/ForumThread');
 const Rating = require('../models/Rating');
-const { protect } = require('../middleware/auth');
+const { protect, handlePreviewMode } = require('../middleware/auth');
 const eventDurationService = require('../services/eventDurationService');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/dashboard/stats
 // @access  Private
-router.get('/stats', protect, async (req, res) => {
+router.get('/stats', protect, handlePreviewMode, async (req, res) => {
   try {
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
+    // Determine target user (preview or actual)
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
+    const isPreviewMode = req.previewMode.active;
+    const isAdmin = req.user.role === 'admin';
 
-    // Get total owners count and growth
-    const [totalOwners, newOwnersThisMonth, ownersLastMonth] = await Promise.all([
-      User.countDocuments({ role: 'owner', isActive: true }),
-      User.countDocuments({
-        role: 'owner',
-        isActive: true,
-        createdAt: { $gte: oneMonthAgo }
-      }),
-      User.countDocuments({
-        role: 'owner',
-        isActive: true,
-        createdAt: { $lt: oneMonthAgo }
-      })
-    ]);
+    // Determine if showing personal stats (user viewing own dashboard or admin in preview mode)
+    // vs global stats (admin viewing global dashboard)
+    const showPersonalStats = isPreviewMode || !isAdmin;
 
-    const ownerGrowthPercent = ownersLastMonth > 0
-      ? ((newOwnersThisMonth / ownersLastMonth) * 100).toFixed(1)
-      : '+0';
+    let totalOwners, newOwnersThisMonth, ownersLastMonth, ownerGrowthPercent;
+    let totalUpcomingEvents, totalUpcomingThisWeek;
+    let totalLibraryFiles, newFilesThisMonth;
+    let totalVideos, newVideosThisMonth;
+    let userUpcomingEvents, userUpcomingThisWeek;
 
-    // Get ALL upcoming events count (global)
-    const [totalUpcomingEvents, totalUpcomingThisWeek] = await Promise.all([
-      Event.countDocuments({
-        isPublished: true,
-        startDate: { $gte: now }
-      }),
-      Event.countDocuments({
-        isPublished: true,
-        startDate: {
-          $gte: now,
-          $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-        }
-      })
-    ]);
+    if (showPersonalStats) {
+      // Show user's personal stats (what they see in their own dashboard)
+      totalOwners = 1; // They only see themselves
+      newOwnersThisMonth = 0;
+      ownersLastMonth = 1;
+      ownerGrowthPercent = '0';
 
-    // Get user's upcoming events count (events user is attending with confirmed RSVP)
-    const [userUpcomingEvents, userUpcomingThisWeek] = await Promise.all([
-      Event.countDocuments({
-        isPublished: true,
-        startDate: { $gte: now },
-        'attendees': {
-          $elemMatch: {
-            user: targetUserId,
-            status: 'confirmed'
+      // Get their RSVPs (they see events they're attending)
+      const eventsData = await Promise.all([
+        Event.countDocuments({
+          isPublished: true,
+          startDate: { $gte: now },
+          'attendees': {
+            $elemMatch: {
+              user: targetUserId,
+              status: 'confirmed'
+            }
           }
-        }
-      }),
-      Event.countDocuments({
-        isPublished: true,
-        startDate: {
-          $gte: now,
-          $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-        },
-        'attendees': {
-          $elemMatch: {
-            user: targetUserId,
-            status: 'confirmed'
+        }),
+        Event.countDocuments({
+          isPublished: true,
+          startDate: {
+            $gte: now,
+            $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+          },
+          'attendees': {
+            $elemMatch: {
+              user: targetUserId,
+              status: 'confirmed'
+            }
           }
-        }
-      })
-    ]);
+        })
+      ]);
+      userUpcomingEvents = eventsData[0];
+      userUpcomingThisWeek = eventsData[1];
+      totalUpcomingEvents = userUpcomingEvents;
+      totalUpcomingThisWeek = userUpcomingThisWeek;
 
-    // Get library files count
-    const [totalLibraryFiles, newFilesThisMonth] = await Promise.all([
-      LibraryFile.countDocuments({ isActive: true }),
-      LibraryFile.countDocuments({
-        isActive: true,
-        createdAt: { $gte: oneMonthAgo }
-      })
-    ]);
+      // Get library files they uploaded/have access to
+      const [userLibraryFiles, userNewFilesThisMonth] = await Promise.all([
+        LibraryFile.countDocuments({ isActive: true, uploadedBy: targetUserId }),
+        LibraryFile.countDocuments({
+          isActive: true,
+          uploadedBy: targetUserId,
+          createdAt: { $gte: oneMonthAgo }
+        })
+      ]);
+      totalLibraryFiles = userLibraryFiles;
+      newFilesThisMonth = userNewFilesThisMonth;
 
-    // Get video lessons count
-    const [totalVideos, newVideosThisMonth] = await Promise.all([
-      Video.countDocuments({ isActive: true }),
-      Video.countDocuments({
-        isActive: true,
-        publishedAt: { $gte: oneMonthAgo }
-      })
-    ]);
+      // Get videos (all active videos available to them)
+      const [userVideos, userNewVideosThisMonth] = await Promise.all([
+        Video.countDocuments({ isActive: true }),
+        Video.countDocuments({
+          isActive: true,
+          publishedAt: { $gte: oneMonthAgo }
+        })
+      ]);
+      totalVideos = userVideos;
+      newVideosThisMonth = userNewVideosThisMonth;
+    } else {
+      // Admin view - show global stats
+      const [adminTotalOwners, adminNewOwnersThisMonth, adminOwnersLastMonth] = await Promise.all([
+        User.countDocuments({ role: 'owner', isActive: true }),
+        User.countDocuments({
+          role: 'owner',
+          isActive: true,
+          createdAt: { $gte: oneMonthAgo }
+        }),
+        User.countDocuments({
+          role: 'owner',
+          isActive: true,
+          createdAt: { $lt: oneMonthAgo }
+        })
+      ]);
+      totalOwners = adminTotalOwners;
+      newOwnersThisMonth = adminNewOwnersThisMonth;
+      ownersLastMonth = adminOwnersLastMonth;
+      ownerGrowthPercent = ownersLastMonth > 0
+        ? ((newOwnersThisMonth / ownersLastMonth) * 100).toFixed(1)
+        : '+0';
+
+      // Get ALL upcoming events count (global)
+      const [adminTotalUpcomingEvents, adminTotalUpcomingThisWeek] = await Promise.all([
+        Event.countDocuments({
+          isPublished: true,
+          startDate: { $gte: now }
+        }),
+        Event.countDocuments({
+          isPublished: true,
+          startDate: {
+            $gte: now,
+            $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+          }
+        })
+      ]);
+      totalUpcomingEvents = adminTotalUpcomingEvents;
+      totalUpcomingThisWeek = adminTotalUpcomingThisWeek;
+
+      // Get library files count
+      const [adminTotalLibraryFiles, adminNewFilesThisMonth] = await Promise.all([
+        LibraryFile.countDocuments({ isActive: true }),
+        LibraryFile.countDocuments({
+          isActive: true,
+          createdAt: { $gte: oneMonthAgo }
+        })
+      ]);
+      totalLibraryFiles = adminTotalLibraryFiles;
+      newFilesThisMonth = adminNewFilesThisMonth;
+
+      // Get video lessons count
+      const [adminTotalVideos, adminNewVideosThisMonth] = await Promise.all([
+        Video.countDocuments({ isActive: true }),
+        Video.countDocuments({
+          isActive: true,
+          publishedAt: { $gte: oneMonthAgo }
+        })
+      ]);
+      totalVideos = adminTotalVideos;
+      newVideosThisMonth = adminNewVideosThisMonth;
+
+      // Also get the user's RSVPs for the myRsvps section
+      const [adminUserUpcomingEvents, adminUserUpcomingThisWeek] = await Promise.all([
+        Event.countDocuments({
+          isPublished: true,
+          startDate: { $gte: now },
+          'attendees': {
+            $elemMatch: {
+              user: targetUserId,
+              status: 'confirmed'
+            }
+          }
+        }),
+        Event.countDocuments({
+          isPublished: true,
+          startDate: {
+            $gte: now,
+            $lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+          },
+          'attendees': {
+            $elemMatch: {
+              user: targetUserId,
+              status: 'confirmed'
+            }
+          }
+        })
+      ]);
+      userUpcomingEvents = adminUserUpcomingEvents;
+      userUpcomingThisWeek = adminUserUpcomingThisWeek;
+    }
 
     res.json({
       success: true,
@@ -143,14 +228,15 @@ router.get('/stats', protect, async (req, res) => {
 // @desc    Get recent activity
 // @route   GET /api/dashboard/activity
 // @access  Private
-router.get('/activity', protect, async (req, res) => {
+router.get('/activity', protect, handlePreviewMode, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
 
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const targetUserId = previewUserId || req.user._id;
-    const isPreviewMode = !!previewUserId;
+    // Determine target user (preview or actual)
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
+    const isPreviewMode = req.previewMode.active;
 
     const activities = [];
 
@@ -319,11 +405,10 @@ router.get('/activity', protect, async (req, res) => {
 // @desc    Get executive dashboard overview data
 // @route   GET /api/dashboard/reports/overview
 // @access  Private
-router.get('/reports/overview', protect, async (req, res) => {
+router.get('/reports/overview', protect, handlePreviewMode, async (req, res) => {
   try {
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const isPreviewMode = !!previewUserId;
+    const isPreviewMode = req.previewMode.active;
+    const previewedUserId = req.previewMode.active ? req.previewMode.previewUser._id : null;
 
     const now = new Date();
     const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -341,12 +426,12 @@ router.get('/reports/overview', protect, async (req, res) => {
         isPublished: true,
         'attendees': {
           $elemMatch: {
-            user: previewUserId,
+            user: previewedUserId,
             status: { $in: ['confirmed', 'pending'] }
           }
         }
       };
-      forumQuery = { status: 'active', author: previewUserId };
+      forumQuery = { status: 'active', author: previewedUserId };
     }
 
     // Get real counts from database
@@ -493,11 +578,10 @@ router.get('/reports/overview', protect, async (req, res) => {
 // @desc    Get engagement analytics data (renamed from revenue)
 // @route   GET /api/dashboard/reports/revenue
 // @access  Private
-router.get('/reports/revenue', protect, async (req, res) => {
+router.get('/reports/revenue', protect, handlePreviewMode, async (req, res) => {
   try {
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const isPreviewMode = !!previewUserId;
+    const isPreviewMode = req.previewMode.active;
+    const previewedUserId = req.previewMode.active ? req.previewMode.previewUser._id : null;
 
     const { dateRange = 'last6months' } = req.query;
     const months = dateRange === 'last12months' ? 12 : 6;
@@ -508,7 +592,7 @@ router.get('/reports/revenue', protect, async (req, res) => {
     let forumQuery = { status: 'active' };
 
     if (isPreviewMode) {
-      forumQuery = { status: 'active', author: previewUserId };
+      forumQuery = { status: 'active', author: previewedUserId };
     }
 
     const [totalOwners, totalVideos, totalVideoViews, totalDownloads, totalForumPosts] = await Promise.all([
@@ -651,11 +735,10 @@ router.get('/reports/revenue', protect, async (req, res) => {
 // @desc    Get event analytics data (renamed from projects)
 // @route   GET /api/dashboard/reports/projects
 // @access  Private
-router.get('/reports/projects', protect, async (req, res) => {
+router.get('/reports/projects', protect, handlePreviewMode, async (req, res) => {
   try {
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const isPreviewMode = !!previewUserId;
+    const isPreviewMode = req.previewMode.active;
+    const previewedUserId = req.previewMode.active ? req.previewMode.previewUser._id : null;
 
     const now = new Date();
     const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -667,7 +750,7 @@ router.get('/reports/projects', protect, async (req, res) => {
         isPublished: true,
         'attendees': {
           $elemMatch: {
-            user: previewUserId,
+            user: previewedUserId,
             status: { $in: ['confirmed', 'pending'] }
           }
         }
@@ -800,11 +883,9 @@ router.get('/reports/projects', protect, async (req, res) => {
 // @desc    Get customer analytics data
 // @route   GET /api/dashboard/reports/customers
 // @access  Private
-router.get('/reports/customers', protect, async (req, res) => {
+router.get('/reports/customers', protect, handlePreviewMode, async (req, res) => {
   try {
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const isPreviewMode = !!previewUserId;
+    const isPreviewMode = req.previewMode.active;
 
     const now = new Date();
     const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -971,11 +1052,20 @@ router.get('/reports/customers', protect, async (req, res) => {
 // @desc    Get resource analytics data (equipment/content)
 // @route   GET /api/dashboard/reports/equipment
 // @access  Private
-router.get('/reports/equipment', protect, async (req, res) => {
+router.get('/reports/equipment', protect, handlePreviewMode, async (req, res) => {
   try {
-    // Check if admin is previewing as a specific user
-    const previewUserId = req.headers['x-preview-user-id'];
-    const isPreviewMode = !!previewUserId;
+    const isPreviewMode = req.previewMode.active;
+    const previewedUserId = req.previewMode.active ? req.previewMode.previewUser._id : null;
+
+    // Build queries based on preview mode
+    const videoQuery = { isActive: true };
+    const fileQuery = { isActive: true };
+
+    if (isPreviewMode) {
+      // In preview mode, show only the previewed user's uploaded content
+      videoQuery.uploadedBy = previewedUserId;
+      fileQuery.uploadedBy = previewedUserId;
+    }
 
     // Get real resource statistics
     const [
@@ -986,23 +1076,23 @@ router.get('/reports/equipment', protect, async (req, res) => {
       videosByCategory,
       filesByCategory
     ] = await Promise.all([
-      Video.countDocuments({ isActive: true }),
-      LibraryFile.countDocuments({ isActive: true }),
+      Video.countDocuments(videoQuery),
+      LibraryFile.countDocuments(fileQuery),
       Video.aggregate([
-        { $match: { isActive: true } },
+        { $match: videoQuery },
         { $group: { _id: null, totalViews: { $sum: '$views' }, totalLikes: { $sum: { $size: '$likes' } } } }
       ]),
       LibraryFile.aggregate([
-        { $match: { isActive: true } },
+        { $match: fileQuery },
         { $group: { _id: null, totalDownloads: { $sum: '$downloadCount' }, totalSize: { $sum: '$fileSize' } } }
       ]),
       Video.aggregate([
-        { $match: { isActive: true } },
+        { $match: videoQuery },
         { $group: { _id: '$category', count: { $sum: 1 }, views: { $sum: '$views' } } },
         { $sort: { views: -1 } }
       ]),
       LibraryFile.aggregate([
-        { $match: { isActive: true } },
+        { $match: fileQuery },
         { $group: { _id: '$category', count: { $sum: 1 }, downloads: { $sum: '$downloadCount' } } },
         { $sort: { downloads: -1 } }
       ])
