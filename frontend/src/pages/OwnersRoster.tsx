@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getOwners, updateOwnerProfile } from '../services/ownerService';
 import type { Owner } from '../services/ownerService';
 import { useAuth } from '../context/AuthContext';
+import { usePreviewMode } from '../context/PreviewModeContext';
 import AddOwnerModal from '../components/AddOwnerModal';
 import toast from 'react-hot-toast';
 import {
@@ -164,6 +165,7 @@ const specialtyFilters = [
 
 const OwnersRoster = () => {
   const { isAdmin, user } = useAuth();
+  const { isPreviewMode } = usePreviewMode();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentUserId = user?._id || user?.id;
@@ -450,7 +452,7 @@ const OwnersRoster = () => {
               </p>
             </div>
             <div className="flex gap-2 mt-4 sm:mt-0">
-              {isAdmin && (
+              {isAdmin && !isPreviewMode && (
                 <button
                   onClick={() => setIsAddModalOpen(true)}
                   className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"

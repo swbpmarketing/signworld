@@ -852,4 +852,155 @@ router.post('/:id/inquiry', protect, async (req, res) => {
   }
 });
 
+// @desc    Get user's equipment cart
+// @route   GET /api/equipment/cart
+// @access  Private
+router.get('/cart', protect, handlePreviewMode, async (req, res) => {
+  try {
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
+
+    const user = await User.findById(targetUserId)
+      .populate('equipmentCart.equipmentId', 'name price image brand category');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user.equipmentCart || []
+    });
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch cart'
+    });
+  }
+});
+
+// @desc    Get user's equipment wishlist
+// @route   GET /api/equipment/wishlist
+// @access  Private
+router.get('/wishlist', protect, handlePreviewMode, async (req, res) => {
+  try {
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
+
+    const user = await User.findById(targetUserId)
+      .populate('equipmentWishlist.equipmentId', 'name price image brand category');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user.equipmentWishlist || []
+    });
+  } catch (error) {
+    console.error('Error fetching wishlist:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch wishlist'
+    });
+  }
+});
+
+// @desc    Save/sync equipment cart
+// @route   POST /api/equipment/cart
+// @access  Private
+router.post('/cart', protect, async (req, res) => {
+  try {
+    const { items } = req.body; // items: [{ equipmentId, quantity }]
+
+    if (!Array.isArray(items)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Items must be an array'
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Update cart with new items
+    user.equipmentCart = items.map(item => ({
+      equipmentId: item.equipmentId || item.equipment?._id,
+      quantity: item.quantity || 1
+    }));
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Cart updated successfully',
+      data: user.equipmentCart
+    });
+  } catch (error) {
+    console.error('Error saving cart:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save cart'
+    });
+  }
+});
+
+// @desc    Save/sync equipment wishlist
+// @route   POST /api/equipment/wishlist
+// @access  Private
+router.post('/wishlist', protect, async (req, res) => {
+  try {
+    const { items } = req.body; // items: [equipmentId, ...]
+
+    if (!Array.isArray(items)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Items must be an array'
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Update wishlist with new items
+    user.equipmentWishlist = items.map(equipmentId => ({
+      equipmentId
+    }));
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Wishlist updated successfully',
+      data: user.equipmentWishlist
+    });
+  } catch (error) {
+    console.error('Error saving wishlist:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save wishlist'
+    });
+  }
+});
+
 module.exports = router;

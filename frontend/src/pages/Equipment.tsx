@@ -95,13 +95,15 @@ const loadFavoritesFromStorage = (userId: string | undefined): Set<string> => {
 
 const Equipment = () => {
   const { user } = useAuth();
-  const { getEffectiveRole } = usePreviewMode();
+  const { getEffectiveRole, getPreviewedUser, isPreviewMode } = usePreviewMode();
   const navigate = useNavigate();
   const { id: equipmentIdFromPath } = useParams<{ id?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const effectiveRole = getEffectiveRole();
-  const userId = user?._id || user?.id;
+  // Use previewed user's ID in preview mode, otherwise use authenticated user's ID
+  const previewedUser = getPreviewedUser();
+  const userId = isPreviewMode && previewedUser ? previewedUser.id : (user?._id || user?.id);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -153,18 +155,93 @@ const Equipment = () => {
     interestRate: 5.9,
   });
 
-  // Load cart and favorites when user changes
+  // Load cart and favorites from API (with localStorage fallback)
   useEffect(() => {
-    if (userId) {
-      setCartItems(loadCartFromStorage(userId));
-      setFavorites(loadFavoritesFromStorage(userId));
-    } else {
-      setCartItems([]);
-      setFavorites(new Set());
-    }
-    // Mark as initialized after loading (even if userId is undefined)
-    setIsInitialized(true);
-  }, [userId]);
+    const loadData = async () => {
+      if (userId) {
+        try {
+          // Try to fetch from API first (works in preview mode too)
+          const [cartRes, wishlistRes] = await Promise.all([
+            api.get('/equipment/cart').catch(() => null),
+            api.get('/equipment/wishlist').catch(() => null)
+          ]);
+
+          if (cartRes?.data?.success) {
+            // Convert API response to cart item format
+            const apiCart = cartRes.data.data.map((item: any) => ({
+              equipment: item.equipmentId,
+              quantity: item.quantity || 1
+            }));
+            setCartItems(apiCart);
+          } else {
+            // Fallback to localStorage if API fails
+            setCartItems(loadCartFromStorage(userId));
+          }
+
+          if (wishlistRes?.data?.success) {
+            // Convert API response to favorites set
+            const apiFavorites = new Set(
+              wishlistRes.data.data.map((item: any) =>
+                typeof item.equipmentId === 'string' ? item.equipmentId : item.equipmentId._id
+              )
+            );
+            setFavorites(apiFavorites);
+          } else {
+            // Fallback to localStorage if API fails
+            setFavorites(loadFavoritesFromStorage(userId));
+          }
+        } catch (error) {
+          console.error('Error loading cart/wishlist from API, using localStorage:', error);
+          // Fallback to localStorage
+          setCartItems(loadCartFromStorage(userId));
+          setFavorites(loadFavoritesFromStorage(userId));
+        }
+      } else {
+        setCartItems([]);
+        setFavorites(new Set());
+      }
+      // Mark as initialized after loading
+      setIsInitialized(true);
+    };
+
+    loadData();
+  }, [userId, isPreviewMode, previewedUser]);
+
+  // Sync cart and wishlist to API whenever they change (after initial load)
+  useEffect(() => {
+    if (!isInitialized || !user || isPreviewMode) return; // Don't sync in preview mode
+
+    const syncData = async () => {
+      try {
+        // Prepare cart data for API
+        const cartData = cartItems.map(item => ({
+          equipmentId: typeof item.equipment === 'string' ? item.equipment : item.equipment._id,
+          quantity: item.quantity
+        }));
+
+        // Prepare wishlist data for API
+        const wishlistData = Array.from(favorites);
+
+        // Sync cart
+        await api.post('/equipment/cart', { items: cartData }).catch(err => {
+          console.error('Error syncing cart:', err);
+        });
+
+        // Sync wishlist
+        await api.post('/equipment/wishlist', { items: wishlistData }).catch(err => {
+          console.error('Error syncing wishlist:', err);
+        });
+
+        // Also save to localStorage for offline support
+        localStorage.setItem(`equipment-cart-${user._id || user.id}`, JSON.stringify(cartData));
+        localStorage.setItem(`equipment-favorites-${user._id || user.id}`, JSON.stringify(wishlistData));
+      } catch (error) {
+        console.error('Error syncing cart/wishlist:', error);
+      }
+    };
+
+    syncData();
+  }, [cartItems, favorites, isInitialized, user, isPreviewMode]);
 
   // Handle view query parameter OR path parameter to auto-open equipment detail modal
   useEffect(() => {
