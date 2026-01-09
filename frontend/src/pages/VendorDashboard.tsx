@@ -169,7 +169,7 @@ const VendorDashboard = () => {
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                    Welcome, {user?.name || 'Partner'}!
+                    Welcome, {previewedUser?.name || user?.name || 'Partner'}!
                   </h1>
                   <p className="mt-1 text-lg text-primary-100">
                     Partner Portal Dashboard
