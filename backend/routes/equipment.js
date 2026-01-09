@@ -451,6 +451,70 @@ router.get('/vendor-inquiries', protect, authorize('vendor', 'admin'), handlePre
   }
 });
 
+// @desc    Get user's equipment cart
+// @route   GET /api/equipment/cart
+// @access  Private
+router.get('/cart', protect, handlePreviewMode, async (req, res) => {
+  try {
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
+
+    const user = await User.findById(targetUserId)
+      .populate('equipmentCart.equipmentId', 'name price image brand category');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user.equipmentCart || []
+    });
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch cart'
+    });
+  }
+});
+
+// @desc    Get user's equipment wishlist
+// @route   GET /api/equipment/wishlist
+// @access  Private
+router.get('/wishlist', protect, handlePreviewMode, async (req, res) => {
+  try {
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
+
+    const user = await User.findById(targetUserId)
+      .populate('equipmentWishlist.equipmentId', 'name price image brand category');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user.equipmentWishlist || []
+    });
+  } catch (error) {
+    console.error('Error fetching wishlist:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch wishlist'
+    });
+  }
+});
+
 // @desc    Get single equipment
 // @route   GET /api/equipment/:id
 // @access  Public
@@ -848,70 +912,6 @@ router.post('/:id/inquiry', protect, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error submitting inquiry'
-    });
-  }
-});
-
-// @desc    Get user's equipment cart
-// @route   GET /api/equipment/cart
-// @access  Private
-router.get('/cart', protect, handlePreviewMode, async (req, res) => {
-  try {
-    const targetUserId = req.previewMode.active
-      ? req.previewMode.previewUser._id
-      : req.user._id;
-
-    const user = await User.findById(targetUserId)
-      .populate('equipmentCart.equipmentId', 'name price image brand category');
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: user.equipmentCart || []
-    });
-  } catch (error) {
-    console.error('Error fetching cart:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch cart'
-    });
-  }
-});
-
-// @desc    Get user's equipment wishlist
-// @route   GET /api/equipment/wishlist
-// @access  Private
-router.get('/wishlist', protect, handlePreviewMode, async (req, res) => {
-  try {
-    const targetUserId = req.previewMode.active
-      ? req.previewMode.previewUser._id
-      : req.user._id;
-
-    const user = await User.findById(targetUserId)
-      .populate('equipmentWishlist.equipmentId', 'name price image brand category');
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: user.equipmentWishlist || []
-    });
-  } catch (error) {
-    console.error('Error fetching wishlist:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch wishlist'
     });
   }
 });
