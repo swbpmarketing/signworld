@@ -195,13 +195,15 @@ const Dashboard = () => {
               <h1 className="text-2xl sm:text-3xl font-bold text-white">
                 {isAdmin && !isPreviewMode
                   ? 'Admin Dashboard'
-                  : `Welcome back, ${previewedUser?.name || user?.name}!`}
+                  : isPreviewMode
+                  ? `Welcome, ${previewedUser?.name || 'User'}!`
+                  : `Welcome back, ${user?.name}!`}
               </h1>
               <p className="mt-2 text-lg text-white/80">
                 {isAdmin && !isPreviewMode
                   ? `Hello ${user?.name}! Here's your system overview.`
                   : isPreviewMode && previewedUser
-                  ? `Viewing as: ${previewedUser.role === 'owner' ? 'Owner' : 'Vendor'} • ${previewedUser.email}`
+                  ? `Previewing as: ${previewedUser.role === 'owner' ? 'Owner' : 'Vendor'} • ${previewedUser.email}`
                   : "Here's what's happening in your Sign Company network today."
                 }
               </p>
