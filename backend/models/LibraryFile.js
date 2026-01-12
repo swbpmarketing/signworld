@@ -30,6 +30,11 @@ const libraryFileSchema = new mongoose.Schema({
     type: String,
     default: 'other',
   },
+  folder: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Folder',
+    default: null, // null means file is in category root
+  },
   tags: [{
     type: String,
     trim: true,
@@ -102,7 +107,8 @@ libraryFileSchema.pre('save', function(next) {
 });
 
 // Performance indexes
-libraryFileSchema.index({ category: 1, status: 1, isActive: 1 }); // Compound index for filtering
+libraryFileSchema.index({ category: 1, folder: 1, status: 1, isActive: 1 }); // Compound index for filtering by category/folder
+libraryFileSchema.index({ folder: 1, deletedAt: 1 }); // For retrieving files in folders
 libraryFileSchema.index({ uploadedBy: 1 }); // For user's uploads
 libraryFileSchema.index({ createdAt: -1 }); // For sorting by date
 libraryFileSchema.index({ status: 1 }); // For pending approval queries

@@ -18,7 +18,8 @@ router.get('/', protect, async (req, res) => {
       search,
       sort = '-createdAt',
       fileType,
-      tags
+      tags,
+      folderId
     } = req.query;
 
     // Build query - exclude soft deleted files and only show approved files
@@ -42,6 +43,14 @@ router.get('/', protect, async (req, res) => {
     // Filter by category
     if (category && category !== 'all') {
       query.category = category;
+    }
+
+    // Filter by folder
+    if (folderId) {
+      query.folder = folderId;
+    } else if (category && category !== 'all') {
+      // If category is specified but no folderId, show only root-level files in that category
+      query.folder = null;
     }
 
     // Filter by file type
@@ -721,8 +730,8 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
       });
     }
 
-    const { title, description, category, tags } = req.body;
-    console.log('Upload metadata:', { title, description, category, tags });
+    const { title, description, category, tags, folderId, folderPath } = req.body;
+    console.log('Upload metadata:', { title, description, category, tags, folderId, folderPath });
 
     // Get system settings to check if library approval is required
     const settings = await SystemSettings.getSettings();
@@ -745,6 +754,34 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
       });
     }
 
+    // If folderPath is provided (for folder uploads), create folders as needed
+    let targetFolderId = folderId || null;
+    if (folderPath && folderPath.trim() !== '') {
+      const Folder = require('../models/Folder');
+      const pathParts = folderPath.split('/').filter(p => p.trim() !== '');
+      let currentParentId = null;
+
+      for (const folderName of pathParts) {
+        let folder = await Folder.findOne({
+          name: folderName,
+          category: category || 'other',
+          parentFolder: currentParentId,
+          deletedAt: null
+        });
+
+        if (!folder) {
+          folder = await Folder.create({
+            name: folderName,
+            category: category || 'other',
+            parentFolder: currentParentId,
+            createdBy: req.user._id
+          });
+        }
+        currentParentId = folder._id;
+      }
+      targetFolderId = currentParentId;
+    }
+
     // Create file record
     const fileData = {
       title: title || req.file.originalname,
@@ -754,6 +791,7 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
       fileType: req.file.mimetype,
       fileSize: req.file.size,
       category: category || 'other',
+      folder: targetFolderId,
       tags: tags ? tags.split(',').map(t => t.trim()) : [],
       uploadedBy: req.user._id,
       status

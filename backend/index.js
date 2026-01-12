@@ -343,6 +343,7 @@ app.use('/api/conventions', require('./routes/conventions'));
 app.use('/api/brags', require('./routes/brags'));
 app.use('/api/forum', require('./routes/forum'));
 app.use('/api/library', require('./routes/library'));
+app.use('/api/folders', require('./routes/folders'));
 app.use('/api/owners', require('./routes/owners'));
 app.use('/api/ratings', require('./routes/ratings'));
 app.use('/api/partners', require('./routes/partners'));

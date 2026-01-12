@@ -33,8 +33,13 @@ const fileFilter = (req, file, cb) => {
       cb(new Error('Only MP4, WebM, OGG, MOV, AVI, WMV, and MPEG video files are allowed'), false);
     }
   }
-  // Accept documents (PDF, DOC, DOCX, XLS, XLSX, PPT, etc.) and library files (images, docs, etc.)
-  else if (file.fieldname === 'documents' || file.fieldname === 'file') {
+  // Accept all file types for library uploads
+  else if (file.fieldname === 'file') {
+    // Allow all file types for library uploads
+    cb(null, true);
+  }
+  // Accept documents for other document uploads (legacy support)
+  else if (file.fieldname === 'documents') {
     const allowedMimes = [
       'application/pdf',
       'application/msword',

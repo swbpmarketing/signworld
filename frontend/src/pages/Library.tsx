@@ -73,6 +73,16 @@ interface Category {
   count: number;
 }
 
+interface Folder {
+  _id: string;
+  name: string;
+  category: string;
+  parentFolder: string | null;
+  children?: Folder[];
+  fileCount?: number;
+  subfolderCount?: number;
+}
+
 const categoryMeta: { [key: string]: { name: string; icon: string; color: string } } = {
   hr: { name: 'HR Documents', icon: 'users', color: 'blue' },
   marketing: { name: 'Marketing Materials', icon: 'megaphone', color: 'purple' },
@@ -106,6 +116,13 @@ const Library = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState('-createdAt');
 
+  // Folder navigation state
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [folderHierarchy, setFolderHierarchy] = useState<Folder[]>([]);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [showFolderPanel, setShowFolderPanel] = useState(true);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -123,7 +140,14 @@ const Library = () => {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [uploadMode, setUploadMode] = useState<'files' | 'folder'>('files'); // Toggle between file and folder upload
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+
+  // New Folder modal state
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [creatingFolder, setCreatingFolder] = useState(false);
 
   // Preview modal state
   const [previewFile, setPreviewFile] = useState<LibraryFile | null>(null);
@@ -141,6 +165,7 @@ const Library = () => {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (selectedCategory !== 'all') params.append('category', selectedCategory);
+      if (currentFolderId) params.append('folderId', currentFolderId);
       if (searchQuery) params.append('search', searchQuery);
       params.append('sort', sortBy);
       params.append('page', page.toString());
@@ -165,7 +190,7 @@ const Library = () => {
       console.error('Error fetching files:', err);
       setError('Failed to connect to server');
     }
-  }, [selectedCategory, searchQuery, sortBy]);
+  }, [selectedCategory, searchQuery, sortBy, currentFolderId]);
 
   // Fetch stats
   const fetchStats = async () => {
@@ -205,6 +230,25 @@ const Library = () => {
     }
   };
 
+  // Fetch folder hierarchy for current category
+  const fetchFolders = async (category: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/folders/hierarchy/${category}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setFolderHierarchy(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching folder hierarchy:', err);
+    }
+  };
+
   // Initial load
   useEffect(() => {
     const loadData = async () => {
@@ -218,8 +262,18 @@ const Library = () => {
   // Refetch when filters change - reset to page 1
   useEffect(() => {
     setCurrentPage(1);
+    setCurrentFolderId(null); // Reset to category root when category changes
     fetchFiles(1);
-  }, [selectedCategory, searchQuery, sortBy]);
+    if (selectedCategory !== 'all') {
+      fetchFolders(selectedCategory);
+    }
+  }, [selectedCategory, searchQuery, sortBy, fetchFiles]);
+
+  // Refetch files when folder changes
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchFiles(1);
+  }, [currentFolderId, fetchFiles]);
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
@@ -360,6 +414,112 @@ const Library = () => {
     setPreviewFile(null);
   };
 
+  // Toggle folder expansion
+  const toggleFolderExpansion = (folderId: string) => {
+    const newExpanded = new Set(expandedFolders);
+    if (newExpanded.has(folderId)) {
+      newExpanded.delete(folderId);
+    } else {
+      newExpanded.add(folderId);
+    }
+    setExpandedFolders(newExpanded);
+  };
+
+  // Handle folder click - navigate into folder
+  const handleFolderClick = (folderId: string) => {
+    setCurrentFolderId(folderId);
+  };
+
+  // Handle delete folder
+  const handleDeleteFolder = async (e: React.MouseEvent, folderId: string) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this folder?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/folders/${folderId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Folder deleted successfully');
+        fetchFolders(selectedCategory);
+        fetchFiles();
+      } else {
+        toast.error(data.error || 'Failed to delete folder');
+      }
+    } catch (err) {
+      console.error('Error deleting folder:', err);
+      toast.error('Failed to delete folder');
+    }
+  };
+
+  // Find folder by ID in hierarchy
+  const findFolderInHierarchy = (id: string, folders: Folder[]): Folder | null => {
+    for (const folder of folders) {
+      if (folder._id === id) return folder;
+      if (folder.children) {
+        const found = findFolderInHierarchy(id, folder.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  // Get current folder object for display
+  const currentFolder = currentFolderId ? findFolderInHierarchy(currentFolderId, folderHierarchy) : null;
+
+  // Render folder tree recursively
+  const renderFolderTree = (folders: Folder[], level: number = 0): JSX.Element[] => {
+    return folders.map((folder) => (
+      <div key={folder._id}>
+        <div
+          className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ${
+            currentFolderId === folder._id ? 'bg-primary-50 dark:bg-primary-900/20' : ''
+          }`}
+          style={{ marginLeft: `${level * 20}px` }}
+        >
+          <button
+            onClick={() => toggleFolderExpansion(folder._id)}
+            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+          >
+            <ChevronLeftIcon
+              className={`h-4 w-4 transition-transform ${
+                expandedFolders.has(folder._id) ? 'rotate-90' : ''
+              }`}
+            />
+          </button>
+          <button
+            onClick={() => handleFolderClick(folder._id)}
+            className="flex items-center gap-2 flex-1 min-w-0"
+          >
+            <FolderIcon className="h-5 w-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+              {folder.name}
+            </span>
+          </button>
+          {isAdmin && (
+            <button
+              onClick={(e) => handleDeleteFolder(e, folder._id)}
+              className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400 rounded"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        {expandedFolders.has(folder._id) && folder.children && folder.children.length > 0 && (
+          <div>{renderFolderTree(folder.children, level + 1)}</div>
+        )}
+      </div>
+    ));
+  };
+
   // Handle drag and drop
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -401,14 +561,25 @@ const Library = () => {
 
   const handleFileSelect = (files: FileList | null) => {
     const newFiles = Array.from(files || []);
-    const totalFiles = uploadFiles.length + newFiles.length;
 
-    if (totalFiles > 5) {
-      const available = 5 - uploadFiles.length;
-      toast.error(`Only ${available} more file(s) can be added (max 5 total)`);
-      setUploadFiles([...uploadFiles, ...newFiles.slice(0, available)]);
-    } else {
+    // Check if this is a folder upload by looking at the webkitRelativePath property
+    const isFolderUpload = newFiles.some(f => (f as any).webkitRelativePath);
+
+    if (isFolderUpload) {
+      // Folder uploads can have many files, just add them all
       setUploadFiles([...uploadFiles, ...newFiles]);
+      setUploadMode('folder');
+    } else {
+      // Regular file uploads limited to 5 files
+      const totalFiles = uploadFiles.length + newFiles.length;
+      if (totalFiles > 5) {
+        const available = 5 - uploadFiles.length;
+        toast.error(`Only ${available} more file(s) can be added (max 5 total)`);
+        setUploadFiles([...uploadFiles, ...newFiles.slice(0, available)]);
+      } else {
+        setUploadFiles([...uploadFiles, ...newFiles]);
+      }
+      setUploadMode('files');
     }
   };
 
@@ -439,6 +610,19 @@ const Library = () => {
         formData.append('description', uploadDescription);
         formData.append('category', finalCategory);
         formData.append('tags', uploadTags);
+
+        // For folder uploads, send the relative path to recreate folder structure
+        if (uploadMode === 'folder') {
+          const webkitPath = (file as any).webkitRelativePath;
+          if (webkitPath) {
+            // Extract folder path (everything except the filename)
+            const parts = webkitPath.split('/');
+            if (parts.length > 1) {
+              const folderPath = parts.slice(0, -1).join('/');
+              formData.append('folderPath', folderPath);
+            }
+          }
+        }
 
         try {
           const response = await fetch(`${API_URL}/library`, {
@@ -498,6 +682,47 @@ const Library = () => {
     } finally {
       setUploading(false);
       setUploadProgress({ current: 0, total: 0 });
+    }
+  };
+
+  // Handle create folder
+  const handleCreateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFolderName.trim()) {
+      toast.error('Folder name is required');
+      return;
+    }
+
+    setCreatingFolder(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/folders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: newFolderName.trim(),
+          category: selectedCategory === 'all' ? 'other' : selectedCategory
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`Folder "${newFolderName}" created successfully`);
+        setShowNewFolderModal(false);
+        setNewFolderName('');
+        // Refresh files to show new folder
+        fetchFiles();
+      } else {
+        toast.error(data.error || 'Failed to create folder');
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to create folder';
+      toast.error(errorMsg);
+    } finally {
+      setCreatingFolder(false);
     }
   };
 
@@ -602,13 +827,22 @@ const Library = () => {
               </p>
             </div>
             {canUpload && (
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                Upload Files
-              </button>
+              <div className="mt-4 sm:mt-0 flex gap-3">
+                <button
+                  onClick={() => setShowNewFolderModal(true)}
+                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+                >
+                  <FolderIcon className="h-5 w-5 mr-2" />
+                  New Folder
+                </button>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Upload Files
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -761,14 +995,57 @@ const Library = () => {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className={`grid gap-6 ${
+        showFolderPanel && selectedCategory !== 'all' ? 'grid-cols-1 lg:grid-cols-4' : 'grid-cols-1 lg:grid-cols-3'
+      }`}>
+        {/* Folder Panel */}
+        {showFolderPanel && selectedCategory !== 'all' && folderHierarchy.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-fit">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                <FolderIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-500" />
+                Folders
+              </h3>
+              <button
+                onClick={() => setShowFolderPanel(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                title="Hide folders"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
+            <div className="p-4 space-y-1 max-h-[calc(100vh-300px)] overflow-y-auto">
+              {/* Root level button */}
+              <button
+                onClick={() => setCurrentFolderId(null)}
+                className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  currentFolderId === null
+                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <HomeIcon className="h-5 w-5 flex-shrink-0" />
+                <span className="text-sm font-medium">Root</span>
+              </button>
+              {/* Folder tree */}
+              <div className="mt-2">
+                {renderFolderTree(folderHierarchy)}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Files Section */}
-        <div className="lg:col-span-2">
+        <div className={showFolderPanel && selectedCategory !== 'all' && folderHierarchy.length > 0 ? 'lg:col-span-3' : 'lg:col-span-2'}>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
                 <FolderSolidIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-500" />
-                {selectedCategory === 'all' ? 'All Files' : categoryMeta[selectedCategory]?.name || 'Files'}
+                {selectedCategory === 'all'
+                  ? 'All Files'
+                  : currentFolder
+                    ? `${categoryMeta[selectedCategory]?.name || 'Files'} / ${currentFolder.name}`
+                    : categoryMeta[selectedCategory]?.name || 'Files'}
                 <span className="ml-2 text-sm font-normal text-gray-500">({files.length})</span>
               </h3>
             </div>
@@ -1151,13 +1428,31 @@ const Library = () => {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Files (up to 5 files per upload)
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {uploadMode === 'folder' ? 'Folder' : 'Files (up to 5 files per upload)'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setUploadMode(uploadMode === 'files' ? 'folder' : 'files')}
+                    className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+                  >
+                    {uploadMode === 'files' ? 'Upload Folder Instead' : 'Upload Files Instead'}
+                  </button>
+                </div>
                 {/* Hidden file input - always in DOM */}
                 <input
                   ref={fileInputRef}
                   type="file"
+                  multiple
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                  className="hidden"
+                />
+                {/* Hidden folder input - always in DOM */}
+                <input
+                  ref={folderInputRef}
+                  type="file"
+                  webkitdirectory=""
                   multiple
                   onChange={(e) => handleFileSelect(e.target.files)}
                   className="hidden"
@@ -1168,7 +1463,13 @@ const Library = () => {
                     onDragLeave={handleDragLeave}
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => {
+                      if (uploadMode === 'folder') {
+                        folderInputRef.current?.click();
+                      } else {
+                        fileInputRef.current?.click();
+                      }
+                    }}
                     className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 cursor-pointer ${
                       dragActive
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
@@ -1252,10 +1553,16 @@ const Library = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => {
+                        if (uploadMode === 'folder') {
+                          folderInputRef.current?.click();
+                        } else {
+                          fileInputRef.current?.click();
+                        }
+                      }}
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
-                      Add more files
+                      Add more {uploadMode === 'folder' ? 'files to this folder' : 'files'}
                     </button>
                   </div>
                 )}
@@ -1367,6 +1674,70 @@ const Library = () => {
                   className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {uploading ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* New Folder Modal */}
+      {showNewFolderModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Create New Folder</h3>
+              <button
+                onClick={() => {
+                  setShowNewFolderModal(false);
+                  setNewFolderName('');
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateFolder} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Category
+                </label>
+                <div className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
+                  <p className="text-sm text-gray-900 dark:text-gray-100">
+                    {selectedCategory === 'all' ? 'Other' : (categoryMeta[selectedCategory]?.name || selectedCategory)}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Folder Name
+                </label>
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Enter folder name"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNewFolderModal(false);
+                    setNewFolderName('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingFolder || !newFolderName.trim()}
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {creatingFolder ? 'Creating...' : 'Create'}
                 </button>
               </div>
             </form>
