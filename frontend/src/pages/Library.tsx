@@ -113,10 +113,11 @@ const Library = () => {
 
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadDescription, setUploadDescription] = useState('');
   const [uploadCategory, setUploadCategory] = useState('other');
+  const [customCategory, setCustomCategory] = useState('');
   const [uploadTags, setUploadTags] = useState('');
   const [uploading, setUploading] = useState(false);
 
@@ -358,49 +359,72 @@ const Library = () => {
   // Handle upload
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadFile) return;
+    if (uploadFiles.length === 0) return;
 
     setUploading(true);
     try {
       const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('file', uploadFile);
-      formData.append('title', uploadTitle || uploadFile.name);
-      formData.append('description', uploadDescription);
-      formData.append('category', uploadCategory);
-      formData.append('tags', uploadTags);
+      const finalCategory = uploadCategory === 'other' && customCategory ? customCategory : uploadCategory;
 
-      const response = await fetch(`${API_URL}/library`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
+      let successCount = 0;
+      let failureCount = 0;
 
-      const data = await response.json();
-      if (data.success) {
+      // Upload each file individually
+      for (const file of uploadFiles) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('title', uploadTitle || file.name);
+        formData.append('description', uploadDescription);
+        formData.append('category', finalCategory);
+        formData.append('tags', uploadTags);
+
+        try {
+          const response = await fetch(`${API_URL}/library`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+
+          const data = await response.json();
+          if (data.success) {
+            successCount++;
+          } else {
+            failureCount++;
+          }
+        } catch (err) {
+          failureCount++;
+        }
+      }
+
+      if (successCount > 0) {
         setShowUploadModal(false);
-        setUploadFile(null);
+        setUploadFiles([]);
         setUploadTitle('');
         setUploadDescription('');
         setUploadCategory('other');
+        setCustomCategory('');
         setUploadTags('');
-        // Show appropriate message based on user role
+
+        const message = uploadFiles.length === 1
+          ? 'File uploaded successfully!'
+          : `${successCount} file(s) uploaded${failureCount > 0 ? `, ${failureCount} failed` : ''}`;
+
         if (isOwner) {
-          toast.success('File uploaded! It will be visible after admin approval.');
+          toast.success(message + ' Files will be visible after admin approval.');
         } else {
-          toast.success('File uploaded successfully!');
+          toast.success(message);
         }
         fetchFiles();
         fetchStats();
         fetchCategories();
       } else {
-        toast.error(data.error || 'Failed to upload file');
+        toast.error('Failed to upload files');
       }
     } catch (err) {
-      console.error('Error uploading file:', err);
-      toast.error('Failed to upload file');
+      console.error('Error uploading files:', err);
+      toast.error('Failed to upload files');
     } finally {
       setUploading(false);
     }
@@ -534,8 +558,11 @@ const Library = () => {
             All Files
             <span className="ml-2 text-xs opacity-75">({stats?.overview?.totalFiles || 0})</span>
           </button>
+          {/* Built-in categories with files */}
           {Object.entries(categoryMeta).map(([key, meta]) => {
             const cat = categories.find(c => c.id === key);
+            // Only show if category has files
+            if (!cat) return null;
             return (
               <button
                 key={key}
@@ -548,7 +575,26 @@ const Library = () => {
               >
                 <FolderIcon className="h-4 w-4 mr-2" />
                 {meta.name}
-                {cat && <span className="ml-2 text-xs opacity-75">({cat.count})</span>}
+                <span className="ml-2 text-xs opacity-75">({cat.count})</span>
+              </button>
+            );
+          })}
+          {/* Custom categories (not in categoryMeta) */}
+          {categories.map((cat) => {
+            if (categoryMeta[cat.id]) return null; // Skip if already shown above
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`inline-flex items-center px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                  selectedCategory === cat.id
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <FolderIcon className="h-4 w-4 mr-2" />
+                {cat.name}
+                <span className="ml-2 text-xs opacity-75">({cat.count})</span>
               </button>
             );
           })}
@@ -1011,11 +1057,14 @@ const Library = () => {
       {/* Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload File</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload Files</h3>
               <button
-                onClick={() => setShowUploadModal(false)}
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadFiles([]);
+                }}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 <XMarkIcon className="h-5 w-5 text-gray-500" />
@@ -1031,36 +1080,61 @@ const Library = () => {
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  File
+                  Files (or drag folder)
                 </label>
-                <input
-                  type="file"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  required
-                />
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(e) => setUploadFiles(Array.from(e.target.files || []))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    required
+                  />
+                  <input
+                    type="file"
+                    onChange={(e) => setUploadFiles(Array.from(e.target.files || []))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    title="Select a folder to upload all files inside"
+                    {...{ webkitdirectory: true } as any}
+                  />
+                </div>
+                {uploadFiles.length > 0 && (
+                  <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg max-h-40 overflow-y-auto">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {uploadFiles.length} file(s) selected
+                    </p>
+                    <ul className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                      {uploadFiles.slice(0, 5).map((file, idx) => (
+                        <li key={idx} className="truncate">• {file.name}</li>
+                      ))}
+                      {uploadFiles.length > 5 && (
+                        <li>• +{uploadFiles.length - 5} more file(s)</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Title
+                  Title (optional)
                 </label>
                 <input
                   type="text"
                   value={uploadTitle}
                   onChange={(e) => setUploadTitle(e.target.value)}
-                  placeholder="Enter file title"
+                  placeholder="Leave empty to use file names"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Description
+                  Description (optional)
                 </label>
                 <textarea
                   value={uploadDescription}
                   onChange={(e) => setUploadDescription(e.target.value)}
                   placeholder="Enter description"
-                  rows={3}
+                  rows={2}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
@@ -1070,7 +1144,12 @@ const Library = () => {
                 </label>
                 <select
                   value={uploadCategory}
-                  onChange={(e) => setUploadCategory(e.target.value)}
+                  onChange={(e) => {
+                    setUploadCategory(e.target.value);
+                    if (e.target.value !== 'other') {
+                      setCustomCategory('');
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 >
                   {Object.entries(categoryMeta).map(([key, meta]) => (
@@ -1078,9 +1157,23 @@ const Library = () => {
                   ))}
                 </select>
               </div>
+              {uploadCategory === 'other' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Custom Category Name
+                  </label>
+                  <input
+                    type="text"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    placeholder="e.g., Client Resources, Special Projects"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tags (comma-separated)
+                  Tags (comma-separated, optional)
                 </label>
                 <input
                   type="text"
@@ -1093,14 +1186,17 @@ const Library = () => {
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowUploadModal(false)}
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setUploadFiles([]);
+                  }}
                   className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={uploading || !uploadFile}
+                  disabled={uploading || uploadFiles.length === 0}
                   className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {uploading ? 'Uploading...' : 'Upload'}

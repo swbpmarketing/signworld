@@ -28,7 +28,6 @@ const libraryFileSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['hr', 'marketing', 'training', 'operations', 'forms', 'fonts', 'artwork', 'other'],
     default: 'other',
   },
   tags: [{
