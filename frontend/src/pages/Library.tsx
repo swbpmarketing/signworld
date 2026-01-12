@@ -120,6 +120,7 @@ const Library = () => {
   const [customCategory, setCustomCategory] = useState('');
   const [uploadTags, setUploadTags] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   // Preview modal state
   const [previewFile, setPreviewFile] = useState<LibraryFile | null>(null);
@@ -354,6 +355,51 @@ const Library = () => {
   const closePreview = () => {
     setShowPreviewModal(false);
     setPreviewFile(null);
+  };
+
+  // Handle drag and drop
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDropFiles = (files: File[]) => {
+    if (files.length > 5) {
+      toast.error('Maximum 5 files per upload');
+      setUploadFiles(files.slice(0, 5));
+    } else {
+      setUploadFiles(files);
+    }
+    setDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = Array.from(e.dataTransfer.files || []);
+    handleDropFiles(files);
+  };
+
+  const handleFileSelect = (files: FileList | null) => {
+    const fileArray = Array.from(files || []);
+    if (fileArray.length > 5) {
+      toast.error('Maximum 5 files per upload');
+      setUploadFiles(fileArray.slice(0, 5));
+    } else {
+      setUploadFiles(fileArray);
+    }
   };
 
   // Handle upload
@@ -1082,74 +1128,81 @@ const Library = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Files (up to 5 files per upload)
                 </label>
-                <div className="space-y-2">
-                  <input
-                    type="file"
-                    multiple
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      if (files.length > 5) {
-                        toast.error('Maximum 5 files per upload');
-                        setUploadFiles(files.slice(0, 5));
-                      } else {
-                        setUploadFiles(files);
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    required
-                  />
-                  <input
-                    type="file"
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      if (files.length > 5) {
-                        toast.error('Maximum 5 files per upload');
-                        setUploadFiles(files.slice(0, 5));
-                      } else {
-                        setUploadFiles(files);
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    title="Select a folder (limited to first 5 files)"
-                    {...{ webkitdirectory: true } as any}
-                  />
-                </div>
-                {uploadFiles.length > 0 && (
-                  <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {uploadFiles.length} / 5 file(s) selected
+                {uploadFiles.length === 0 ? (
+                  <div
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 cursor-pointer ${
+                      dragActive
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                        : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 hover:border-gray-400 dark:hover:border-gray-500'
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => handleFileSelect(e.target.files)}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      required
+                    />
+                    <div className="flex flex-col items-center justify-center pointer-events-none">
+                      <PhotoIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-3" />
+                      <p className="text-sm font-medium text-primary-600 dark:text-primary-400 mb-1">
+                        Click to upload or drag and drop
                       </p>
-                      {uploadFiles.length > 0 && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        PNG, JPG, PDF, DOC up to 10MB (max 5 files)
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {uploadFiles.length} / 5 file(s) selected
+                        </p>
                         <button
                           type="button"
                           onClick={() => setUploadFiles([])}
-                          className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline font-medium"
                         >
                           Clear all
                         </button>
-                      )}
-                    </div>
-                    <ul className="space-y-2 max-h-48 overflow-y-auto">
-                      {uploadFiles.map((file, idx) => (
-                        <li
-                          key={idx}
-                          className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-600 rounded border border-gray-200 dark:border-gray-500"
-                        >
-                          <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1">
-                            {file.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setUploadFiles(uploadFiles.filter((_, i) => i !== idx))}
-                            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 flex-shrink-0"
-                            title="Remove file"
+                      </div>
+                      <ul className="space-y-2 max-h-48 overflow-y-auto">
+                        {uploadFiles.map((file, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-600 rounded border border-gray-200 dark:border-gray-500"
                           >
-                            <XMarkIcon className="h-4 w-4" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <DocumentIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              <span className="text-xs text-gray-600 dark:text-gray-300 truncate">
+                                {file.name}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setUploadFiles(uploadFiles.filter((_, i) => i !== idx))}
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 flex-shrink-0"
+                              title="Remove file"
+                            >
+                              <XMarkIcon className="h-4 w-4" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      Add more files
+                    </button>
                   </div>
                 )}
               </div>
