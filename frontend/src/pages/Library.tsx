@@ -1080,36 +1080,75 @@ const Library = () => {
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Files (or drag folder)
+                  Files (up to 5 files per upload)
                 </label>
                 <div className="space-y-2">
                   <input
                     type="file"
                     multiple
-                    onChange={(e) => setUploadFiles(Array.from(e.target.files || []))}
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 5) {
+                        toast.error('Maximum 5 files per upload');
+                        setUploadFiles(files.slice(0, 5));
+                      } else {
+                        setUploadFiles(files);
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     required
                   />
                   <input
                     type="file"
-                    onChange={(e) => setUploadFiles(Array.from(e.target.files || []))}
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 5) {
+                        toast.error('Maximum 5 files per upload');
+                        setUploadFiles(files.slice(0, 5));
+                      } else {
+                        setUploadFiles(files);
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    title="Select a folder to upload all files inside"
+                    title="Select a folder (limited to first 5 files)"
                     {...{ webkitdirectory: true } as any}
                   />
                 </div>
                 {uploadFiles.length > 0 && (
-                  <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg max-h-40 overflow-y-auto">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {uploadFiles.length} file(s) selected
-                    </p>
-                    <ul className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                      {uploadFiles.slice(0, 5).map((file, idx) => (
-                        <li key={idx} className="truncate">• {file.name}</li>
-                      ))}
-                      {uploadFiles.length > 5 && (
-                        <li>• +{uploadFiles.length - 5} more file(s)</li>
+                  <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {uploadFiles.length} / 5 file(s) selected
+                      </p>
+                      {uploadFiles.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setUploadFiles([])}
+                          className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                        >
+                          Clear all
+                        </button>
                       )}
+                    </div>
+                    <ul className="space-y-2 max-h-48 overflow-y-auto">
+                      {uploadFiles.map((file, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-600 rounded border border-gray-200 dark:border-gray-500"
+                        >
+                          <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1">
+                            {file.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setUploadFiles(uploadFiles.filter((_, i) => i !== idx))}
+                            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 flex-shrink-0"
+                            title="Remove file"
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 )}
