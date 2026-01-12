@@ -1307,6 +1307,9 @@ const Library = () => {
                     );
                   })}
 
+                  {/* Other option - always available for custom categories */}
+                  <option value="other">Other</option>
+
                   {/* Custom categories (not in categoryMeta) - only show if they have files */}
                   {categories.map((cat) => {
                     // Only show if it's not a built-in category
