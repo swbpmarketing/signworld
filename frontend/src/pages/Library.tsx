@@ -633,7 +633,7 @@ const Library = () => {
           {Object.entries(categoryMeta).map(([key, meta]) => {
             const cat = categories.find(c => c.id === key);
             // Only show if category has files
-            if (!cat) return null;
+            if (!cat || cat.count === 0) return null;
             return (
               <button
                 key={key}
@@ -653,6 +653,7 @@ const Library = () => {
           {/* Custom categories (not in categoryMeta) */}
           {categories.map((cat) => {
             if (categoryMeta[cat.id]) return null; // Skip if already shown above
+            if (cat.count === 0) return null; // Hide categories with no files
             return (
               <button
                 key={cat.id}

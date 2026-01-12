@@ -555,7 +555,7 @@ router.get('/stats', protect, async (req, res) => {
 
     // Get count by category
     const categoryStats = await LibraryFile.aggregate([
-      { $match: { isActive: true } },
+      { $match: { isActive: true, deletedAt: null } },
       {
         $group: {
           _id: '$category',
@@ -568,7 +568,7 @@ router.get('/stats', protect, async (req, res) => {
 
     // Get count by file type
     const typeStats = await LibraryFile.aggregate([
-      { $match: { isActive: true } },
+      { $match: { isActive: true, deletedAt: null } },
       {
         $group: {
           _id: {
@@ -603,7 +603,7 @@ router.get('/stats', protect, async (req, res) => {
     ]);
 
     // Get recent files - use .lean() for better performance
-    const recentFiles = await LibraryFile.find({ isActive: true })
+    const recentFiles = await LibraryFile.find({ isActive: true, deletedAt: null })
       .sort('-createdAt')
       .limit(5)
       .select('title fileName fileType fileSize createdAt')
@@ -633,7 +633,7 @@ router.get('/stats', protect, async (req, res) => {
 router.get('/categories', protect, async (req, res) => {
   try {
     const categories = await LibraryFile.aggregate([
-      { $match: { isActive: true } },
+      { $match: { isActive: true, deletedAt: null } },
       {
         $group: {
           _id: '$category',
