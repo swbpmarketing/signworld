@@ -1298,15 +1298,21 @@ const Library = () => {
                   }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 >
-                  {/* Built-in categories */}
-                  {Object.entries(categoryMeta).map(([key, meta]) => (
-                    <option key={key} value={key}>{meta.name}</option>
-                  ))}
+                  {/* Built-in categories - only show if they have files */}
+                  {Object.entries(categoryMeta).map(([key, meta]) => {
+                    const cat = categories.find(c => c.id === key);
+                    if (!cat || cat.count === 0) return null;
+                    return (
+                      <option key={key} value={key}>{meta.name}</option>
+                    );
+                  })}
 
-                  {/* Custom categories (not in categoryMeta) */}
+                  {/* Custom categories (not in categoryMeta) - only show if they have files */}
                   {categories.map((cat) => {
                     // Only show if it's not a built-in category
                     if (categoryMeta[cat.id]) return null;
+                    // Hide categories with no files
+                    if (cat.count === 0) return null;
                     return (
                       <option key={cat.id} value={cat.id}>
                         {cat.name}
