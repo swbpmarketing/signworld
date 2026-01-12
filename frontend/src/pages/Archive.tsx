@@ -67,7 +67,8 @@ const Archive = () => {
   const { user } = useAuth();
   const { getEffectiveRole } = usePreviewMode();
   const effectiveRole = getEffectiveRole();
-  const isAdmin = effectiveRole === 'admin';
+  // Check actual user role for admin-only features (not preview role)
+  const isAdmin = user?.role === 'admin';
 
   // State
   const [files, setFiles] = useState<LibraryFile[]>([]);

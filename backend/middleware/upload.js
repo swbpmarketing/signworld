@@ -8,7 +8,7 @@ const storage = multer.memoryStorage();
 // File filter for validation
 const fileFilter = (req, file, cb) => {
   // Accept images
-  if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'image' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail' || file.fieldname === 'file') {
+  if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'image' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail') {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
@@ -33,21 +33,29 @@ const fileFilter = (req, file, cb) => {
       cb(new Error('Only MP4, WebM, OGG, MOV, AVI, WMV, and MPEG video files are allowed'), false);
     }
   }
-  // Accept documents (PDF, DOC, DOCX, XLS, XLSX, etc.)
-  else if (file.fieldname === 'documents') {
+  // Accept documents (PDF, DOC, DOCX, XLS, XLSX, PPT, etc.) and library files (images, docs, etc.)
+  else if (file.fieldname === 'documents' || file.fieldname === 'file') {
     const allowedMimes = [
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/plain'
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain',
+      'text/csv',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/svg+xml'
     ];
 
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF, DOC, DOCX, XLS, XLSX, and TXT files are allowed for documents'), false);
+      cb(new Error('File type not allowed. Supported types: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, CSV, JPEG, PNG, GIF, WebP, SVG'), false);
     }
   }
   else {
@@ -60,7 +68,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB max file size for non-video files
+    fileSize: 100 * 1024 * 1024 // 100MB max file size for non-video files
   }
 });
 
@@ -80,6 +88,7 @@ const uploadVideo = multer({
 const uploadFilesToS3 = async (req, res, next) => {
   try {
     console.log('uploadFilesToS3 middleware called');
+    console.log('Request URL:', req.originalUrl, 'Path:', req.path);
     console.log('req.file:', req.file ? { fieldname: req.file.fieldname, originalname: req.file.originalname, mimetype: req.file.mimetype, size: req.file.size } : 'none');
     console.log('req.files:', req.files ? 'present' : 'none');
 
@@ -93,11 +102,21 @@ const uploadFilesToS3 = async (req, res, next) => {
 
     // Upload each file to S3
     const uploadPromises = files.map(async (file) => {
-      // Determine folder based on field name
+      // Determine folder based on field name and request URL
       let folder = 'other';
+      const url = req.originalUrl || req.baseUrl || '';
+      const path_str = req.path || '';
+      const isLibraryRoute = url.includes('/library') || path_str.includes('/library');
+
+      console.log('Folder detection - URL:', url, 'Path:', path_str, 'isLibraryRoute:', isLibraryRoute, 'fieldname:', file.fieldname);
+
       if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'image' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail') {
         folder = 'images';
+      } else if (file.fieldname === 'file' && isLibraryRoute) {
+        // Library file uploads
+        folder = 'library';
       } else if (file.fieldname === 'file') {
+        // Profile photo uploads (other 'file' fieldname usage)
         folder = 'profile-photos';
       } else if (file.fieldname === 'documents') {
         folder = 'documents';

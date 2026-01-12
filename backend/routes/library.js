@@ -709,7 +709,12 @@ router.get('/:id', protect, async (req, res) => {
 // @access  Private (Admin and Owner - Owner uploads go to pending based on settings)
 router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), async (req, res) => {
   try {
+    console.log('Library upload route called');
+    console.log('User:', req.user._id, req.user.role);
+    console.log('File:', req.file ? { name: req.file.originalname, size: req.file.size, type: req.file.mimetype, s3Url: req.file.s3Url } : 'none');
+
     if (!req.file) {
+      console.error('No file provided in request');
       return res.status(400).json({
         success: false,
         error: 'Please upload a file'
@@ -717,6 +722,7 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
     }
 
     const { title, description, category, tags } = req.body;
+    console.log('Upload metadata:', { title, description, category, tags });
 
     // Get system settings to check if library approval is required
     const settings = await SystemSettings.getSettings();
@@ -728,6 +734,15 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
     let status = 'approved';
     if (!isAdmin && settings.requireLibraryApproval) {
       status = 'pending'; // Requires admin approval
+    }
+
+    // Validate S3 URL exists
+    if (!req.file.s3Url && !req.file.location) {
+      console.error('S3 URL missing:', { s3Url: req.file.s3Url, location: req.file.location });
+      return res.status(400).json({
+        success: false,
+        error: 'File upload to storage failed. Please try again.'
+      });
     }
 
     // Create file record
@@ -744,7 +759,9 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
       status
     };
 
+    console.log('Creating library file record:', fileData);
     const libraryFile = await LibraryFile.create(fileData);
+    console.log('Library file created:', libraryFile._id);
 
     res.status(201).json({
       success: true,
@@ -752,10 +769,12 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
       message: status === 'approved' ? 'File uploaded successfully' : 'File uploaded and pending admin approval'
     });
   } catch (error) {
-    console.error('Error uploading file:', error);
+    console.error('Error uploading file:', error.message);
+    console.error('Stack:', error.stack);
     res.status(500).json({
       success: false,
-      error: 'Server error uploading file'
+      error: error.message || 'Server error uploading file',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -88,7 +88,8 @@ const Library = () => {
   const { user } = useAuth();
   const { getEffectiveRole } = usePreviewMode();
   const effectiveRole = getEffectiveRole();
-  const isAdmin = effectiveRole === 'admin';
+  // Check actual user role for admin-only features (not preview role)
+  const isAdmin = user?.role === 'admin';
   const isOwner = effectiveRole === 'owner';
   const canUpload = isAdmin || isOwner;
 
@@ -121,6 +122,8 @@ const Library = () => {
   const [uploadTags, setUploadTags] = useState('');
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Preview modal state
   const [previewFile, setPreviewFile] = useState<LibraryFile | null>(null);
@@ -376,11 +379,15 @@ const Library = () => {
   };
 
   const handleDropFiles = (files: File[]) => {
-    if (files.length > 5) {
-      toast.error('Maximum 5 files per upload');
-      setUploadFiles(files.slice(0, 5));
+    const newFiles = files;
+    const totalFiles = uploadFiles.length + newFiles.length;
+
+    if (totalFiles > 5) {
+      const available = 5 - uploadFiles.length;
+      toast.error(`Only ${available} more file(s) can be added (max 5 total)`);
+      setUploadFiles([...uploadFiles, ...newFiles.slice(0, available)]);
     } else {
-      setUploadFiles(files);
+      setUploadFiles([...uploadFiles, ...newFiles]);
     }
     setDragActive(false);
   };
@@ -393,12 +400,15 @@ const Library = () => {
   };
 
   const handleFileSelect = (files: FileList | null) => {
-    const fileArray = Array.from(files || []);
-    if (fileArray.length > 5) {
-      toast.error('Maximum 5 files per upload');
-      setUploadFiles(fileArray.slice(0, 5));
+    const newFiles = Array.from(files || []);
+    const totalFiles = uploadFiles.length + newFiles.length;
+
+    if (totalFiles > 5) {
+      const available = 5 - uploadFiles.length;
+      toast.error(`Only ${available} more file(s) can be added (max 5 total)`);
+      setUploadFiles([...uploadFiles, ...newFiles.slice(0, available)]);
     } else {
-      setUploadFiles(fileArray);
+      setUploadFiles([...uploadFiles, ...newFiles]);
     }
   };
 
@@ -408,6 +418,7 @@ const Library = () => {
     if (uploadFiles.length === 0) return;
 
     setUploading(true);
+    setUploadProgress({ current: 0, total: uploadFiles.length });
     try {
       const token = localStorage.getItem('token');
       const finalCategory = uploadCategory === 'other' && customCategory ? customCategory : uploadCategory;
@@ -416,7 +427,12 @@ const Library = () => {
       let failureCount = 0;
 
       // Upload each file individually
-      for (const file of uploadFiles) {
+      for (let index = 0; index < uploadFiles.length; index++) {
+        const file = uploadFiles[index];
+
+        // Update progress to show current file being uploaded
+        setUploadProgress({ current: index + 1, total: uploadFiles.length });
+
         const formData = new FormData();
         formData.append('file', file);
         formData.append('title', uploadTitle || file.name);
@@ -438,9 +454,14 @@ const Library = () => {
             successCount++;
           } else {
             failureCount++;
+            // Show error message for this file
+            const errorMsg = data.error || 'Failed to upload file';
+            toast.error(`${file.name}: ${errorMsg}`);
           }
         } catch (err) {
           failureCount++;
+          const errorMsg = err instanceof Error ? err.message : 'Failed to upload file';
+          toast.error(`${file.name}: ${errorMsg}`);
         }
       }
 
@@ -452,6 +473,7 @@ const Library = () => {
         setUploadCategory('other');
         setCustomCategory('');
         setUploadTags('');
+        setUploadProgress({ current: 0, total: 0 });
 
         const message = uploadFiles.length === 1
           ? 'File uploaded successfully!'
@@ -466,13 +488,16 @@ const Library = () => {
         fetchStats();
         fetchCategories();
       } else {
-        toast.error('Failed to upload files');
+        const errorMsg = failureCount === 1 ? '1 file failed to upload' : `${failureCount} files failed to upload`;
+        toast.error(errorMsg);
       }
     } catch (err) {
       console.error('Error uploading files:', err);
-      toast.error('Failed to upload files');
+      const errorMsg = err instanceof Error ? err.message : 'Failed to upload files';
+      toast.error(errorMsg);
     } finally {
       setUploading(false);
+      setUploadProgress({ current: 0, total: 0 });
     }
   };
 
@@ -1128,34 +1153,62 @@ const Library = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Files (up to 5 files per upload)
                 </label>
+                {/* Hidden file input - always in DOM */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                  className="hidden"
+                />
                 {uploadFiles.length === 0 ? (
                   <div
                     onDragEnter={handleDragEnter}
                     onDragLeave={handleDragLeave}
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
                     className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 cursor-pointer ${
                       dragActive
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
                         : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 hover:border-gray-400 dark:hover:border-gray-500'
                     }`}
                   >
-                    <input
-                      type="file"
-                      multiple
-                      onChange={(e) => handleFileSelect(e.target.files)}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      required
-                    />
                     <div className="flex flex-col items-center justify-center pointer-events-none">
                       <PhotoIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-3" />
                       <p className="text-sm font-medium text-primary-600 dark:text-primary-400 mb-1">
                         Click to upload or drag and drop
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        PNG, JPG, PDF, DOC up to 10MB (max 5 files)
+                        PNG, JPG, PDF, DOC up to 100MB (max 5 files)
                       </p>
                     </div>
+                  </div>
+                ) : uploading && uploadProgress.total > 0 ? (
+                  <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Uploading file {uploadProgress.current} of {uploadProgress.total}
+                        </p>
+                        <span className="text-xs font-medium text-primary-600 dark:text-primary-400">
+                          {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary-600 dark:bg-primary-500 transition-all duration-300"
+                          style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    {uploadFiles[uploadProgress.current - 1] && (
+                      <div className="text-center">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                          {uploadFiles[uploadProgress.current - 1].name}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -1198,7 +1251,7 @@ const Library = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
+                      onClick={() => fileInputRef.current?.click()}
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       Add more files
@@ -1244,9 +1297,21 @@ const Library = () => {
                   }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 >
+                  {/* Built-in categories */}
                   {Object.entries(categoryMeta).map(([key, meta]) => (
                     <option key={key} value={key}>{meta.name}</option>
                   ))}
+
+                  {/* Custom categories (not in categoryMeta) */}
+                  {categories.map((cat) => {
+                    // Only show if it's not a built-in category
+                    if (categoryMeta[cat.id]) return null;
+                    return (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               {uploadCategory === 'other' && (
