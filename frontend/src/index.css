@@ -11,6 +11,16 @@
 }
 
 @layer base {
+  :root {
+    --font-scale: 1;
+    --icon-color: #6366f1;
+    --icon-hover-color: #4f46e5; /* Default: darker shade for light mode */
+  }
+
+  .dark {
+    --icon-hover-color: #818cf8; /* Lighter shade for dark mode */
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -19,6 +29,36 @@
   body {
     @apply bg-gray-100 text-gray-900;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: calc(1rem * var(--font-scale));
+  }
+
+  /**
+   * Icon theming
+   * - Default: original icon rendering (no forced fill/stroke)
+   * - When .icon-theme-custom is on <html>, use CSS variables for color & hover
+   */
+
+  /* Base icon behavior: only animate color, let icons control fill/stroke themselves */
+  svg {
+    transition: color 0.2s ease;
+  }
+
+  /* Custom icon theming – only active when html has icon-theme-custom */
+  html.icon-theme-custom svg {
+    color: var(--icon-color);
+  }
+
+  /* Sidebar icons should always follow the custom icon color when enabled */
+  html.icon-theme-custom .sidebar-icon {
+    color: var(--icon-color) !important;
+  }
+
+  /* Hover state under custom theming */
+  html.icon-theme-custom button:hover svg,
+  html.icon-theme-custom a:hover svg,
+  html.icon-theme-custom [role="button"]:hover svg,
+  html.icon-theme-custom .group:hover svg {
+    color: var(--icon-hover-color);
   }
   
   /* Custom scrollbar */

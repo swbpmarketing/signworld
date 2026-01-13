@@ -797,9 +797,21 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
       status
     };
 
-    console.log('Creating library file record:', fileData);
+    console.log('Creating library file record:', {
+      title: fileData.title,
+      fileUrl: fileData.fileUrl,
+      fileType: fileData.fileType,
+      fileSize: fileData.fileSize,
+      category: fileData.category,
+      status: fileData.status
+    });
+
+    if (!fileData.fileUrl) {
+      console.error('WARNING: No S3 URL found. req.file.s3Url:', req.file.s3Url, 'req.file.location:', req.file.location);
+    }
+
     const libraryFile = await LibraryFile.create(fileData);
-    console.log('Library file created:', libraryFile._id);
+    console.log('Library file created:', libraryFile._id, 'with fileUrl:', libraryFile.fileUrl);
 
     res.status(201).json({
       success: true,

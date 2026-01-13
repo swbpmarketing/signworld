@@ -17,6 +17,7 @@ import {
   XMarkIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
   EllipsisVerticalIcon,
   ArchiveBoxIcon,
   TrashIcon,
@@ -158,6 +159,19 @@ const Library = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<LibraryFile | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+
+  // Derive current category label and count for header, to match category chips
+  const selectedCategoryMeta = selectedCategory === 'all' ? null : categoryMeta[selectedCategory];
+  const selectedCategoryFromList = categories.find((c) => c.id === selectedCategory);
+  const currentCategoryLabel =
+    selectedCategory === 'all'
+      ? 'All Files'
+      : selectedCategoryMeta?.name || selectedCategoryFromList?.name || 'Files';
+  const currentCategoryCount =
+    selectedCategory === 'all'
+      ? stats?.overview?.totalFiles || 0
+      : selectedCategoryFromList?.count ?? files.length;
 
   // Fetch library files
   const fetchFiles = useCallback(async (page: number = 1) => {
@@ -259,15 +273,20 @@ const Library = () => {
     loadData();
   }, []);
 
-  // Refetch when filters change - reset to page 1
+  // Refetch when category changes - reset to page 1 and folder
   useEffect(() => {
     setCurrentPage(1);
     setCurrentFolderId(null); // Reset to category root when category changes
-    fetchFiles(1);
     if (selectedCategory !== 'all') {
       fetchFolders(selectedCategory);
     }
-  }, [selectedCategory, searchQuery, sortBy, fetchFiles]);
+  }, [selectedCategory]);
+
+  // Refetch files when search or sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchFiles(1);
+  }, [searchQuery, sortBy, fetchFiles]);
 
   // Refetch files when folder changes
   useEffect(() => {
@@ -484,10 +503,11 @@ const Library = () => {
             currentFolderId === folder._id ? 'bg-primary-50 dark:bg-primary-900/20' : ''
           }`}
           style={{ marginLeft: `${level * 20}px` }}
+          title={folder.name}
         >
           <button
             onClick={() => toggleFolderExpansion(folder._id)}
-            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded flex-shrink-0"
           >
             <ChevronLeftIcon
               className={`h-4 w-4 transition-transform ${
@@ -497,17 +517,18 @@ const Library = () => {
           </button>
           <button
             onClick={() => handleFolderClick(folder._id)}
-            className="flex items-center gap-2 flex-1 min-w-0"
+            className="flex items-center gap-2 flex-1 min-w-0 text-left"
+            title={folder.name}
           >
             <FolderIcon className="h-5 w-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate block">
               {folder.name}
             </span>
           </button>
           {isAdmin && (
             <button
               onClick={(e) => handleDeleteFolder(e, folder._id)}
-              className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400 rounded"
+              className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400 rounded flex-shrink-0"
             >
               <TrashIcon className="h-4 w-4" />
             </button>
@@ -583,6 +604,18 @@ const Library = () => {
     }
   };
 
+  // Helper function to find folder by ID in hierarchy
+  const findFolderById = (folderId: string, hierarchy: Folder[]): Folder | null => {
+    for (const folder of hierarchy) {
+      if (folder._id === folderId) return folder;
+      if (folder.children) {
+        const found = findFolderById(folderId, folder.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   // Handle upload
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -592,7 +625,23 @@ const Library = () => {
     setUploadProgress({ current: 0, total: uploadFiles.length });
     try {
       const token = localStorage.getItem('token');
-      const finalCategory = uploadCategory === 'other' && customCategory ? customCategory : uploadCategory;
+
+      // Determine category - use folder's category if uploading to a folder
+      let finalCategory = uploadCategory === 'other' && customCategory ? customCategory : uploadCategory;
+      if (currentFolderId) {
+        if (folderHierarchy.length > 0) {
+          const folder = findFolderById(currentFolderId, folderHierarchy);
+          if (folder && folder.category) {
+            finalCategory = folder.category;
+          } else {
+            // Fallback to selected category if folder not found or has no category
+            finalCategory = selectedCategory !== 'all' ? selectedCategory : 'other';
+          }
+        } else {
+          // No folder hierarchy loaded, use selected category as fallback
+          finalCategory = selectedCategory !== 'all' ? selectedCategory : 'other';
+        }
+      }
 
       let successCount = 0;
       let failureCount = 0;
@@ -610,6 +659,11 @@ const Library = () => {
         formData.append('description', uploadDescription);
         formData.append('category', finalCategory);
         formData.append('tags', uploadTags);
+
+        // If uploading to a specific folder, include the folder ID
+        if (currentFolderId) {
+          formData.append('folderId', currentFolderId);
+        }
 
         // For folder uploads, send the relative path to recreate folder structure
         if (uploadMode === 'folder') {
@@ -671,6 +725,10 @@ const Library = () => {
         fetchFiles();
         fetchStats();
         fetchCategories();
+        // Refresh folder hierarchy if a category is selected
+        if (selectedCategory !== 'all') {
+          fetchFolders(selectedCategory);
+        }
       } else {
         const errorMsg = failureCount === 1 ? '1 file failed to upload' : `${failureCount} files failed to upload`;
         toast.error(errorMsg);
@@ -713,8 +771,11 @@ const Library = () => {
         toast.success(`Folder "${newFolderName}" created successfully`);
         setShowNewFolderModal(false);
         setNewFolderName('');
-        // Refresh files to show new folder
+        // Refresh both files and folder hierarchy to show new folder
         fetchFiles();
+        if (selectedCategory !== 'all') {
+          fetchFolders(selectedCategory);
+        }
       } else {
         toast.error(data.error || 'Failed to create folder');
       }
@@ -849,8 +910,15 @@ const Library = () => {
       </div>
 
       {/* Category Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 px-4 py-4 overflow-hidden">
-        <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 px-4 py-4 overflow-hidden relative">
+        <div
+          className={`flex items-center gap-2 pb-2 ${
+            showAllCategories ? 'flex-wrap' : 'overflow-x-auto scrollbar-hide'
+          } ${
+            !showAllCategories && categories.filter(c => c.count > 0).length > 3 ? 'pr-20' : ''
+          }`}
+          style={showAllCategories ? undefined : { scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           <button
             onClick={() => setSelectedCategory('all')}
             className={`inline-flex items-center px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
@@ -905,6 +973,25 @@ const Library = () => {
             );
           })}
         </div>
+        {/* Toggle to expand/collapse categories - Always visible on the right */}
+        {categories.filter(c => c.count > 0).length > 3 && (
+          <button
+            type="button"
+            onClick={() => setShowAllCategories(prev => !prev)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 z-10"
+          >
+            <span>{showAllCategories ? 'Collapse' : 'More'}</span>
+            <ChevronDownIcon
+              className={`ml-1 h-4 w-4 transform transition-transform ${
+                showAllCategories ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+        )}
+        {/* Gradient fade effect when collapsed to indicate more content */}
+        {!showAllCategories && categories.filter(c => c.count > 0).length > 3 && (
+          <div className="absolute right-16 top-0 bottom-2 w-8 bg-gradient-to-l from-white dark:from-gray-800 to-transparent pointer-events-none z-0" />
+        )}
       </div>
 
       {/* File Type Stats */}
@@ -996,57 +1083,20 @@ const Library = () => {
 
       {/* Main Content */}
       <div className={`grid gap-6 ${
-        showFolderPanel && selectedCategory !== 'all' ? 'grid-cols-1 lg:grid-cols-4' : 'grid-cols-1 lg:grid-cols-3'
+        showFolderPanel && selectedCategory !== 'all' && folderHierarchy.length > 0
+          ? 'grid-cols-1 lg:grid-cols-3'
+          : 'grid-cols-1'
       }`}>
-        {/* Folder Panel */}
-        {showFolderPanel && selectedCategory !== 'all' && folderHierarchy.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-fit">
-            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-                <FolderIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-500" />
-                Folders
-              </h3>
-              <button
-                onClick={() => setShowFolderPanel(false)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                title="Hide folders"
-              >
-                <XMarkIcon className="h-5 w-5 text-gray-400" />
-              </button>
-            </div>
-            <div className="p-4 space-y-1 max-h-[calc(100vh-300px)] overflow-y-auto">
-              {/* Root level button */}
-              <button
-                onClick={() => setCurrentFolderId(null)}
-                className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                  currentFolderId === null
-                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-              >
-                <HomeIcon className="h-5 w-5 flex-shrink-0" />
-                <span className="text-sm font-medium">Root</span>
-              </button>
-              {/* Folder tree */}
-              <div className="mt-2">
-                {renderFolderTree(folderHierarchy)}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Files Section */}
-        <div className={showFolderPanel && selectedCategory !== 'all' && folderHierarchy.length > 0 ? 'lg:col-span-3' : 'lg:col-span-2'}>
+        {/* Files Section - Main/Left Column */}
+        <div className={showFolderPanel && selectedCategory !== 'all' && folderHierarchy.length > 0 ? 'lg:col-span-2' : ''}>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
                 <FolderSolidIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-500" />
-                {selectedCategory === 'all'
-                  ? 'All Files'
-                  : currentFolder
-                    ? `${categoryMeta[selectedCategory]?.name || 'Files'} / ${currentFolder.name}`
-                    : categoryMeta[selectedCategory]?.name || 'Files'}
-                <span className="ml-2 text-sm font-normal text-gray-500">({files.length})</span>
+                {currentFolder
+                  ? `${currentCategoryLabel} / ${currentFolder.name}`
+                  : currentCategoryLabel}
+                <span className="ml-2 text-sm font-normal text-gray-500">({currentCategoryCount})</span>
               </h3>
             </div>
             <div className="p-6">
@@ -1314,12 +1364,80 @@ const Library = () => {
                   )}
                 </>
               )}
+              
+              {/* Quick Links - Show when All Files is selected */}
+              {selectedCategory === 'all' && (
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                      to="/recently-deleted"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg transition-colors duration-200 font-medium text-sm"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                      Recently Deleted
+                    </Link>
+                    <Link
+                      to="/archive"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-lg transition-colors duration-200 font-medium text-sm"
+                    >
+                      <ArchiveBoxIcon className="h-4 w-4" />
+                      View Archive
+                    </Link>
+                    {isAdmin && (
+                      <Link
+                        to="/pending-approval"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg transition-colors duration-200 font-medium text-sm"
+                      >
+                        <ClipboardDocumentListIcon className="h-4 w-4" />
+                        Pending Approvals
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
+        {/* Right Column - Folders and Sidebar */}
+        {showFolderPanel && selectedCategory !== 'all' && folderHierarchy.length > 0 && (
+          <div className="space-y-6">
+            {/* Folder Panel */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 h-fit">
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                  <FolderIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-500" />
+                  Folders
+                </h3>
+                <button
+                  onClick={() => setShowFolderPanel(false)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  title="Hide folders"
+                >
+                  <XMarkIcon className="h-5 w-5 text-gray-400" />
+                </button>
+              </div>
+              <div className="p-4 space-y-1 max-h-[calc(100vh-300px)] overflow-y-auto">
+                {/* Root level button */}
+                <button
+                  onClick={() => setCurrentFolderId(null)}
+                  className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                    currentFolderId === null
+                      ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                >
+                  <HomeIcon className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Root</span>
+                </button>
+                {/* Folder tree */}
+                <div className="mt-2">
+                  {renderFolderTree(folderHierarchy)}
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar */}
           {/* Recent Files */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
@@ -1400,7 +1518,8 @@ const Library = () => {
               </Link>
             </div>
           )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Upload Modal */}
@@ -1591,59 +1710,63 @@ const Library = () => {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Category
-                </label>
-                <select
-                  value={uploadCategory}
-                  onChange={(e) => {
-                    setUploadCategory(e.target.value);
-                    if (e.target.value !== 'other') {
-                      setCustomCategory('');
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                >
-                  {/* Built-in categories - only show if they have files */}
-                  {Object.entries(categoryMeta).map(([key, meta]) => {
-                    const cat = categories.find(c => c.id === key);
-                    if (!cat || cat.count === 0) return null;
-                    return (
-                      <option key={key} value={key}>{meta.name}</option>
-                    );
-                  })}
+              {!currentFolderId && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Category
+                    </label>
+                    <select
+                      value={uploadCategory}
+                      onChange={(e) => {
+                        setUploadCategory(e.target.value);
+                        if (e.target.value !== 'other') {
+                          setCustomCategory('');
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    >
+                      {/* Built-in categories - only show if they have files */}
+                      {Object.entries(categoryMeta).map(([key, meta]) => {
+                        const cat = categories.find(c => c.id === key);
+                        if (!cat || cat.count === 0) return null;
+                        return (
+                          <option key={key} value={key}>{meta.name}</option>
+                        );
+                      })}
 
-                  {/* Other option - always available for custom categories */}
-                  <option value="other">Other</option>
+                      {/* Other option - always available for custom categories */}
+                      <option value="other">Other</option>
 
-                  {/* Custom categories (not in categoryMeta) - only show if they have files */}
-                  {categories.map((cat) => {
-                    // Only show if it's not a built-in category
-                    if (categoryMeta[cat.id]) return null;
-                    // Hide categories with no files
-                    if (cat.count === 0) return null;
-                    return (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-              {uploadCategory === 'other' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Custom Category Name
-                  </label>
-                  <input
-                    type="text"
-                    value={customCategory}
-                    onChange={(e) => setCustomCategory(e.target.value)}
-                    placeholder="e.g., Client Resources, Special Projects"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
+                      {/* Custom categories (not in categoryMeta) - only show if they have files */}
+                      {categories.map((cat) => {
+                        // Only show if it's not a built-in category
+                        if (categoryMeta[cat.id]) return null;
+                        // Hide categories with no files
+                        if (cat.count === 0) return null;
+                        return (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                  {uploadCategory === 'other' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Custom Category Name
+                      </label>
+                      <input
+                        type="text"
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value)}
+                        placeholder="e.g., Client Resources, Special Projects"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                  )}
+                </>
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1849,6 +1972,35 @@ const Library = () => {
             <div className="w-full max-w-5xl">
               {(() => {
                 const fileUrl = previewFile.fileUrl;
+
+                // Check if fileUrl is missing
+                if (!fileUrl) {
+                  return (
+                    <div className="bg-white rounded-lg shadow-2xl aspect-[8.5/11] flex flex-col items-center justify-center p-8 sm:p-12">
+                      <div className="p-6 sm:p-8 bg-red-100 rounded-xl mb-4">
+                        <svg className="h-12 w-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <h3 className="mt-4 text-xl sm:text-2xl font-semibold text-gray-900 text-center">File Not Available</h3>
+                      <p className="mt-3 text-gray-500 text-center max-w-md text-sm sm:text-base">
+                        The file URL is missing. This usually means the file failed to upload to storage.
+                      </p>
+                      <div className="mt-4 flex items-center gap-3 text-sm text-gray-400">
+                        <span>{formatFileSize(previewFile.fileSize)}</span>
+                        <span>•</span>
+                        <span>{previewFile.fileName}</span>
+                      </div>
+                      <button
+                        onClick={closePreview}
+                        className="mt-6 sm:mt-8 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  );
+                }
+
                 const isDemo = fileUrl?.includes('sign-company-uploads.s3.amazonaws.com') &&
                   (fileUrl.includes('/documents/') || fileUrl.includes('/fonts/') || fileUrl.includes('/artwork/'));
 
@@ -1879,6 +2031,9 @@ const Library = () => {
                       className="w-full bg-white rounded-lg shadow-2xl"
                       style={{ height: 'calc(100vh - 100px)', minHeight: '500px' }}
                       title={previewFile.title}
+                      onError={(e) => {
+                        console.error('PDF iframe failed to load:', fileUrl);
+                      }}
                     />
                   );
                 }
@@ -1886,7 +2041,15 @@ const Library = () => {
                 if (previewFile.fileType.includes('image')) {
                   return (
                     <div className="bg-gray-800 rounded-lg shadow-2xl p-4 flex items-center justify-center">
-                      <img src={fileUrl} alt={previewFile.title} className="max-w-full max-h-[80vh] object-contain rounded" />
+                      <img
+                        src={fileUrl}
+                        alt={previewFile.title}
+                        className="max-w-full max-h-[80vh] object-contain rounded"
+                        onError={(e) => {
+                          console.error('Image failed to load:', fileUrl);
+                          e.currentTarget.src = '';
+                        }}
+                      />
                     </div>
                   );
                 }

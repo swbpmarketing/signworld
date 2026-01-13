@@ -20,6 +20,7 @@ import { CheckIcon as CheckSolidIcon } from '@heroicons/react/24/solid';
 import { Menu, Transition } from '@headlessui/react';
 import { useAuth } from '../context/AuthContext';
 import { usePreviewMode } from '../context/PreviewModeContext';
+import { usePresence } from '../hooks/usePresence';
 import {
   getConversations,
   getMessages,
@@ -78,6 +79,30 @@ const Chat = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
+
+  // Get all contact user IDs for presence tracking
+  const contactUserIds = contacts.map(contact => contact.id).filter(Boolean);
+  
+  // Use presence hook to track online/offline status
+  const { getPresence, isOnline } = usePresence(contactUserIds);
+
+  // Update contacts when presence changes - derive from real presence data
+  useEffect(() => {
+    if (contactUserIds.length === 0) return;
+    
+    setContacts(prevContacts =>
+      prevContacts.map(contact => {
+        // Get real presence data from the hook
+        const presence = getPresence(contact.id);
+        // Derive isOnline from actual presence status (online or idle = online)
+        const online = presence.status === 'online' || presence.status === 'idle';
+        return {
+          ...contact,
+          isOnline: online,
+        };
+      })
+    );
+  }, [contactUserIds.join(','), getPresence]); // Update when contacts or presence changes
 
   // currentUserId is the authenticated user (used for permissions and backend operations)
   const currentUserId = user?._id || user?.id || '';
@@ -297,6 +322,7 @@ const Chat = () => {
     // Find the "other" participant by excluding the authenticated user (currentUserId)
     // Even in preview mode, conversation structure is based on actual participants
     const otherUser = conv.otherParticipant || conv.participants.find(p => p._id !== currentUserId);
+    const otherUserId = otherUser?._id || conv._id;
     const initials = otherUser?.name
       ?.split(' ')
       .map(n => n[0])
@@ -304,15 +330,20 @@ const Chat = () => {
       .toUpperCase()
       .slice(0, 2) || '??';
 
+    // Get real presence status for this user (derived from actual presence data)
+    const presence = getPresence(otherUserId);
+    // Online if status is 'online' or 'idle' (not 'offline')
+    const online = presence.status === 'online' || presence.status === 'idle';
+
     return {
-      id: otherUser?._id || conv._id,
+      id: otherUserId,
       name: otherUser?.name || 'Unknown User',
       avatar: initials,
       role: otherUser?.companyName || otherUser?.role || '',
       lastMessage: conv.lastMessagePreview || '',
       lastMessageTime: new Date(conv.lastMessageAt),
       unreadCount: conv.unreadCount,
-      isOnline: false, // Would need WebSocket for real-time status
+      isOnline: online, // Derived from real presence data, not UI state
       conversationId: conv._id,
     };
   };
@@ -854,9 +885,15 @@ const Chat = () => {
                   }`}>
                     {contact.avatar}
                   </div>
-                  {contact.isOnline && (
-                    <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-900" />
-                  )}
+                  {/* Presence indicator */}
+                  <span 
+                    className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white dark:ring-gray-900 ${
+                      contact.isOnline 
+                        ? 'bg-green-500' 
+                        : 'bg-gray-400 dark:bg-gray-500'
+                    }`}
+                    title={contact.isOnline ? 'Online' : 'Offline'}
+                  />
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <div className="flex items-center justify-between">
@@ -907,9 +944,15 @@ const Chat = () => {
                   <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-sm lg:text-lg">
                     {selectedContact.avatar}
                   </div>
-                  {selectedContact.isOnline && (
-                    <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 lg:h-3 lg:w-3 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-800" />
-                  )}
+                  {/* Presence indicator */}
+                  <span 
+                    className={`absolute bottom-0 right-0 block h-2.5 w-2.5 lg:h-3 lg:w-3 rounded-full ring-2 ring-white dark:ring-gray-800 ${
+                      selectedContact.isOnline 
+                        ? 'bg-green-500' 
+                        : 'bg-gray-400 dark:bg-gray-500'
+                    }`}
+                    title={selectedContact.isOnline ? 'Online' : 'Offline'}
+                  />
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-base lg:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
@@ -993,7 +1036,9 @@ const Chat = () => {
                     // In preview mode: shows previewed user's perspective (their messages on right)
                     // In normal mode: shows authenticated user's perspective
                     // messageOwnerUserId comes from backend and reflects the viewing context
-                    const senderId = message.sender?._id || message.sender;
+                    const senderId = typeof message.sender === 'object' && message.sender?._id 
+                      ? message.sender._id 
+                      : (message.sender as string);
                     const isOwn = senderId === messageOwnerUserId;
                     const prevMessage = messages[index - 1];
                     const msgDate = new Date(message.createdAt);
@@ -1022,8 +1067,16 @@ const Chat = () => {
                         >
                           <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[75%] md:max-w-[70%] ${isOwn ? 'flex-row-reverse' : ''}`}>
                             {!isOwn && (
-                              <div className="hidden sm:flex h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                              <div className="hidden sm:flex relative h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                                 {selectedContact.avatar}
+                                {/* Presence indicator on message avatar */}
+                                <span 
+                                  className={`absolute bottom-0 right-0 block h-2 w-2 rounded-full ring-1 ring-white dark:ring-gray-800 ${
+                                    selectedContact.isOnline 
+                                      ? 'bg-green-500' 
+                                      : 'bg-gray-400 dark:bg-gray-500'
+                                  }`}
+                                />
                               </div>
                             )}
 
@@ -1512,8 +1565,12 @@ const Chat = () => {
                       onClick={() => handleNewChat(user)}
                       className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     >
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white font-semibold">
+                      <div className="relative h-10 w-10 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white font-semibold">
                         {user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'}
+                        {/* Presence indicator in new chat modal */}
+                        {isOnline(user._id) && (
+                          <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-1 ring-white dark:ring-gray-800" />
+                        )}
                       </div>
                       <div className="flex-1 text-left min-w-0">
                         <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{user.name}</p>

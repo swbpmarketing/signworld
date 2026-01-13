@@ -58,13 +58,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }
 
-  // Legacy adminOnly check - skip in preview mode since admin is previewing
-  if (adminOnly && !isPreviewMode && user.role !== 'admin') {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // In preview mode, check if admin-only routes should be blocked
-  if (adminOnly && isPreviewMode) {
+  // Admin-only check: If adminOnly is true and user is admin (not in preview mode), grant access immediately
+  if (adminOnly) {
+    if (isPreviewMode) {
+      // Block admin-only routes in preview mode
+      return <Navigate to="/dashboard" replace />;
+    }
+    if (user.role === 'admin') {
+      // Admin has full access to admin-only routes, skip permission check
+      return children;
+    }
+    // Non-admin users cannot access admin-only routes
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -80,6 +84,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Check required permission
+  // hasPermission already handles admin users correctly (returns true for all permissions when admin and not in preview)
   if (requiredPermission && !hasPermission(requiredPermission)) {
     return <Navigate to="/dashboard" replace />;
   }

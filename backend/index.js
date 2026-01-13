@@ -6,6 +6,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const { initConventionReminderJob } = require('./jobs/conventionReminders');
+const presenceService = require('./utils/presenceService');
+const jwt = require('jsonwebtoken');
+const User = require('./models/User');
 
 // Load env vars - override any existing environment variables
 dotenv.config({ path: require('path').join(__dirname, '.env'), override: true });
@@ -98,10 +101,16 @@ const io = new Server(server, {
       'http://localhost:5174',
       'http://localhost:5175',
       'http://localhost:5176',
+      'http://localhost:5177',
+      'http://localhost:5178',
+      'http://localhost:5179',
       'http://127.0.0.1:5173',
       'http://127.0.0.1:5174',
       'http://127.0.0.1:5175',
       'http://127.0.0.1:5176',
+      'http://127.0.0.1:5177',
+      'http://127.0.0.1:5178',
+      'http://127.0.0.1:5179',
       'https://sign-company.onrender.com',
       'https://customadesign.github.io'
     ],
@@ -113,9 +122,78 @@ const io = new Server(server, {
 // Make io accessible to routes
 app.set('io', io);
 
-// Socket.io connection handling
-io.on('connection', (socket) => {
-  console.log('🔌 User connected:', socket.id);
+// Socket.io connection handling with presence tracking
+io.on('connection', async (socket) => {
+  console.log('🔌 Socket connected:', socket.id);
+  let userId = null;
+
+  // Try to authenticate immediately if token is in handshake
+  const authenticateUser = async (token) => {
+    try {
+      if (!token) {
+        return false;
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.id).select('_id name email role');
+      
+      if (!user) {
+        return false;
+      }
+
+      userId = user._id.toString();
+      socket.userId = userId;
+
+      // Set user as online
+      presenceService.setOnline(userId, socket.id);
+
+      // Join user's personal room
+      socket.join(`user:${userId}`);
+      socket.join(`chat:${userId}`);
+
+      // Broadcast presence update to all connected clients
+      io.emit('presence:update', {
+        userId,
+        status: 'online',
+      });
+
+      console.log(`✅ User authenticated: ${user.name} (${userId})`);
+      return true;
+    } catch (error) {
+      console.error('Socket authentication error:', error);
+      return false;
+    }
+  };
+
+  // Try to authenticate from handshake auth token
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+  if (token) {
+    await authenticateUser(token);
+  }
+
+  // Also allow manual authentication
+  socket.on('authenticate', async (token) => {
+    const success = await authenticateUser(token);
+    if (success) {
+      socket.emit('auth:success', { userId });
+    } else {
+      socket.emit('auth:error', { message: 'Authentication failed' });
+    }
+  });
+
+  // Handle user activity (heartbeat)
+  socket.on('presence:activity', () => {
+    if (userId) {
+      const update = presenceService.updateActivity(userId);
+      if (update && update.wasIdle) {
+        // User became active again (was idle) - broadcast update
+        io.emit('presence:update', {
+          userId,
+          status: 'online',
+        });
+      }
+    }
+  });
 
   // Join brags room for real-time updates
   socket.on('join:brags', () => {
@@ -226,9 +304,34 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('🔌 User disconnected:', socket.id);
+    console.log('🔌 Socket disconnected:', socket.id);
+    
+    // Find user by socket ID if userId wasn't set (in case of connection issues)
+    if (!userId) {
+      userId = presenceService.getUserBySocketId(socket.id);
+    }
+    
+    // Mark user as offline if they were authenticated
+    if (userId) {
+      presenceService.setOffline(userId);
+      
+      // Broadcast presence update to all connected clients
+      io.emit('presence:update', {
+        userId,
+        status: 'offline',
+      });
+      
+      console.log(`👋 User went offline: ${userId}`);
+    }
   });
 });
+
+// Set up idle check that broadcasts status changes
+setInterval(() => {
+  presenceService.checkIdleUsers((update) => {
+    io.emit('presence:update', update);
+  });
+}, 60 * 1000); // Check every minute
 
 // Body parser middleware with increased limits for file uploads
 app.use(express.json({ limit: '100mb' }));
@@ -246,10 +349,16 @@ const corsOptions = {
       'http://localhost:5174',
       'http://localhost:5175',
       'http://localhost:5176',
+      'http://localhost:5177',
+      'http://localhost:5178',
+      'http://localhost:5179',
       'http://127.0.0.1:5173',
       'http://127.0.0.1:5174',
       'http://127.0.0.1:5175',
       'http://127.0.0.1:5176',
+      'http://127.0.0.1:5177',
+      'http://127.0.0.1:5178',
+      'http://127.0.0.1:5179',
       'https://sign-company.onrender.com',
       'https://customadesign.github.io'
     ];

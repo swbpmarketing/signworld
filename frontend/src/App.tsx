@@ -156,12 +156,12 @@ function App() {
                     </ProtectedRoute>
                   } />
                   <Route path="archive" element={
-                    <ProtectedRoute requiredPermission="canAccessLibrary">
+                    <ProtectedRoute adminOnly>
                       <Archive />
                     </ProtectedRoute>
                   } />
                   <Route path="recently-deleted" element={
-                    <ProtectedRoute requiredPermission="canAccessLibrary">
+                    <ProtectedRoute adminOnly>
                       <RecentlyDeleted />
                     </ProtectedRoute>
                   } />

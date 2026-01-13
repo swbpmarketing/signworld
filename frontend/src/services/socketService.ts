@@ -27,12 +27,21 @@ class SocketService {
 
     const socketUrl = getSocketUrl();
 
+    // Get token for authentication
+    const token = localStorage.getItem('token');
+
     this.socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      auth: {
+        token: token || undefined,
+      },
+      query: {
+        token: token || undefined,
+      },
     });
 
     this.socket.on('connect', () => {

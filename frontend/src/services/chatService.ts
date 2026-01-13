@@ -13,7 +13,7 @@ export interface ChatUser {
 export interface Message {
   _id: string;
   conversation: string;
-  sender: ChatUser;
+  sender: ChatUser | string;
   content: string;
   attachments?: Array<{
     url: string;
@@ -24,6 +24,10 @@ export interface Message {
   readBy: Array<{
     user: string;
     readAt: string;
+  }>;
+  reactions?: Array<{
+    emoji: string;
+    users: Array<string | ChatUser>;
   }>;
   isEdited: boolean;
   isDeleted: boolean;

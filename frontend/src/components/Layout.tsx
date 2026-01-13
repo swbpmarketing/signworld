@@ -137,7 +137,7 @@ const Sidebar = memo(({
                   onClick={onClose}
                 >
                   <item.icon
-                    className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                    className={`mr-3 h-5 w-5 flex-shrink-0 sidebar-icon ${
                       isActive
                         ? "text-primary-600 dark:text-primary-400"
                         : "text-gray-400 dark:text-gray-500"

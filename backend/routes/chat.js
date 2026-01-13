@@ -7,6 +7,7 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { protect, handlePreviewMode, blockPreviewWrites } = require('../middleware/auth');
 const { uploadToS3 } = require('../utils/s3');
+const presenceService = require('../utils/presenceService');
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -779,6 +780,74 @@ router.put('/messages/:id', protect, handlePreviewMode, blockPreviewWrites, asyn
     res.status(500).json({
       success: false,
       error: 'Failed to edit message',
+    });
+  }
+});
+
+// @desc    Get presence status for users
+// @route   GET /api/chat/presence
+// @access  Private
+router.get('/presence', protect, handlePreviewMode, async (req, res) => {
+  try {
+    const { userIds } = req.query;
+    
+    if (!userIds) {
+      return res.status(400).json({
+        success: false,
+        error: 'User IDs are required',
+      });
+    }
+
+    // Parse userIds (can be comma-separated string or array)
+    const userIdArray = Array.isArray(userIds) 
+      ? userIds 
+      : userIds.split(',').filter(id => id.trim());
+
+    const presence = presenceService.getBulkPresence(userIdArray);
+
+    res.status(200).json({
+      success: true,
+      data: presence,
+    });
+  } catch (error) {
+    console.error('Error fetching presence:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch presence',
+    });
+  }
+});
+
+// @desc    Update user activity (heartbeat)
+// @route   POST /api/chat/presence/activity
+// @access  Private
+router.post('/presence/activity', protect, handlePreviewMode, async (req, res) => {
+  try {
+    const userId = req.user._id.toString();
+    const update = presenceService.updateActivity(userId);
+
+    if (update && update.status === 'online') {
+      // User became active (was idle)
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('presence:update', {
+          userId,
+          status: 'online',
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        status: update?.status || 'offline',
+      },
+    });
+  } catch (error) {
+    console.error('Error updating activity:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update activity',
     });
   }
 });

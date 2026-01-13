@@ -98,7 +98,7 @@ type NestedObjectKeys = 'notifications' | 'privacy' | 'security';
 
 const UserSettings = () => {
   const { user } = useAuth();
-  const { theme, setTheme } = useDarkMode();
+  const { theme, setTheme, fontSize, setFontSize, iconColor, setIconColor } = useDarkMode();
   const [activeSection, setActiveSection] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -829,86 +829,229 @@ const UserSettings = () => {
     },
   ];
 
-  const renderDisplay = () => (
-    <div className="space-y-8">
-      {/* Theme Selection */}
-      <div>
-        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
-          <PaintBrushIcon className="h-5 w-5 mr-2 text-primary-500" />
-          Theme
-        </h4>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Choose how the dashboard looks to you
-        </p>
+  const renderDisplay = () => {
+    const fontSizeOptions = [
+      { value: 'xs', label: 'Extra Small', description: '14px base' },
+      { value: 'sm', label: 'Small', description: '15px base' },
+      { value: 'md', label: 'Medium', description: '16px base (default)' },
+      { value: 'lg', label: 'Large', description: '18px base' },
+      { value: 'xl', label: 'Extra Large', description: '20px base' },
+    ];
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {themeOptions.map((themeOption) => {
-            const isSelected = theme === themeOption.id;
-            const ThemeIcon = themeOption.icon;
+    const presetColors = [
+      { name: 'Indigo', value: '#6366f1', class: 'bg-indigo-500' },
+      { name: 'Blue', value: '#3b82f6', class: 'bg-blue-500' },
+      { name: 'Purple', value: '#a855f7', class: 'bg-purple-500' },
+      { name: 'Pink', value: '#ec4899', class: 'bg-pink-500' },
+      { name: 'Red', value: '#ef4444', class: 'bg-red-500' },
+      { name: 'Orange', value: '#f97316', class: 'bg-orange-500' },
+      { name: 'Green', value: '#10b981', class: 'bg-green-500' },
+      { name: 'Teal', value: '#14b8a6', class: 'bg-teal-500' },
+    ];
 
-            return (
-              <button
-                key={themeOption.id}
-                onClick={() => setTheme(themeOption.id as ThemeMode)}
-                className={`relative group rounded-xl transition-all duration-300 overflow-hidden ${
-                  isSelected
-                    ? 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-800'
-                    : 'hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 hover:ring-offset-2 dark:hover:ring-offset-gray-800'
-                }`}
-              >
-                {/* Mini Dashboard Preview */}
-                <div className={`${themeOption.preview.bg} p-2 h-28 relative`}>
-                  {/* Mini sidebar */}
-                  <div className={`absolute left-2 top-2 bottom-2 w-8 ${themeOption.preview.sidebar} rounded-md shadow-sm`}>
-                    <div className="p-1 space-y-1">
-                      <div className={`h-1.5 w-4 ${themeOption.preview.text} rounded-full mx-auto`}></div>
-                      <div className={`h-1.5 w-4 ${themeOption.preview.text} rounded-full mx-auto opacity-60`}></div>
-                      <div className={`h-1.5 w-4 ${themeOption.preview.text} rounded-full mx-auto opacity-40`}></div>
+    return (
+      <div className="space-y-8">
+        {/* Theme Selection */}
+        <div>
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
+            <PaintBrushIcon className="h-5 w-5 mr-2 text-primary-500" />
+            Theme
+          </h4>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Choose how the dashboard looks to you
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {themeOptions.map((themeOption) => {
+              const isSelected = theme === themeOption.id;
+              const ThemeIcon = themeOption.icon;
+
+              return (
+                <button
+                  key={themeOption.id}
+                  onClick={() => setTheme(themeOption.id as ThemeMode)}
+                  className={`relative group rounded-xl transition-all duration-300 overflow-hidden ${
+                    isSelected
+                      ? 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-800'
+                      : 'hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600 hover:ring-offset-2 dark:hover:ring-offset-gray-800'
+                  }`}
+                >
+                  {/* Mini Dashboard Preview */}
+                  <div className={`${themeOption.preview.bg} p-2 h-28 relative`}>
+                    {/* Mini sidebar */}
+                    <div className={`absolute left-2 top-2 bottom-2 w-8 ${themeOption.preview.sidebar} rounded-md shadow-sm`}>
+                      <div className="p-1 space-y-1">
+                        <div className={`h-1.5 w-4 ${themeOption.preview.text} rounded-full mx-auto`}></div>
+                        <div className={`h-1.5 w-4 ${themeOption.preview.text} rounded-full mx-auto opacity-60`}></div>
+                        <div className={`h-1.5 w-4 ${themeOption.preview.text} rounded-full mx-auto opacity-40`}></div>
+                      </div>
                     </div>
+                    {/* Mini content area */}
+                    <div className="absolute left-12 right-2 top-2 bottom-2 flex flex-col gap-1">
+                      {/* Header */}
+                      <div className={`${themeOption.preview.header} h-5 rounded-md`}></div>
+                      {/* Content */}
+                      <div className={`${themeOption.preview.content} flex-1 rounded-md p-1.5 shadow-sm`}>
+                        <div className="flex gap-1 h-full">
+                          <div className={`${themeOption.preview.text} flex-1 rounded opacity-50`}></div>
+                          <div className={`${themeOption.preview.text} flex-1 rounded opacity-30`}></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Selected checkmark */}
+                    {isSelected && (
+                      <div className="absolute top-1 right-1 h-5 w-5 bg-primary-500 rounded-full flex items-center justify-center shadow-lg">
+                        <CheckIcon className="h-3 w-3 text-white" />
+                      </div>
+                    )}
                   </div>
-                  {/* Mini content area */}
-                  <div className="absolute left-12 right-2 top-2 bottom-2 flex flex-col gap-1">
-                    {/* Header */}
-                    <div className={`${themeOption.preview.header} h-5 rounded-md`}></div>
-                    {/* Content */}
-                    <div className={`${themeOption.preview.content} flex-1 rounded-md p-1.5 shadow-sm`}>
-                      <div className="flex gap-1 h-full">
-                        <div className={`${themeOption.preview.text} flex-1 rounded opacity-50`}></div>
-                        <div className={`${themeOption.preview.text} flex-1 rounded opacity-30`}></div>
+
+                  {/* Theme info */}
+                  <div className={`p-3 ${isSelected ? 'bg-primary-50 dark:bg-primary-900/30' : 'bg-gray-50 dark:bg-gray-700/50'}`}>
+                    <div className="flex items-center gap-2">
+                      <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-primary-100 dark:bg-primary-800/50' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                        <ThemeIcon className={`h-4 w-4 ${isSelected ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`} />
+                      </div>
+                      <div className="text-left">
+                        <h5 className={`text-sm font-semibold ${isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-white'}`}>
+                          {themeOption.name}
+                        </h5>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{themeOption.description}</p>
                       </div>
                     </div>
                   </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-                  {/* Selected checkmark */}
-                  {isSelected && (
-                    <div className="absolute top-1 right-1 h-5 w-5 bg-primary-500 rounded-full flex items-center justify-center shadow-lg">
-                      <CheckIcon className="h-3 w-3 text-white" />
+        {/* Personalization Section */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-8">
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
+            <PaintBrushIcon className="h-5 w-5 mr-2 text-primary-500" />
+            Personalization
+          </h4>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Customize font size and icon colors to match your preferences
+          </p>
+
+          {/* Font Size */}
+          <div className="mb-8">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Font Size
+            </label>
+            <div className="grid grid-cols-5 gap-2">
+              {fontSizeOptions.map((option) => {
+                const isSelected = fontSize === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => setFontSize(option.value as any)}
+                    className={`px-4 py-3 rounded-lg border-2 transition-all ${
+                      isSelected
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                        : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className={`font-semibold mb-1 ${
+                        option.value === 'xs' ? 'text-xs' :
+                        option.value === 'sm' ? 'text-sm' :
+                        option.value === 'md' ? 'text-base' :
+                        option.value === 'lg' ? 'text-lg' :
+                        'text-xl'
+                      }`}>
+                        Aa
+                      </div>
+                      <div className="text-xs font-medium">{option.label}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{option.description}</div>
                     </div>
-                  )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Icon Color */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Icon Color
+            </label>
+            <div className="space-y-4">
+              {/* Default theme option */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Default Theme</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Use the original multicolor icon theme (no custom accent color)
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIconColor('')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-primary-500 hover:text-primary-600 dark:hover:border-primary-400 dark:hover:text-primary-300 transition-colors"
+                >
+                  <PaintBrushIcon className="h-4 w-4" />
+                  Default
+                </button>
+              </div>
 
-                {/* Theme info */}
-                <div className={`p-3 ${isSelected ? 'bg-primary-50 dark:bg-primary-900/30' : 'bg-gray-50 dark:bg-gray-700/50'}`}>
-                  <div className="flex items-center gap-2">
-                    <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-primary-100 dark:bg-primary-800/50' : 'bg-gray-200 dark:bg-gray-600'}`}>
-                      <ThemeIcon className={`h-4 w-4 ${isSelected ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400'}`} />
-                    </div>
-                    <div className="text-left">
-                      <h5 className={`text-sm font-semibold ${isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-white'}`}>
-                        {themeOption.name}
-                      </h5>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{themeOption.description}</p>
-                    </div>
+              {/* Preset Colors */}
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Preset Colors</p>
+                <div className="flex flex-wrap gap-2">
+                  {presetColors.map((color) => {
+                    const isSelected = iconColor === color.value;
+                    return (
+                      <button
+                        key={color.value}
+                        onClick={() => setIconColor(color.value)}
+                        className={`w-10 h-10 rounded-lg ${color.class} border-2 transition-all ${
+                          isSelected
+                            ? 'ring-2 ring-offset-2 ring-primary-500 dark:ring-offset-gray-800 scale-110'
+                            : 'border-gray-200 dark:border-gray-600 hover:scale-105'
+                        }`}
+                        title={color.name}
+                      >
+                        {isSelected && (
+                          <CheckIcon className="h-5 w-5 text-white mx-auto" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom Color Picker */}
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Custom Color</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={iconColor || '#6366f1'}
+                    onChange={(e) => setIconColor(e.target.value)}
+                    className="w-16 h-10 rounded-lg border-2 border-gray-200 dark:border-gray-600 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={iconColor}
+                    onChange={(e) => setIconColor(e.target.value)}
+                    placeholder="#6366f1"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
+                  />
+                  <div className="w-10 h-10 rounded-lg border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center" style={{ backgroundColor: iconColor }}>
+                    <PaintBrushIcon className="h-5 w-5 text-white" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
                   </div>
                 </div>
-              </button>
-            );
-          })}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-    </div>
-  );
+    );
+  };
 
   const renderSectionContent = () => {
     switch (activeSection) {
