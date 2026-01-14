@@ -1,11 +1,16 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import {
   MagnifyingGlassIcon,
   EnvelopeIcon,
   PhoneIcon,
   BuildingOfficeIcon,
   CalendarIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ShieldCheckIcon,
+  NoSymbolIcon,
 } from '@heroicons/react/24/outline';
 import api from '../config/axios';
 import CustomSelect from '../components/CustomSelect';
@@ -28,11 +33,17 @@ const roleLabels = {
 };
 
 const NewUsers = () => {
+  const queryClient = useQueryClient();
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [limit] = useState(15);
   const [sortBy, setSortBy] = useState('-createdAt');
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'approve' | 'reject';
+    userId: string;
+    userName?: string;
+  } | null>(null);
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -46,39 +57,87 @@ const NewUsers = () => {
     setPage(1);
   };
 
-  // Fetch new users (created in last 7 days)
+  // Fetch pending users (inactive users awaiting approval)
   const { data: usersData, isLoading } = useQuery({
     queryKey: ['new-users', page, searchQuery, sortBy],
     queryFn: async () => {
-      const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
       const params = {
         page,
         limit,
         sort: sortBy,
-        createdAfter: weekAgo.toISOString(),
+        isActive: false, // Only fetch inactive/pending users
         ...(searchQuery && { search: searchQuery }),
       };
 
       const response = await api.get('/users', { params });
-      return response.data?.data;
+      return response.data;
     },
   });
 
-  // Get total pages
-  const totalPages = usersData ? Math.ceil(usersData.length / limit) : 1;
-  const displayUsers = usersData ? usersData.slice((page - 1) * limit, page * limit) : [];
+  // Get total pages and users
+  const total = usersData?.total || 0;
+  const totalPages = Math.ceil(total / limit);
+  const displayUsers: User[] = usersData?.data || [];
+
+  // Approve user mutation
+  const approveUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await api.put(`/users/${userId}`, { isActive: true });
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('User approved successfully');
+      queryClient.invalidateQueries({ queryKey: ['new-users'] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to approve user');
+    },
+  });
+
+  // Reject/Delete user mutation
+  const rejectUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await api.delete(`/users/${userId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('User request rejected');
+      queryClient.invalidateQueries({ queryKey: ['new-users'] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to reject user');
+    },
+  });
+
+  const handleApprove = (userId: string, userName?: string) => {
+    setConfirmAction({ type: 'approve', userId, userName });
+  };
+
+  const handleReject = (userId: string, userName: string) => {
+    setConfirmAction({ type: 'reject', userId, userName });
+  };
+
+  const handleConfirmAction = () => {
+    if (!confirmAction) return;
+    if (confirmAction.type === 'approve') {
+      approveUserMutation.mutate(confirmAction.userId);
+    } else {
+      rejectUserMutation.mutate(confirmAction.userId);
+    }
+    setConfirmAction(null);
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 border-l-4 border-cyan-500 rounded-lg p-6">
+      <div className="bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-l-4 border-amber-500 rounded-lg p-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          New Users (Last 7 Days)
+          Pending User Requests
         </h1>
         <p className="text-gray-600 dark:text-gray-300">
-          View recently added users to the system
+          Review and approve new user registrations awaiting admin approval
         </p>
       </div>
 
@@ -136,7 +195,7 @@ const NewUsers = () => {
         ) : displayUsers.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">
-              {searchQuery ? 'No users found matching your search.' : 'No new users in the last 7 days.'}
+              {searchQuery ? 'No users found matching your search.' : 'No pending user requests at this time.'}
             </p>
           </div>
         ) : (
@@ -162,6 +221,9 @@ const NewUsers = () => {
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
                       Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -219,11 +281,31 @@ const NewUsers = () => {
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
                             user.isActive
                               ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                              : 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
                           }`}
                         >
-                          {user.isActive ? 'Active' : 'Inactive'}
+                          {user.isActive ? 'Active' : 'Pending'}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleApprove(user._id, user.name)}
+                            disabled={approveUserMutation.isPending || rejectUserMutation.isPending}
+                            className="inline-flex items-center justify-center p-2 text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Approve user"
+                          >
+                            <CheckCircleIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleReject(user._id, user.name)}
+                            disabled={approveUserMutation.isPending || rejectUserMutation.isPending}
+                            className="inline-flex items-center justify-center p-2 text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Reject user"
+                          >
+                            <XCircleIcon className="h-5 w-5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -258,6 +340,61 @@ const NewUsers = () => {
           </>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmAction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className={`p-3 rounded-full ${
+                  confirmAction.type === 'approve'
+                    ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                    : 'bg-red-100 dark:bg-red-900/30'
+                }`}
+              >
+                {confirmAction.type === 'approve' ? (
+                  <ShieldCheckIcon className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <NoSymbolIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+                )}
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {confirmAction.type === 'approve' ? 'Approve User' : 'Reject Registration'}
+              </h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {confirmAction.type === 'approve'
+                ? 'Are you sure you want to approve this user? They will be able to access the system.'
+                : `Are you sure you want to reject ${confirmAction.userName || 'this user'}'s registration? This action cannot be undone.`}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmAction(null)}
+                disabled={approveUserMutation.isPending || rejectUserMutation.isPending}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                disabled={approveUserMutation.isPending || rejectUserMutation.isPending}
+                className={`flex-1 px-4 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+                  confirmAction.type === 'approve'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                {approveUserMutation.isPending || rejectUserMutation.isPending
+                  ? 'Processing...'
+                  : confirmAction.type === 'approve'
+                  ? 'Approve'
+                  : 'Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

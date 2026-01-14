@@ -188,7 +188,7 @@ const Dashboard = () => {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div className={`bg-gradient-to-r ${isAdmin && !isPreviewMode ? 'from-purple-600 to-purple-700' : 'from-primary-600 to-primary-700'} rounded-xl shadow-lg overflow-hidden`}>
-        <div className="px-6 py-8 sm:px-8 sm:py-10">
+        <div className="px-4 py-6 sm:px-8 sm:py-10">
           <div className="flex items-center gap-3">
             {isAdmin && !isPreviewMode && <ShieldCheckIcon className="h-8 w-8 text-white/80" />}
             <div>

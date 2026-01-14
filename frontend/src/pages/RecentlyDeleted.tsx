@@ -378,7 +378,7 @@ const RecentlyDeleted = () => {
     <div className="space-y-8 min-w-0 max-w-full">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-8 sm:px-8 sm:py-10">
+        <div className="px-4 py-6 sm:px-8 sm:py-10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-3">

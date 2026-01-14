@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   UsersIcon,
@@ -16,6 +16,7 @@ import {
   ShieldCheckIcon,
   BuildingStorefrontIcon,
   UserIcon,
+  ClipboardDocumentCheckIcon,
 } from '@heroicons/react/24/outline';
 import api from '../config/axios';
 import CustomSelect from '../components/CustomSelect';
@@ -40,16 +41,16 @@ const UserManagement = () => {
   const [page, setPage] = useState(1);
   const [limit] = useState(15);
   const [roleFilter, setRoleFilter] = useState<string>(searchParams.get('role') || 'all');
-  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all');
+  // User Management should only list approved users. Pending registrations live in `/new-users`.
+  const [statusFilter, setStatusFilter] = useState<string>('active');
   const [showFilters, setShowFilters] = useState(false);
 
   // Update URL when filters change
   useEffect(() => {
     const newParams = new URLSearchParams();
     if (roleFilter !== 'all') newParams.set('role', roleFilter);
-    if (statusFilter !== 'all') newParams.set('status', statusFilter);
     setSearchParams(newParams);
-  }, [roleFilter, statusFilter, setSearchParams]);
+  }, [roleFilter, setSearchParams]);
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -65,11 +66,11 @@ const UserManagement = () => {
 
   const handleClearFilters = () => {
     setRoleFilter('all');
-    setStatusFilter('all');
+    setStatusFilter('active');
     setPage(1);
   };
 
-  const hasActiveFilters = roleFilter !== 'all' || statusFilter !== 'all';
+  const hasActiveFilters = roleFilter !== 'all' || statusFilter !== 'active';
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -97,7 +98,8 @@ const UserManagement = () => {
     queryFn: async () => {
       const params: Record<string, any> = { page, limit, search: searchQuery };
       if (roleFilter !== 'all') params.role = roleFilter;
-      if (statusFilter !== 'all') params.isActive = statusFilter === 'active';
+      // Always fetch only approved/active users for this list.
+      params.isActive = true;
       const response = await api.get('/users', { params });
       return response.data;
     }
@@ -362,13 +364,27 @@ const UserManagement = () => {
                   Manage all users and their access permissions
                 </p>
               </div>
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-primary-700 bg-white hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-colors whitespace-nowrap flex-shrink-0"
-              >
-                <PlusIcon className="h-5 w-5 sm:mr-2" />
-                <span className="hidden sm:inline">Create User</span>
-              </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Link
+                  to="/new-users"
+                  className="relative inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 active:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors whitespace-nowrap"
+                >
+                  <ClipboardDocumentCheckIcon className="h-5 w-5 sm:mr-2" />
+                  <span className="hidden sm:inline">View Pending Request</span>
+                  {statsData?.inactive && statsData.inactive > 0 && (
+                    <span className="absolute -top-2 -right-2 flex items-center justify-center h-5 w-5 text-xs font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-primary-600">
+                      {statsData.inactive > 9 ? '9+' : statsData.inactive}
+                    </span>
+                  )}
+                </Link>
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-primary-700 bg-white hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-colors whitespace-nowrap"
+                >
+                  <PlusIcon className="h-5 w-5 sm:mr-2" />
+                  <span className="hidden sm:inline">Create User</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -471,12 +487,10 @@ const UserManagement = () => {
           </div>
         </button>
 
-        <button
-          onClick={() => { setRoleFilter('all'); setStatusFilter('inactive'); setPage(1); }}
+        <Link
+          to="/new-users"
           className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 transition-all ${
-            statusFilter === 'inactive'
-              ? 'border-red-500 shadow-md'
-              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+            'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
           }`}
         >
           <div className="flex items-center gap-3">
@@ -488,7 +502,7 @@ const UserManagement = () => {
               <p className="text-xs text-gray-500 dark:text-gray-400">Inactive</p>
             </div>
           </div>
-        </button>
+        </Link>
       </div>
 
       {/* Search and Filters Bar */}
