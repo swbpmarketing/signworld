@@ -457,7 +457,7 @@ const VendorProfile = () => {
       <div className="space-y-8">
         {/* Header */}
         <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-8 sm:px-8 sm:py-10">
+          <div className="px-4 py-6 sm:px-8 sm:py-10">
             <div className="text-center">
               <div className="mx-auto h-16 w-16 rounded-full bg-white/20 flex items-center justify-center mb-4">
                 <BuildingStorefrontIcon className="h-8 w-8 text-white" />
@@ -682,7 +682,7 @@ const VendorProfile = () => {
     <div className="space-y-8">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-8 sm:px-8 sm:py-10">
+        <div className="px-4 py-6 sm:px-8 sm:py-10">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               {formData.logo ? (

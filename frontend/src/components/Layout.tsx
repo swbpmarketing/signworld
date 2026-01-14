@@ -49,6 +49,7 @@ const navigation: {
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDashboard' },
   { name: "Reports", href: "/reports", icon: ChartBarIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDashboard' },
   { name: "User Management", href: "/users", icon: UsersIcon, roles: ['admin'], permission: 'canManageUsers' },
+  { name: "Settings", href: "/settings", icon: Cog6ToothIcon, roles: ['admin', 'owner', 'vendor'] },
   { name: "Calendar", href: "/calendar", icon: CalendarIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEvents' },
   { name: "Convention", href: "/convention", icon: BuildingOffice2Icon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEvents' },
   { name: "Success Stories", href: "/brags", icon: NewspaperIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessBrags' },
@@ -71,6 +72,7 @@ const navigation: {
 const Sidebar = memo(({
   sidebarOpen,
   userRole,
+  actualUserRole,
   currentPath,
   onClose,
   hasPermission,
@@ -79,6 +81,7 @@ const Sidebar = memo(({
 }: {
   sidebarOpen: boolean;
   userRole?: string;
+  actualUserRole?: string;
   currentPath: string;
   onClose: () => void;
   hasPermission: (permission: keyof Permissions) => boolean;
@@ -86,8 +89,14 @@ const Sidebar = memo(({
   permissions: Permissions | null;
 }) => {
   const filteredNavigation = navigation.filter(item => {
+    // For admin-only items, check actual user role (not effective/preview role)
+    // For other items, use effective role (respects preview mode)
+    const roleToCheck = (item.roles.length === 1 && item.roles[0] === 'admin') 
+      ? actualUserRole 
+      : userRole;
+    
     // First check role-based access
-    if (userRole && !item.roles.includes(userRole)) {
+    if (roleToCheck && !item.roles.includes(roleToCheck)) {
       return false;
     }
     // Then check permission-based access
@@ -379,6 +388,7 @@ const Layout = () => {
       <Sidebar
         sidebarOpen={sidebarOpen}
         userRole={effectiveRole}
+        actualUserRole={user?.role}
         currentPath={location.pathname}
         onClose={handleSidebarClose}
         hasPermission={hasPermission}
@@ -390,7 +400,7 @@ const Layout = () => {
       <div className={`flex-1 flex flex-col min-h-screen md:ml-64 min-w-0 overflow-hidden ${isPreviewMode ? 'pt-10' : ''}`}>
         {/* Top bar */}
         <header className={`sticky ${isPreviewMode ? 'top-10' : 'top-0'} z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md`}>
-          <div className="px-6">
+          <div className="px-4 sm:px-6">
             <div className="flex items-center justify-between h-16">
               {/* Left side - Mobile menu + Breadcrumbs */}
               <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">

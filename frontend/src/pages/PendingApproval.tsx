@@ -67,9 +67,8 @@ const categoryMeta: { [key: string]: { name: string; icon: string; color: string
 
 const PendingApproval = () => {
   const { user } = useAuth();
-  const { getEffectiveRole } = usePreviewMode();
-  const effectiveRole = getEffectiveRole();
-  const isAdmin = effectiveRole === 'admin';
+  // Check actual user role - ProtectedRoute already ensures only admins (not in preview) can access
+  const isAdmin = user?.role === 'admin';
 
   // State
   const [files, setFiles] = useState<LibraryFile[]>([]);
@@ -454,7 +453,7 @@ const PendingApproval = () => {
     <div className="space-y-8 min-w-0 max-w-full">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-8 sm:px-8 sm:py-10">
+        <div className="px-4 py-6 sm:px-8 sm:py-10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-3">

@@ -64,10 +64,11 @@ interface RolePermissions {
 
 const Settings = () => {
   const { user } = useAuth();
-  const { getEffectiveRole } = usePreviewMode();
+  const { getEffectiveRole, isPreviewMode } = usePreviewMode();
   const queryClient = useQueryClient();
   const effectiveRole = getEffectiveRole();
-  const isAdmin = effectiveRole === 'admin';
+  // Check actual user role, not effective role (since admin settings should only show for actual admins)
+  const isAdmin = user?.role === 'admin' && !isPreviewMode;
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'system' | 'notifications' | 'broadcasts' | 'roles'>('profile');
   const [selectedRoleTab, setSelectedRoleTab] = useState<'owner' | 'vendor'>('owner');
@@ -351,7 +352,7 @@ const Settings = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className={`bg-gradient-to-r ${isAdmin ? 'from-gray-700 to-gray-800' : 'from-primary-600 to-primary-700'} rounded-xl shadow-lg overflow-hidden`}>
-        <div className="px-6 py-8 sm:px-8 sm:py-10">
+        <div className="px-4 py-6 sm:px-8 sm:py-10">
           <div className="flex items-center gap-3">
             <Cog6ToothIcon className="h-8 w-8 text-white/80" />
             <div>

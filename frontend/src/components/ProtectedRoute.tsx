@@ -29,7 +29,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _previewKey = `${isPreviewMode}-${previewRole}`;
 
-  if (loading || permissionsLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
@@ -44,6 +44,30 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Get the effective role (actual role or preview role for admins)
   const effectiveRole = getEffectiveRole();
 
+  // Admin-only check: If adminOnly is true, check immediately (don't wait for permissions to load)
+  // This allows admins to access admin-only routes without waiting for permission checks
+  if (adminOnly) {
+    if (isPreviewMode) {
+      // Block admin-only routes in preview mode
+      return <Navigate to="/dashboard" replace />;
+    }
+    if (user.role === 'admin') {
+      // Admin has full access to admin-only routes, skip permission check
+      return children;
+    }
+    // Non-admin users cannot access admin-only routes
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // For non-adminOnly routes, wait for permissions to load if needed
+  if (permissionsLoading && requiredPermission) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
   // Check allowed roles if specified (use effective role for preview mode)
   if (allowedRoles && allowedRoles.length > 0) {
     // In preview mode, check against the preview role
@@ -56,20 +80,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return <Navigate to="/dashboard" replace />;
       }
     }
-  }
-
-  // Admin-only check: If adminOnly is true and user is admin (not in preview mode), grant access immediately
-  if (adminOnly) {
-    if (isPreviewMode) {
-      // Block admin-only routes in preview mode
-      return <Navigate to="/dashboard" replace />;
-    }
-    if (user.role === 'admin') {
-      // Admin has full access to admin-only routes, skip permission check
-      return children;
-    }
-    // Non-admin users cannot access admin-only routes
-    return <Navigate to="/dashboard" replace />;
   }
 
   // Owner-only check (allows admin access too, but not in preview mode)

@@ -161,7 +161,7 @@ const VendorDashboard = () => {
       <div className="space-y-8">
         {/* Welcome Section */}
         <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-8 sm:px-8 sm:py-10">
+          <div className="px-4 py-6 sm:px-8 sm:py-10">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="h-16 w-16 rounded-lg bg-white/20 flex items-center justify-center">
@@ -313,7 +313,7 @@ const VendorDashboard = () => {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-8 sm:px-8 sm:py-10">
+        <div className="px-4 py-6 sm:px-8 sm:py-10">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               {(partner.logo || partner.logoUrl) ? (
