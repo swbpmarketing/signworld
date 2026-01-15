@@ -269,10 +269,8 @@ router.delete('/:id', protect, authorize('admin', 'owner'), async (req, res) => 
       });
     }
 
-    // Soft delete
-    folder.deletedAt = new Date();
-    folder.isActive = false;
-    await folder.save();
+    // Hard delete - permanently remove folder from database
+    await Folder.findByIdAndDelete(id);
 
     res.json({
       success: true,

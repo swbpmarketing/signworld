@@ -23,6 +23,20 @@ const userSchema = new mongoose.Schema({
     minlength: 6,
     select: false,
   },
+  // Email verification fields
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  verificationToken: String,
+  verificationTokenExpires: Date,
+  // Password reset fields
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  // Email change fields
+  pendingEmail: String,
+  emailChangeToken: String,
+  emailChangeTokenExpires: Date,
   role: {
     type: String,
     enum: ['admin', 'owner', 'vendor'],
@@ -159,6 +173,10 @@ userSchema.index({ 'location': '2dsphere' }, { sparse: true });
 userSchema.index({ role: 1, isActive: 1 }); // For role-based queries
 userSchema.index({ email: 1 }); // For login/lookup (unique already creates index, but explicit is clearer)
 userSchema.index({ createdAt: -1 }); // For sorting by date
+// Token indexes for email verification and password reset
+userSchema.index({ verificationToken: 1 }, { sparse: true }); // Only index if token exists
+userSchema.index({ resetPasswordToken: 1 }, { sparse: true }); // Only index if token exists
+userSchema.index({ emailChangeToken: 1 }, { sparse: true }); // Only index if token exists
 
 // Encrypt password using bcrypt
 userSchema.pre('save', async function(next) {

@@ -1,44 +1,46 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const dotenv = require('dotenv');
+dotenv.config();
 
-// Load env vars
-dotenv.config({ path: '../.env' });
-
-// Connect to DB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/sign-company-dashboard', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-});
-
-const User = require('./models/User');
-
-const testLogin = async () => {
+}).then(async () => {
   try {
-    // Find admin user
-    const admin = await User.findOne({ email: 'admin@signcompany.com' }).select('+password');
-    
-    if (!admin) {
-      console.log('Admin user not found!');
+    const User = require('./models/User');
+    const user = await User.findOne({ email: 'admin@signcompany.com' }).select('+password');
+
+    if (!user) {
+      console.log('❌ User not found');
       process.exit(1);
     }
 
-    console.log('Admin found:', admin.email);
-    console.log('Stored password hash:', admin.password);
-    
-    // Test password
-    const isMatch = await bcrypt.compare('admin123', admin.password);
-    console.log('Password match:', isMatch);
-    
-    // Also test using the model method
-    const isMatchMethod = await admin.matchPassword('admin123');
-    console.log('Password match (method):', isMatchMethod);
-    
+    console.log('✅ User found');
+    console.log('   emailVerified:', user.emailVerified);
+    console.log('   isActive:', user.isActive);
+    console.log('\n🔑 Testing password match...');
+
+    const isMatch = await user.matchPassword('admin123');
+
+    if (isMatch) {
+      console.log('✅ Password is correct!');
+
+      // Try generating token
+      const generateToken = require('./utils/generateToken');
+      const token = generateToken(user._id, user.role);
+      console.log('✅ Token generated:', token.substring(0, 20) + '...');
+      console.log('\n✅✅✅ LOGIN SHOULD WORK ✅✅✅');
+    } else {
+      console.log('❌ Password is incorrect!');
+    }
+
     process.exit(0);
-  } catch (error) {
-    console.error('Error testing login:', error);
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+    console.error(err.stack);
     process.exit(1);
   }
-};
-
-testLogin();
+}).catch(err => {
+  console.error('❌ Database connection failed:', err.message);
+  process.exit(1);
+});

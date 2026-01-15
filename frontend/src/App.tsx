@@ -15,6 +15,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const DashboardRouter = lazy(() => import('./pages/DashboardRouter'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const Convention = lazy(() => import('./pages/Convention'));
@@ -87,6 +90,9 @@ function App() {
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
                 {/* Protected routes with Layout */}
                 <Route element={<Layout />}>

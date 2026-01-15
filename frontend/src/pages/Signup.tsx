@@ -11,6 +11,8 @@ interface SignupFormData {
   email: string;
   password: string;
   confirmPassword: string;
+  role: 'owner' | 'vendor';
+  company?: string;
 }
 
 const Signup = () => {
@@ -24,7 +26,11 @@ const Signup = () => {
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<SignupFormData>();
+  } = useForm<SignupFormData>({
+    defaultValues: {
+      role: 'owner',
+    },
+  });
 
   const password = watch('password');
 
@@ -48,7 +54,7 @@ const Signup = () => {
       const fullName = `${data.firstName} ${data.lastName}`.trim();
 
       // Call signup API
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,7 +63,8 @@ const Signup = () => {
           name: fullName,
           email: data.email,
           password: data.password,
-          role: 'owner', // Default role for new signups
+          role: data.role,
+          company: data.company || undefined,
         }),
       });
 
@@ -67,7 +74,7 @@ const Signup = () => {
       }
 
       const result = await response.json();
-      toast.success('Account created successfully! Please log in.');
+      toast.success(result.message || 'Account created successfully! Please log in.');
       navigate('/login', { replace: true });
     } catch (error: any) {
       toast.error(error.message || 'Signup failed. Please try again.');
@@ -212,6 +219,58 @@ const Signup = () => {
                 {errors.email && (
                   <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
                 )}
+              </div>
+
+              {/* Role Selection */}
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-300 mb-2">
+                  I am signing up as
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className={`relative flex items-center justify-center px-4 py-3 border-2 rounded-lg cursor-pointer transition-all ${
+                    watch('role') === 'owner'
+                      ? 'border-blue-500 bg-blue-500/20'
+                      : 'border-blue-500/30 bg-gray-900/40 hover:border-blue-500/50'
+                  }`}>
+                    <input
+                      {...register('role', { required: 'Please select a role' })}
+                      type="radio"
+                      value="owner"
+                      className="sr-only"
+                    />
+                    <span className="text-sm font-medium text-gray-300">Owner</span>
+                  </label>
+                  <label className={`relative flex items-center justify-center px-4 py-3 border-2 rounded-lg cursor-pointer transition-all ${
+                    watch('role') === 'vendor'
+                      ? 'border-blue-500 bg-blue-500/20'
+                      : 'border-blue-500/30 bg-gray-900/40 hover:border-blue-500/50'
+                  }`}>
+                    <input
+                      {...register('role', { required: 'Please select a role' })}
+                      type="radio"
+                      value="vendor"
+                      className="sr-only"
+                    />
+                    <span className="text-sm font-medium text-gray-300">Vendor</span>
+                  </label>
+                </div>
+                {errors.role && (
+                  <p className="mt-1 text-xs text-red-400">{errors.role.message}</p>
+                )}
+              </div>
+
+              {/* Company Name */}
+              <div>
+                <label htmlFor="company" className="block text-sm font-medium text-gray-300 mb-2">
+                  Company Name <span className="text-gray-500 text-xs">(Optional)</span>
+                </label>
+                <input
+                  {...register('company')}
+                  type="text"
+                  autoComplete="organization"
+                  className="w-full px-4 py-3 border-2 border-blue-500/30 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-900/40 text-white placeholder-gray-500 transition-all font-medium backdrop-blur-sm"
+                  placeholder="Your Company Name"
+                />
               </div>
 
               {/* Password */}

@@ -149,6 +149,7 @@ const Library = () => {
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [creatingFolder, setCreatingFolder] = useState(false);
+  const [folderModalCategory, setFolderModalCategory] = useState<string>('other');
 
   // Preview modal state
   const [previewFile, setPreviewFile] = useState<LibraryFile | null>(null);
@@ -494,6 +495,24 @@ const Library = () => {
   // Get current folder object for display
   const currentFolder = currentFolderId ? findFolderInHierarchy(currentFolderId, folderHierarchy) : null;
 
+  // Build breadcrumbs path from root to current folder
+  const buildBreadcrumbs = (targetId: string, folders: Folder[]): Folder[] => {
+    for (const folder of folders) {
+      if (folder._id === targetId) {
+        return [folder];
+      }
+      if (folder.children) {
+        const pathInChildren = buildBreadcrumbs(targetId, folder.children);
+        if (pathInChildren.length > 0) {
+          return [folder, ...pathInChildren];
+        }
+      }
+    }
+    return [];
+  };
+
+  const breadcrumbs = currentFolderId ? buildBreadcrumbs(currentFolderId, folderHierarchy) : [];
+
   // Render folder tree recursively
   const renderFolderTree = (folders: Folder[], level: number = 0): JSX.Element[] => {
     return folders.map((folder) => (
@@ -560,12 +579,26 @@ const Library = () => {
   };
 
   const handleDropFiles = (files: File[]) => {
-    const newFiles = files;
+    // Filter out duplicates based on file name and size
+    const newFiles = files.filter(newFile => {
+      return !uploadFiles.some(
+        existingFile =>
+          existingFile.name === newFile.name &&
+          existingFile.size === newFile.size
+      );
+    });
+
+    // Notify if duplicates were removed
+    if (newFiles.length < files.length) {
+      const duplicateCount = files.length - newFiles.length;
+      toast.success(`${duplicateCount} duplicate file(s) ignored`);
+    }
+
     const totalFiles = uploadFiles.length + newFiles.length;
 
-    if (totalFiles > 5) {
-      const available = 5 - uploadFiles.length;
-      toast.error(`Only ${available} more file(s) can be added (max 5 total)`);
+    if (totalFiles > 10) {
+      const available = 10 - uploadFiles.length;
+      toast.error(`Only ${available} more file(s) can be added (max 10 total)`);
       setUploadFiles([...uploadFiles, ...newFiles.slice(0, available)]);
     } else {
       setUploadFiles([...uploadFiles, ...newFiles]);
@@ -581,7 +614,24 @@ const Library = () => {
   };
 
   const handleFileSelect = (files: FileList | null) => {
-    const newFiles = Array.from(files || []);
+    let newFiles = Array.from(files || []);
+
+    // Filter out duplicates based on file name and size
+    const filteredFiles = newFiles.filter(newFile => {
+      return !uploadFiles.some(
+        existingFile =>
+          existingFile.name === newFile.name &&
+          existingFile.size === newFile.size
+      );
+    });
+
+    // Notify if duplicates were removed
+    if (filteredFiles.length < newFiles.length) {
+      const duplicateCount = newFiles.length - filteredFiles.length;
+      toast.success(`${duplicateCount} duplicate file(s) ignored`);
+    }
+
+    newFiles = filteredFiles;
 
     // Check if this is a folder upload by looking at the webkitRelativePath property
     const isFolderUpload = newFiles.some(f => (f as any).webkitRelativePath);
@@ -591,11 +641,11 @@ const Library = () => {
       setUploadFiles([...uploadFiles, ...newFiles]);
       setUploadMode('folder');
     } else {
-      // Regular file uploads limited to 5 files
+      // Regular file uploads limited to 10 files
       const totalFiles = uploadFiles.length + newFiles.length;
-      if (totalFiles > 5) {
-        const available = 5 - uploadFiles.length;
-        toast.error(`Only ${available} more file(s) can be added (max 5 total)`);
+      if (totalFiles > 10) {
+        const available = 10 - uploadFiles.length;
+        toast.error(`Only ${available} more file(s) can be added (max 10 total)`);
         setUploadFiles([...uploadFiles, ...newFiles.slice(0, available)]);
       } else {
         setUploadFiles([...uploadFiles, ...newFiles]);
@@ -751,9 +801,24 @@ const Library = () => {
       return;
     }
 
+    // Validate category is provided
+    if (!folderModalCategory) {
+      toast.error('Please select a category');
+      return;
+    }
+
     setCreatingFolder(true);
     try {
       const token = localStorage.getItem('token');
+
+      // Determine which category to use
+      // If inside a folder, use the parent folder's category
+      // Otherwise, use the selected category from the modal
+      let categoryForFolder = folderModalCategory;
+      if (currentFolder && currentFolder.category) {
+        categoryForFolder = currentFolder.category;
+      }
+
       const response = await fetch(`${API_URL}/folders`, {
         method: 'POST',
         headers: {
@@ -762,7 +827,8 @@ const Library = () => {
         },
         body: JSON.stringify({
           name: newFolderName.trim(),
-          category: selectedCategory === 'all' ? 'other' : selectedCategory
+          category: categoryForFolder,
+          parentFolderId: currentFolderId // Support nested folder creation
         })
       });
 
@@ -771,11 +837,13 @@ const Library = () => {
         toast.success(`Folder "${newFolderName}" created successfully`);
         setShowNewFolderModal(false);
         setNewFolderName('');
+        // Reset to default category
+        if (categories.length > 0) {
+          setFolderModalCategory(categories[0].id);
+        }
         // Refresh both files and folder hierarchy to show new folder
         fetchFiles();
-        if (selectedCategory !== 'all') {
-          fetchFolders(selectedCategory);
-        }
+        fetchFolders(categoryForFolder);
       } else {
         toast.error(data.error || 'Failed to create folder');
       }
@@ -890,7 +958,16 @@ const Library = () => {
             {canUpload && (
               <div className="mt-4 sm:mt-0 flex gap-3">
                 <button
-                  onClick={() => setShowNewFolderModal(true)}
+                  onClick={() => {
+                    // Initialize category based on current context
+                    if (selectedCategory !== 'all') {
+                      setFolderModalCategory(selectedCategory);
+                    } else if (categories.length > 0) {
+                      // If viewing all categories, default to first available category
+                      setFolderModalCategory(categories[0].id);
+                    }
+                    setShowNewFolderModal(true);
+                  }}
                   className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
                 >
                   <FolderIcon className="h-5 w-5 mr-2" />
@@ -1115,12 +1192,29 @@ const Library = () => {
                   <FolderIcon className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-600" />
                   <p className="mt-4 text-gray-500 dark:text-gray-400">No files found</p>
                   {canUpload && (
-                    <button
-                      onClick={() => setShowUploadModal(true)}
-                      className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                    >
-                      Upload your first file
-                    </button>
+                    <div className="mt-4 flex gap-3 justify-center">
+                      <button
+                        onClick={() => setShowUploadModal(true)}
+                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                      >
+                        Upload your first file
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Initialize category based on current context
+                          if (selectedCategory !== 'all') {
+                            setFolderModalCategory(selectedCategory);
+                          } else if (categories.length > 0) {
+                            // If viewing all categories, default to first available category
+                            setFolderModalCategory(categories[0].id);
+                          }
+                          setShowNewFolderModal(true);
+                        }}
+                        className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        Create a Folder
+                      </button>
+                    </div>
                   )}
                 </div>
               ) : viewMode === 'grid' ? (
@@ -1239,6 +1333,32 @@ const Library = () => {
                           <ChevronRightIcon className="h-4 w-4 ml-1" />
                         </button>
                       </div>
+                    </div>
+                  )}
+                  {/* Action Buttons Below Files */}
+                  {canUpload && (
+                    <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex gap-3 justify-center">
+                      <button
+                        onClick={() => {
+                          if (selectedCategory !== 'all') {
+                            setFolderModalCategory(selectedCategory);
+                          } else if (categories.length > 0) {
+                            setFolderModalCategory(categories[0].id);
+                          }
+                          setShowNewFolderModal(true);
+                        }}
+                        className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                      >
+                        <FolderIcon className="h-5 w-5 mr-2" />
+                        Create Folder
+                      </button>
+                      <button
+                        onClick={() => setShowUploadModal(true)}
+                        className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200"
+                      >
+                        <PlusIcon className="h-5 w-5 mr-2" />
+                        Upload Files
+                      </button>
                     </div>
                   )}
                 </>
@@ -1362,9 +1482,35 @@ const Library = () => {
                       </div>
                     </div>
                   )}
+                  {/* Action Buttons Below Files */}
+                  {canUpload && (
+                    <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 flex gap-3 justify-center">
+                      <button
+                        onClick={() => {
+                          if (selectedCategory !== 'all') {
+                            setFolderModalCategory(selectedCategory);
+                          } else if (categories.length > 0) {
+                            setFolderModalCategory(categories[0].id);
+                          }
+                          setShowNewFolderModal(true);
+                        }}
+                        className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                      >
+                        <FolderIcon className="h-5 w-5 mr-2" />
+                        Create Folder
+                      </button>
+                      <button
+                        onClick={() => setShowUploadModal(true)}
+                        className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200"
+                      >
+                        <PlusIcon className="h-5 w-5 mr-2" />
+                        Upload Files
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
-              
+
               {/* Quick Links - Show when All Files is selected */}
               {selectedCategory === 'all' && (
                 <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -1417,6 +1563,38 @@ const Library = () => {
                   <XMarkIcon className="h-5 w-5 text-gray-400" />
                 </button>
               </div>
+
+              {/* Breadcrumb Navigation */}
+              {currentFolderId && breadcrumbs.length > 0 && (
+                <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                  <div className="flex items-center gap-2 overflow-x-auto">
+                    <button
+                      onClick={() => setCurrentFolderId(null)}
+                      className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm flex-shrink-0"
+                      title="Go to root"
+                    >
+                      Root
+                    </button>
+                    {breadcrumbs.map((folder, index) => (
+                      <div key={folder._id} className="flex items-center gap-2 flex-shrink-0">
+                        <ChevronRightIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                        <button
+                          onClick={() => setCurrentFolderId(folder._id)}
+                          className={`text-sm whitespace-nowrap ${
+                            index === breadcrumbs.length - 1
+                              ? 'text-gray-900 dark:text-gray-100 font-medium'
+                              : 'text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300'
+                          }`}
+                          title={folder.name}
+                        >
+                          {folder.name.length > 15 ? folder.name.substring(0, 12) + '...' : folder.name}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="p-4 space-y-1 max-h-[calc(100vh-300px)] overflow-y-auto">
                 {/* Root level button */}
                 <button
@@ -1549,7 +1727,7 @@ const Library = () => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {uploadMode === 'folder' ? 'Folder' : 'Files (up to 5 files per upload)'}
+                    {uploadMode === 'folder' ? 'Folder' : 'Files (up to 10 files per upload)'}
                   </label>
                   <button
                     type="button"
@@ -1601,7 +1779,7 @@ const Library = () => {
                         Click to upload or drag and drop
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        PNG, JPG, PDF, DOC up to 100MB (max 5 files)
+                        PNG, JPG, PDF, DOC, AI up to 500MB (max 10 files)
                       </p>
                     </div>
                   </div>
@@ -1636,7 +1814,7 @@ const Library = () => {
                     <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {uploadFiles.length} / 5 file(s) selected
+                          {uploadFiles.length} / 10 file(s) selected
                         </p>
                         <button
                           type="button"
@@ -1814,6 +1992,10 @@ const Library = () => {
                 onClick={() => {
                   setShowNewFolderModal(false);
                   setNewFolderName('');
+                  // Reset to default category
+                  if (categories.length > 0) {
+                    setFolderModalCategory(categories[0].id);
+                  }
                 }}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
@@ -1821,16 +2003,30 @@ const Library = () => {
               </button>
             </div>
             <form onSubmit={handleCreateFolder} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Category
-                </label>
-                <div className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
-                  <p className="text-sm text-gray-900 dark:text-gray-100">
-                    {selectedCategory === 'all' ? 'Other' : (categoryMeta[selectedCategory]?.name || selectedCategory)}
+              {currentFolderId && currentFolder ? (
+                <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg p-3">
+                  <p className="text-sm font-medium text-primary-900 dark:text-primary-100">
+                    Creating inside: <span className="font-bold">{currentFolder.name}</span>
                   </p>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Category
+                  </label>
+                  <select
+                    value={folderModalCategory}
+                    onChange={(e) => setFolderModalCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Folder Name
@@ -1850,6 +2046,10 @@ const Library = () => {
                   onClick={() => {
                     setShowNewFolderModal(false);
                     setNewFolderName('');
+                    // Reset to default category
+                    if (categories.length > 0) {
+                      setFolderModalCategory(categories[0].id);
+                    }
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >

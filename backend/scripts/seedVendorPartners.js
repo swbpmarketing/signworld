@@ -296,7 +296,11 @@ async function seedVendorPartners() {
 
       if (!vendor) {
         // Create vendor user
-        vendor = await User.create(item.user);
+        vendor = await User.create({
+          ...item.user,
+          emailVerified: true, // Seeded vendors are pre-verified
+          isActive: true
+        });
         console.log(`Created vendor user: ${item.user.email}`);
       } else {
         console.log(`Vendor user already exists: ${item.user.email}`);

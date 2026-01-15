@@ -35,11 +35,14 @@ const Login = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
+      console.log('🔐 Login attempt:', { email: data.email });
       setLoading(true);
       await login(data.email, data.password);
+      console.log('✅ Login successful');
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (error: any) {
+      console.error('❌ Login failed:', error.message);
       toast.error(error.message || 'Login failed');
     } finally {
       setLoading(false);
@@ -181,6 +184,16 @@ const Login = () => {
                   <span className="relative z-10">Sign In</span>
                 )}
               </button>
+
+              {/* Forgot Password Link */}
+              <div className="text-center">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
             </form>
 
             {/* Demo Credentials */}

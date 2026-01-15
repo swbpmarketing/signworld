@@ -36,7 +36,8 @@ const sampleOwners = [
       available: true,
       areas: ['Digital Printing', 'Business Management', 'Equipment Training']
     },
-    isActive: true
+    isActive: true,
+    emailVerified: true
   },
   {
     name: 'Sarah Johnson',
@@ -94,7 +95,8 @@ const sampleOwners = [
       available: false,
       areas: []
     },
-    isActive: true
+    isActive: true,
+    emailVerified: true
   },
   {
     name: 'Emily Chen',
@@ -124,7 +126,8 @@ const sampleOwners = [
       available: true,
       areas: ['Design Concepts', 'ADA Compliance', 'Project Management']
     },
-    isActive: true
+    isActive: true,
+    emailVerified: true
   },
   {
     name: 'David Thompson',
@@ -153,7 +156,8 @@ const sampleOwners = [
       available: true,
       areas: ['Neon Fabrication', 'Electrical Work', 'Traditional Techniques']
     },
-    isActive: true
+    isActive: true,
+    emailVerified: true
   }
 ];
 
@@ -257,6 +261,7 @@ const seedOwners = async () => {
       if (!reviewer) {
         const salt = await bcrypt.genSalt(10);
         reviewData.reviewer.password = await bcrypt.hash(reviewData.reviewer.password, salt);
+        reviewData.reviewer.emailVerified = true; // Seed reviewers are pre-verified
         reviewer = await User.create(reviewData.reviewer);
         console.log(`Created reviewer: ${reviewer.name}`);
       }

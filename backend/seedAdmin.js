@@ -36,6 +36,8 @@ const seedAdmin = async () => {
         state: 'NY',
         country: 'USA',
       },
+      emailVerified: true, // Admin users are pre-verified
+      isActive: true,
     });
 
     console.log('Admin user created successfully!');

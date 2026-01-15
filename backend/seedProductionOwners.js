@@ -274,7 +274,8 @@ async function seedProductionOwners() {
         const hashedPassword = await bcrypt.hash(ownerData.password, 10);
         const owner = await User.create({
           ...ownerData,
-          password: hashedPassword
+          password: hashedPassword,
+          emailVerified: true // Seeded owners are pre-verified
         });
         
         console.log(`✓ Created owner: ${owner.name} (${owner.company})`);

@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 
-// Default sender email
-const DEFAULT_FROM = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'SignWorld <noreply@signworld.com>';
+// Default sender email - use just email address to avoid relay issues with some SMTP providers
+const DEFAULT_FROM = process.env.SMTP_FROM_EMAIL || 'noreply@signworld.com';
 
 // Lazy initialization of transporter - create on first use to ensure environment vars are loaded
 let transporter = null;
@@ -9,12 +9,12 @@ let transporter = null;
 function getTransporter() {
   if (!transporter) {
     transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp-relay.brevo.com',
-      port: process.env.EMAIL_PORT || 587,
-      secure: false, // Use TLS
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
       }
     });
   }
@@ -22,6 +22,26 @@ function getTransporter() {
 }
 
 class EmailService {
+  /**
+   * Send email verification email
+   */
+  async sendVerificationEmail({ to, name, verificationUrl }) {
+    try {
+      const info = await getTransporter().sendMail({
+        from: DEFAULT_FROM,
+        to,
+        subject: 'Verify Your Email Address - Sign World Business Partners',
+        html: this.getVerificationTemplate(name, verificationUrl),
+      });
+
+      console.log('Verification email sent successfully:', info.messageId);
+      return { success: true, data: info };
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   /**
    * Send a welcome email to new users
    */
@@ -170,6 +190,53 @@ class EmailService {
   }
 
   // EMAIL TEMPLATES
+
+  getVerificationTemplate(name, verificationUrl) {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+            .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .info-box { background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0; border-radius: 4px; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Welcome to Sign World Business Partners!</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${name},</p>
+              <p>Thank you for signing up! To complete your registration, please verify your email address by clicking the button below:</p>
+              <a href="${verificationUrl}" class="button">Verify Email Address</a>
+              <div class="info-box">
+                <p><strong>Important:</strong></p>
+                <ul>
+                  <li>This verification link will expire in 1 hour</li>
+                  <li>If you didn't create this account, please ignore this email</li>
+                  <li>Never share your verification link with anyone</li>
+                </ul>
+              </div>
+              <p style="margin-top: 30px;">If the button above doesn't work, you can also copy and paste this link in your browser:</p>
+              <p style="word-break: break-all; background: #f0f0f0; padding: 10px; border-radius: 4px; font-size: 12px;">
+                ${verificationUrl}
+              </p>
+              <p>Best regards,<br>The Sign World Business Partners Team</p>
+            </div>
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} Sign World Business Partners. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  }
 
   getWelcomeTemplate(name) {
     return `

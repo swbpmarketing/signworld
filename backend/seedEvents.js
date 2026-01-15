@@ -33,7 +33,8 @@ const seedEvents = async () => {
         email: 'admin@signcompany.com',
         password: 'temppass123',
         role: 'admin',
-        isVerified: true
+        emailVerified: true,
+        isActive: true
       });
     }
 
