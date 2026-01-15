@@ -102,6 +102,8 @@ const seedVendor = async () => {
         state: 'CA',
         country: 'USA',
       },
+      emailVerified: true, // Seeded vendors are pre-verified
+      isActive: true,
     });
 
     console.log('Vendor user created successfully!');

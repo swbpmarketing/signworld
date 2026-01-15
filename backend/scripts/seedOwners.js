@@ -46,7 +46,8 @@ const sampleOwners = [
       available: true,
       areas: ['Vehicle Wraps', 'Business Development']
     },
-    isActive: true
+    isActive: true,
+    emailVerified: true
   },
   {
     name: 'Michael Chen',
@@ -76,7 +77,8 @@ const sampleOwners = [
       available: true,
       areas: ['Digital Signage', 'Technology Integration']
     },
-    isActive: true
+    isActive: true,
+    emailVerified: true
   },
   {
     name: 'Emily Rodriguez',
@@ -106,7 +108,8 @@ const sampleOwners = [
       available: false,
       areas: []
     },
-    isActive: true
+    isActive: true,
+    emailVerified: true
   },
   {
     name: 'David Martinez',
@@ -136,7 +139,8 @@ const sampleOwners = [
       available: true,
       areas: ['Monument Signs', 'ADA Compliance', 'Business Management']
     },
-    isActive: true
+    isActive: true,
+    emailVerified: true
   },
   {
     name: 'Jennifer Williams',
@@ -166,7 +170,8 @@ const sampleOwners = [
       available: true,
       areas: ['Design', 'Retail Signage']
     },
-    isActive: true
+    isActive: true,
+    emailVerified: true
   },
   {
     name: 'Robert Thompson',
@@ -195,7 +200,8 @@ const sampleOwners = [
       available: true,
       areas: ['Fleet Graphics', 'Large Format Printing']
     },
-    isActive: true
+    isActive: true,
+    emailVerified: true
   }
 ];
 

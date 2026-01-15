@@ -22,10 +22,10 @@ console.log('AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET);
 // Debug: Log environment and email configuration
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('Email Configuration Loaded:');
-console.log('EMAIL_HOST:', process.env.EMAIL_HOST);
-console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
-console.log('EMAIL_USER:', process.env.EMAIL_USER);
-console.log('EMAIL_FROM:', process.env.EMAIL_FROM);
+console.log('SMTP_HOST:', process.env.SMTP_HOST);
+console.log('SMTP_PORT:', process.env.SMTP_PORT);
+console.log('SMTP_USER:', process.env.SMTP_USER);
+console.log('SMTP_FROM_EMAIL:', process.env.SMTP_FROM_EMAIL);
 
 // Track database connection status
 let dbConnected = false;
