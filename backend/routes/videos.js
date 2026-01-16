@@ -6,6 +6,7 @@ const Notification = require('../models/Notification');
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const { deleteFromS3 } = require('../utils/s3');
+const { getYouTubeDuration, getVideoDuration } = require('../utils/videoDuration');
 
 // @desc    Get video statistics
 // @route   GET /api/videos/stats
@@ -28,6 +29,9 @@ router.get('/stats', async (req, res) => {
     categoryCounts.forEach(cat => {
       categoryCountsObj[cat._id] = cat.count;
     });
+
+    console.log('=== Video Stats Response ===');
+    console.log('Category counts:', JSON.stringify(categoryCountsObj, null, 2));
 
     res.json({
       success: true,
@@ -179,6 +183,9 @@ router.post('/:id/view', async (req, res) => {
 // @access  Private/Admin
 router.post('/', protect, authorize('admin'), async (req, res) => {
   try {
+    console.log('=== Received video creation request ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+
     const videoData = {
       ...req.body,
       uploadedBy: req.user.id
@@ -192,6 +199,19 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
     // Parse presenter if string
     if (typeof videoData.presenter === 'string') {
       videoData.presenter = JSON.parse(videoData.presenter);
+    }
+
+    // Auto-fetch YouTube duration if not provided
+    if (videoData.youtubeUrl && !videoData.duration) {
+      // Extract YouTube ID
+      const match = videoData.youtubeUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+      if (match) {
+        const youtubeId = match[1];
+        const duration = await getYouTubeDuration(youtubeId);
+        if (duration) {
+          videoData.duration = duration;
+        }
+      }
     }
 
     const video = await Video.create(videoData);
@@ -336,6 +356,18 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
     // Parse presenter if string
     if (typeof updateData.presenter === 'string') {
       updateData.presenter = JSON.parse(updateData.presenter);
+    }
+
+    // Auto-fetch YouTube duration if URL is being updated and duration is not provided
+    if (updateData.youtubeUrl && !updateData.duration) {
+      const match = updateData.youtubeUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+      if (match) {
+        const youtubeId = match[1];
+        const duration = await getYouTubeDuration(youtubeId);
+        if (duration) {
+          updateData.duration = duration;
+        }
+      }
     }
 
     const video = await Video.findByIdAndUpdate(

@@ -53,6 +53,9 @@ export const PreviewModeProvider: React.FC<{ children: React.ReactNode }> = ({ c
             if (parsed.type === 'role' || parsed.type === 'user') {
               setPreviewState(parsed);
             }
+          } else {
+            // If sessionStorage is empty, clear any preview state
+            setPreviewState({ type: null });
           }
         }
       } catch (error) {
@@ -76,12 +79,17 @@ export const PreviewModeProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [previewState]);
 
-  // Clear preview mode if user is not an admin
+  // Clear preview mode if user is not an admin or logged out
   useEffect(() => {
-    if (user && user.role !== 'admin' && previewState.type !== null) {
+    if (!user) {
+      // User logged out - reset everything
+      initializeRef.current = false;
+      setPreviewState({ type: null });
+    } else if (user.role !== 'admin' && previewState.type !== null) {
+      // User is not admin - clear preview mode
       setPreviewState({ type: null });
     }
-  }, [user, previewState]);
+  }, [user]);
 
   const startPreview = useCallback((role: 'owner' | 'vendor') => {
     setPreviewState({

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -21,12 +21,14 @@ import {
   CloudArrowUpIcon,
   LinkIcon,
   TrashIcon,
+  EllipsisVerticalIcon,
+  PencilIcon,
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolidIcon, PlayIcon as PlaySolidIcon, StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
 import { useAuth } from '../context/AuthContext';
 import usePermissions from '../hooks/usePermissions';
-import { getVideos, getVideoStats, createVideo, uploadVideo, deleteVideo, incrementVideoView } from '../services/videoService';
+import { getVideos, getVideoStats, createVideo, uploadVideo, updateVideo, deleteVideo, incrementVideoView } from '../services/videoService';
 import type { Video as VideoType, CreateVideoData } from '../services/videoService';
 import { getPlaylists } from '../services/playlistService';
 import type { Playlist } from '../services/playlistService';
@@ -60,15 +62,97 @@ const backendToUICategory: { [key: string]: string } = {
   'other': 'Design Tips',
 };
 
-const categories = [
-  { name: "All Videos", icon: VideoCameraIcon, count: 0 },
-  { name: "Vehicle Wraps", icon: ArrowTrendingUpIcon, count: 0 },
-  { name: "Technical Training", icon: WrenchScrewdriverIcon, count: 0 },
-  { name: "Business Growth", icon: LightBulbIcon, count: 0 },
-  { name: "Installation", icon: SparklesIcon, count: 0 },
-  { name: "Design Tips", icon: AcademicCapIcon, count: 0 }
-];
+const categoryIcons: { [key: string]: any } = {
+  'All Videos': VideoCameraIcon,
+  'Vehicle Wraps': ArrowTrendingUpIcon,
+  'Technical Training': WrenchScrewdriverIcon,
+  'Business Growth': LightBulbIcon,
+  'Installation': SparklesIcon,
+  'Design Tips': AcademicCapIcon,
+  'Product Demo': PlayCircleIcon,
+  'Webinar': AcademicCapIcon,
+};
 
+/**
+ * VideoOptionsMenu Component - Dropdown menu for edit/delete actions
+ */
+const VideoOptionsMenu = ({
+  video,
+  onEdit,
+  onDelete,
+  canRemoveVideo
+}: {
+  video: VideoUI;
+  onEdit: () => void;
+  onDelete: () => void;
+  canRemoveVideo: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('VideoOptionsMenu - canRemoveVideo:', canRemoveVideo);
+  }, [canRemoveVideo]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  if (!canRemoveVideo) return null;
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        title="Options"
+      >
+        <EllipsisVerticalIcon className="h-5 w-5" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+              setIsOpen(false);
+            }}
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2 border-b border-gray-200 dark:border-gray-600"
+          >
+            <PencilIcon className="h-4 w-4" />
+            Edit Video
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+              setIsOpen(false);
+            }}
+            className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
+          >
+            <TrashIcon className="h-4 w-4" />
+            Delete Video
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Videos = () => {
   const { user } = useAuth();
@@ -92,11 +176,12 @@ const Videos = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [formData, setFormData] = useState<CreateVideoData>({
+  const [formData, setFormData] = useState<any>({
     title: '',
     description: '',
     youtubeUrl: '',
     category: 'other',
+    customCategory: '',
     duration: '',
     tags: [],
     presenter: { name: '', title: '', company: '' },
@@ -120,6 +205,8 @@ const Videos = () => {
     queryKey: ['videoStats'],
     queryFn: getVideoStats,
   });
+
+  // Note: Removed auto-setting of category to allow users to select "Other / Custom"
 
   // Fetch playlists
   const { data: playlistsData } = useQuery({
@@ -177,12 +264,49 @@ const Videos = () => {
     },
   });
 
+  // Edit video state and mutation
+  const [editingVideo, setEditingVideo] = useState<VideoUI | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState<any>({
+    title: '',
+    description: '',
+    category: 'other',
+    duration: '',
+    tags: [],
+    presenter: { name: '', title: '', company: '' },
+    isFeatured: false,
+  });
+
+  const editVideoMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateVideoData> }) => updateVideo(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
+      queryClient.invalidateQueries({ queryKey: ['videoStats'] });
+      toast.success('Video updated successfully!');
+      setShowEditModal(false);
+      setEditingVideo(null);
+      setEditFormData({
+        title: '',
+        description: '',
+        category: 'other',
+        duration: '',
+        tags: [],
+        presenter: { name: '', title: '', company: '' },
+        isFeatured: false,
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update video');
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       title: '',
       description: '',
       youtubeUrl: '',
       category: 'other',
+      customCategory: '',
       duration: '',
       tags: [],
       presenter: { name: '', title: '', company: '' },
@@ -238,17 +362,31 @@ const Videos = () => {
       return;
     }
 
+    // Handle custom category
+    let finalCategory = formData.category;
+    if (formData.category === 'other') {
+      if (!formData.customCategory?.trim()) {
+        toast.error('Please enter a custom category name');
+        return;
+      }
+      finalCategory = formData.customCategory.trim().toLowerCase().replace(/\s+/g, '-');
+    }
+
     const tags = tagsInput.split(',').map(t => t.trim()).filter(t => t);
+    const dataToSubmit = {
+      ...formData,
+      category: finalCategory,
+      tags,
+    };
+    // Remove customCategory from submission
+    delete dataToSubmit.customCategory;
 
     if (uploadType === 'youtube') {
       if (!formData.youtubeUrl) {
         toast.error('Please enter a YouTube URL');
         return;
       }
-      createVideoMutation.mutate({
-        ...formData,
-        tags,
-      });
+      createVideoMutation.mutate(dataToSubmit);
     } else {
       if (!videoFile) {
         toast.error('Please select a video file');
@@ -256,10 +394,7 @@ const Videos = () => {
       }
       uploadVideoMutation.mutate({
         file: videoFile,
-        metadata: {
-          ...formData,
-          tags,
-        },
+        metadata: dataToSubmit,
       });
     }
   };
@@ -310,7 +445,50 @@ const Videos = () => {
   };
   const stats = statsData?.data;
 
+  // Compute categories dynamically from stats
+  const dynamicCategories = useMemo(() => {
+    const baseCategories = [
+      { name: 'All Videos', icon: VideoCameraIcon, backendKey: 'all' },
+    ];
+
+    // Get all categories from stats and display them
+    if (stats?.categoryCounts) {
+      // Preferred order for known categories
+      const categoryOrder = ['training', 'marketing', 'technical', 'business', 'product-demo', 'webinar', 'other'];
+
+      // First, add known categories in order
+      categoryOrder.forEach(backendKey => {
+        const count = stats.categoryCounts[backendKey];
+        if (count && count > 0) {
+          const uiName = backendToUICategory[backendKey] || backendKey.charAt(0).toUpperCase() + backendKey.slice(1).replace(/-/g, ' ');
+          baseCategories.push({
+            name: uiName,
+            icon: categoryIcons[uiName] || VideoCameraIcon,
+            backendKey,
+          });
+        }
+      });
+
+      // Then, add any custom categories that aren't in the known list
+      Object.keys(stats.categoryCounts).forEach(backendKey => {
+        const count = stats.categoryCounts[backendKey];
+        if (count > 0 && !categoryOrder.includes(backendKey)) {
+          // Format the category name for display
+          const uiName = backendKey.charAt(0).toUpperCase() + backendKey.slice(1).replace(/-/g, ' ');
+          baseCategories.push({
+            name: uiName,
+            icon: VideoCameraIcon,
+            backendKey,
+          });
+        }
+      });
+    }
+
+    return baseCategories;
+  }, [stats?.categoryCounts]);
+
   // Use permissions hook for role-based access
+  const { role, isAdmin } = usePermissions();
   const canAddVideo = canCreate('videos');
   const canRemoveVideo = canDelete('videos');
 
@@ -330,7 +508,7 @@ const Videos = () => {
               </p>
             </div>
             <div className="flex gap-2 mt-4 sm:mt-0">
-              {canAddVideo && (
+              {canCreate && (
                 <button
                   onClick={() => setShowUploadModal(true)}
                   className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
@@ -430,29 +608,32 @@ const Videos = () => {
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
               <nav className="space-y-2">
-                {categories.map((category) => (
-                  <button
-                    key={category.name}
-                    onClick={() => setSelectedCategory(category.name)}
-                    className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
-                      selectedCategory === category.name
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <category.icon className={`h-5 w-5 mr-3 ${
+                {dynamicCategories.map((category) => {
+                  const count = category.name === 'All Videos' ? stats?.totalVideos : (stats?.categoryCounts?.[category.backendKey] || 0);
+                  return (
+                    <button
+                      key={category.name}
+                      onClick={() => setSelectedCategory(category.name)}
+                      className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
+                        selectedCategory === category.name
+                          ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <category.icon className={`h-5 w-5 mr-3 ${
+                          selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
+                        }`} />
+                        <span>{category.name}</span>
+                      </div>
+                      <span className={`text-sm ${
                         selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
-                      }`} />
-                      <span>{category.name}</span>
-                    </div>
-                    <span className={`text-sm ${
-                      selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
-                    }`}>
-                      {stats?.categoryCounts?.[categoryMapping[category.name]] || 0}
-                    </span>
-                  </button>
-                ))}
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
               </nav>
             </div>
           </div>
@@ -574,14 +755,24 @@ const Videos = () => {
                 <div className="p-6">
                   <div className="flex items-start justify-between">
                     <h4 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2 flex-1">{featuredVideo.title}</h4>
-                    {canRemoveVideo && (
-                      <button
-                        onClick={() => deleteVideoMutation.mutate(featuredVideo._id)}
-                        className="ml-2 p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    )}
+                    <VideoOptionsMenu
+                      video={featuredVideo}
+                      onEdit={() => {
+                        setEditingVideo(featuredVideo);
+                        setEditFormData({
+                          title: featuredVideo.title,
+                          description: featuredVideo.description || '',
+                          category: featuredVideo.category,
+                          duration: featuredVideo.duration || '',
+                          tags: featuredVideo.tags || [],
+                          presenter: featuredVideo.presenter || { name: '', title: '', company: '' },
+                          isFeatured: featuredVideo.isFeatured,
+                        });
+                        setShowEditModal(true);
+                      }}
+                      onDelete={() => deleteVideoMutation.mutate(featuredVideo._id)}
+                      canRemoveVideo={canRemoveVideo}
+                    />
                   </div>
                   <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-4 line-clamp-2">{featuredVideo.description}</p>
                   <div className="flex items-center justify-between">
@@ -651,17 +842,24 @@ const Videos = () => {
                       {video.title}
                     </h4>
                     <div className="flex items-center">
-                      {canRemoveVideo && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteVideoMutation.mutate(video._id);
-                          }}
-                          className="ml-1 p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      )}
+                      <VideoOptionsMenu
+                        video={video}
+                        onEdit={() => {
+                          setEditingVideo(video);
+                          setEditFormData({
+                            title: video.title,
+                            description: video.description || '',
+                            category: video.category,
+                            duration: video.duration || '',
+                            tags: video.tags || [],
+                            presenter: video.presenter || { name: '', title: '', company: '' },
+                            isFeatured: video.isFeatured,
+                          });
+                          setShowEditModal(true);
+                        }}
+                        onDelete={() => deleteVideoMutation.mutate(video._id)}
+                        canRemoveVideo={canRemoveVideo}
+                      />
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -979,14 +1177,24 @@ const Videos = () => {
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="training">Installation</option>
-                    <option value="marketing">Vehicle Wraps</option>
-                    <option value="technical">Technical Training</option>
-                    <option value="business">Business Growth</option>
-                    <option value="product-demo">Product Demo</option>
-                    <option value="webinar">Webinar</option>
-                    <option value="other">Other</option>
+                    {/* Dynamic categories from database */}
+                    {Object.keys(statsData?.data?.categoryCounts || {}).map(category => (
+                      <option key={category} value={category}>
+                        {category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' ')}
+                      </option>
+                    ))}
+                    {/* Always show Other / Custom option */}
+                    <option value="other">Other / Custom</option>
                   </select>
+                  {formData.category === 'other' && (
+                    <input
+                      type="text"
+                      placeholder="Enter custom category name"
+                      value={formData.customCategory || ''}
+                      onChange={(e) => setFormData({ ...formData, customCategory: e.target.value })}
+                      className="w-full mt-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 text-sm"
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1086,6 +1294,189 @@ const Videos = () => {
                     <>
                       {uploadType === 'youtube' ? <LinkIcon className="h-5 w-5" /> : <CloudArrowUpIcon className="h-5 w-5" />}
                       {uploadType === 'youtube' ? 'Add Video' : 'Upload Video'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Video Modal */}
+      {showEditModal && editingVideo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit Video</h2>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingVideo(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                editVideoMutation.mutate({
+                  id: editingVideo._id,
+                  data: {
+                    title: editFormData.title,
+                    description: editFormData.description,
+                    category: editFormData.category,
+                    duration: editFormData.duration,
+                    tags: editFormData.tags,
+                    presenter: editFormData.presenter,
+                    isFeatured: editFormData.isFeatured,
+                  },
+                });
+              }}
+              className="p-6 space-y-5"
+            >
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  placeholder="Video title"
+                  required
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  placeholder="Video description"
+                  rows={3}
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Category *
+                </label>
+                <select
+                  value={editFormData.category}
+                  onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  required
+                >
+                  {/* Dynamic categories from database */}
+                  {Object.keys(statsData?.data?.categoryCounts || {}).map(category => (
+                    <option key={category} value={category}>
+                      {category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' ')}
+                    </option>
+                  ))}
+                  {/* Always show Other option */}
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              {/* Duration */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Duration
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.duration}
+                  onChange={(e) => setEditFormData({ ...editFormData, duration: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  placeholder="e.g. 15:30"
+                />
+              </div>
+
+              {/* Presenter */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Presenter Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.presenter.name}
+                    onChange={(e) => setEditFormData({
+                      ...editFormData,
+                      presenter: { ...editFormData.presenter, name: e.target.value }
+                    })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Presenter Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.presenter.title}
+                    onChange={(e) => setEditFormData({
+                      ...editFormData,
+                      presenter: { ...editFormData.presenter, title: e.target.value }
+                    })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Featured */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isFeatured"
+                  checked={editFormData.isFeatured}
+                  onChange={(e) => setEditFormData({ ...editFormData, isFeatured: e.target.checked })}
+                  className="h-4 w-4 text-primary-600 rounded"
+                />
+                <label htmlFor="isFeatured" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  Featured Video
+                </label>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingVideo(null);
+                  }}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editVideoMutation.isPending}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {editVideoMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <PencilIcon className="h-5 w-5" />
+                      Save Changes
                     </>
                   )}
                 </button>
