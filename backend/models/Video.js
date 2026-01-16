@@ -34,8 +34,8 @@ const videoSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['training', 'marketing', 'technical', 'business', 'product-demo', 'webinar', 'other'],
     default: 'other',
+    trim: true,
   },
   tags: [{
     type: String,
@@ -98,7 +98,8 @@ videoSchema.pre('save', function(next) {
 
   // Set thumbnail from YouTube if not provided and is YouTube video
   if (this.youtubeId && !this.thumbnail && !this.thumbnailUrl) {
-    this.thumbnail = `https://img.youtube.com/vi/${this.youtubeId}/maxresdefault.jpg`;
+    // Use hqdefault instead of maxresdefault for better compatibility
+    this.thumbnail = `https://img.youtube.com/vi/${this.youtubeId}/hqdefault.jpg`;
   }
 
   next();

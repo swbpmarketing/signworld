@@ -63,26 +63,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      console.log('🔑 AuthContext.login called with:', { email });
-      console.log('📡 Making API request to /auth/login');
       const response = await api.post('/auth/login', { email, password });
-      console.log('✅ API Response received:', response.status, response.data);
-      const { token, user } = response.data;
+      const { token } = response.data;
 
-      console.log('💾 Saving token to localStorage');
       localStorage.setItem('token', token);
 
-      console.log('👤 Setting user state:', user);
-      setUser(user);
-      console.log('✨ User set, navigating to dashboard');
+      // Fetch fresh user data from database
+      await fetchUser();
       setTimeout(() => navigate('/dashboard'), 500); // Small delay to ensure state is updated
     } catch (error: any) {
-      console.error('🚨 Login error:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data,
-        error: error
-      });
+      console.error('Login error:', error.response?.data?.error || error.message);
       throw new Error(error.response?.data?.error || 'Login failed');
     }
   };
