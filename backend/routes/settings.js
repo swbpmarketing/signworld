@@ -313,8 +313,44 @@ router.get('/my-permissions', protect, async (req, res) => {
       return;
     }
 
-    // Return role-specific permissions
-    const rolePermissions = settings.rolePermissions?.[userRole] || {};
+    // Default permissions for fallback
+    const defaultPermissions = {
+      owner: {
+        canAccessDashboard: true,
+        canAccessLibrary: true,
+        canUploadToLibrary: true,
+        canAccessForum: true,
+        canPostInForum: true,
+        canAccessChat: true,
+        canAccessEvents: true,
+        canAccessEquipment: true,
+        canListEquipment: true,
+        canAccessBrags: true,
+        canPostBrags: true,
+        canAccessVideos: true,
+        canAccessDirectory: true,
+        canAccessPartners: true,
+      },
+      vendor: {
+        canAccessDashboard: true,
+        canAccessLibrary: true,
+        canUploadToLibrary: false,
+        canAccessForum: true,
+        canPostInForum: true,
+        canAccessChat: true,
+        canAccessEvents: true,
+        canAccessEquipment: true,
+        canListEquipment: true,
+        canAccessBrags: true,
+        canPostBrags: false,
+        canAccessVideos: true,
+        canAccessDirectory: true,
+        canAccessPartners: false,
+      },
+    };
+
+    // Return role-specific permissions from settings, fallback to defaults
+    const rolePermissions = settings.rolePermissions?.[userRole] || defaultPermissions[userRole] || {};
 
     res.json({
       success: true,
