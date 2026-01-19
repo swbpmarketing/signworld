@@ -3,7 +3,8 @@ const router = express.Router();
 const Event = require('../models/Event');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-const ical = require('ical-generator');
+const icalGenerator = require('ical-generator');
+const ical = icalGenerator.default || icalGenerator;
 const { protect } = require('../middleware/auth');
 
 // Get all published events (public route for calendar display)
@@ -202,7 +203,7 @@ router.get('/calendar.ics', async (req, res) => {
           email: event.organizer?.email || process.env.DEFAULT_ORGANIZER_EMAIL || 'events@signcompany.com'
         },
         url: event.onlineLink || '',
-        categories: [event.category],
+        categories: event.category ? [{ name: event.category }] : [],
         created: event.createdAt,
         lastModified: event.updatedAt || event.createdAt
       });
