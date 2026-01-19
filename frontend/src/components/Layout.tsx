@@ -135,7 +135,7 @@ const Sidebar = memo(({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="space-y-0.5">
             {filteredNavigation.map((item) => {
               const isActive = currentPath === item.href;
