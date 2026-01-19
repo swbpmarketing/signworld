@@ -6,7 +6,7 @@ const Notification = require('../models/Notification');
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const { deleteFromS3 } = require('../utils/s3');
-const { getYouTubeDuration, getVideoDuration } = require('../utils/videoDuration');
+const { getYouTubeDuration, getVideoDuration, downloadAndUploadThumbnail } = require('../utils/videoDuration');
 
 // @desc    Get video statistics
 // @route   GET /api/videos/stats
@@ -201,16 +201,30 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
       videoData.presenter = JSON.parse(videoData.presenter);
     }
 
-    // Auto-fetch YouTube duration if not provided
-    if (videoData.youtubeUrl && !videoData.duration) {
-      // Extract YouTube ID
+    // Extract YouTube ID for auto-fetching metadata
+    let youtubeId = null;
+    if (videoData.youtubeUrl) {
       const match = videoData.youtubeUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
       if (match) {
-        const youtubeId = match[1];
-        const duration = await getYouTubeDuration(youtubeId);
-        if (duration) {
-          videoData.duration = duration;
-        }
+        youtubeId = match[1];
+      }
+    }
+
+    // Auto-fetch YouTube duration if not provided
+    if (youtubeId && !videoData.duration) {
+      const duration = await getYouTubeDuration(youtubeId);
+      if (duration) {
+        videoData.duration = duration;
+      }
+    }
+
+    // Auto-download and upload YouTube thumbnail to S3
+    if (youtubeId && !videoData.thumbnail && !videoData.thumbnailUrl) {
+      console.log(`Downloading thumbnail for YouTube ID: ${youtubeId}`);
+      const s3ThumbnailUrl = await downloadAndUploadThumbnail(youtubeId);
+      if (s3ThumbnailUrl) {
+        videoData.thumbnailUrl = s3ThumbnailUrl;
+        console.log(`Thumbnail uploaded to S3: ${s3ThumbnailUrl}`);
       }
     }
 
@@ -358,14 +372,33 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
       updateData.presenter = JSON.parse(updateData.presenter);
     }
 
-    // Auto-fetch YouTube duration if URL is being updated and duration is not provided
-    if (updateData.youtubeUrl && !updateData.duration) {
+    // Extract YouTube ID if URL is being updated
+    let youtubeId = null;
+    if (updateData.youtubeUrl) {
       const match = updateData.youtubeUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
       if (match) {
-        const youtubeId = match[1];
-        const duration = await getYouTubeDuration(youtubeId);
-        if (duration) {
-          updateData.duration = duration;
+        youtubeId = match[1];
+      }
+    }
+
+    // Auto-fetch YouTube duration if URL is being updated and duration is not provided
+    if (youtubeId && !updateData.duration) {
+      const duration = await getYouTubeDuration(youtubeId);
+      if (duration) {
+        updateData.duration = duration;
+      }
+    }
+
+    // Auto-download and upload YouTube thumbnail to S3 if URL changed
+    if (youtubeId && updateData.youtubeUrl) {
+      // Get the existing video to check if URL has changed
+      const existingVideo = await Video.findById(req.params.id);
+      if (existingVideo && existingVideo.youtubeUrl !== updateData.youtubeUrl) {
+        console.log(`YouTube URL changed, downloading new thumbnail for: ${youtubeId}`);
+        const s3ThumbnailUrl = await downloadAndUploadThumbnail(youtubeId);
+        if (s3ThumbnailUrl) {
+          updateData.thumbnailUrl = s3ThumbnailUrl;
+          console.log(`New thumbnail uploaded to S3: ${s3ThumbnailUrl}`);
         }
       }
     }
