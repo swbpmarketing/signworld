@@ -27,6 +27,11 @@ export type Video = {
   sortOrder: number;
   publishedAt: string;
   createdAt: string;
+  uploadedBy?: {
+    _id: string;
+    name: string;
+    role: 'admin' | 'owner' | 'vendor';
+  };
 };
 
 export type VideoStats = {
