@@ -723,7 +723,9 @@ const OwnersRoster = () => {
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          // Handle email action
+                          if (owner.email) {
+                            window.location.href = `mailto:${owner.email}`;
+                          }
                         }}
                         className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-xs sm:text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <EnvelopeIcon className="h-4 w-4 mr-1.5 text-gray-400" />
