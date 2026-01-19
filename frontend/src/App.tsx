@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { lazy, Suspense } from 'react';
@@ -72,9 +72,7 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  // Only log in development mode
-  if (import.meta.env.DEV) {
-  }
+  
   
   return (
     <QueryClientProvider client={queryClient}>

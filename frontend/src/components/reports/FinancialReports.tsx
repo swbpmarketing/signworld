@@ -1,9 +1,12 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BanknotesIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, DocumentTextIcon } from '@heroicons/react/24/solid';
+import { BanknotesIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, DocumentTextIcon, ArrowDownTrayIcon } from '@heroicons/react/24/solid';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { getFinancialAnalytics } from '../../services/dashboardService';
 import type { FinancialAnalyticsData } from '../../services/dashboardService';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface FinancialReportsProps {
   dateRange: string;
@@ -45,6 +48,120 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
     const IconComponent = iconMap[stat.icon] || BanknotesIcon;
     return { ...stat, icon: IconComponent };
   });
+
+  const exportToPDF = () => {
+    if (!data) return;
+
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(20);
+    doc.text('Engagement Analytics Report', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+
+    // Stats Summary
+    doc.setFontSize(14);
+    doc.text('Summary Statistics', 14, 45);
+
+    const statsData = data.stats.map(stat => [stat.label, stat.value, stat.change]);
+    autoTable(doc, {
+      startY: 50,
+      head: [['Metric', 'Value', 'Change']],
+      body: statsData,
+    });
+
+    // Engagement Breakdown
+    const breakdownY = (doc as any).lastAutoTable.finalY + 15;
+    doc.setFontSize(14);
+    doc.text('Engagement Breakdown', 14, breakdownY);
+
+    const breakdownData = data.expenseBreakdown.map(item => [
+      item.category,
+      item.amount.toLocaleString(),
+      `${item.percentage}%`
+    ]);
+    autoTable(doc, {
+      startY: breakdownY + 5,
+      head: [['Category', 'Amount', 'Percentage']],
+      body: breakdownData,
+    });
+
+    // Financial Summary
+    const summaryY = (doc as any).lastAutoTable.finalY + 15;
+    doc.setFontSize(14);
+    doc.text('Financial Summary', 14, summaryY);
+
+    const summaryData = [
+      ['Total Engagement', data.financialSummary.totalRevenue.toLocaleString()],
+      ['Baseline Activity', data.financialSummary.totalExpenses.toLocaleString()],
+      ['Net Growth', data.financialSummary.grossProfit.toLocaleString()],
+      ['Active Engagement', data.financialSummary.netIncome.toLocaleString()],
+      ['Total Score', data.financialSummary.ebitda.toLocaleString()],
+      ['Member Ratio', data.financialSummary.currentRatio.toString()],
+    ];
+    autoTable(doc, {
+      startY: summaryY + 5,
+      head: [['Metric', 'Value']],
+      body: summaryData,
+    });
+
+    doc.save('engagement-analytics-report.pdf');
+  };
+
+  const exportToExcel = () => {
+    if (!data) return;
+
+    const wb = XLSX.utils.book_new();
+
+    // Stats Sheet
+    const statsSheet = XLSX.utils.json_to_sheet(data.stats.map(stat => ({
+      Metric: stat.label,
+      Value: stat.value,
+      Change: stat.change,
+      Positive: stat.positive ? 'Yes' : 'No'
+    })));
+    XLSX.utils.book_append_sheet(wb, statsSheet, 'Statistics');
+
+    // Cash Flow Sheet
+    const cashFlowSheet = XLSX.utils.json_to_sheet(data.cashFlowData.map(item => ({
+      Month: item.month,
+      Income: item.income,
+      Expenses: item.expenses,
+      'Net Cash': item.netCash
+    })));
+    XLSX.utils.book_append_sheet(wb, cashFlowSheet, 'Cash Flow');
+
+    // Expense Breakdown Sheet
+    const expenseSheet = XLSX.utils.json_to_sheet(data.expenseBreakdown.map(item => ({
+      Category: item.category,
+      Amount: item.amount,
+      Percentage: item.percentage
+    })));
+    XLSX.utils.book_append_sheet(wb, expenseSheet, 'Breakdown');
+
+    // Profit Margins Sheet
+    const marginsSheet = XLSX.utils.json_to_sheet(data.profitMargins.map(item => ({
+      Month: item.month,
+      'Gross %': item.gross,
+      'Operating %': item.operating,
+      'Net %': item.net
+    })));
+    XLSX.utils.book_append_sheet(wb, marginsSheet, 'Growth Margins');
+
+    // Summary Sheet
+    const summarySheet = XLSX.utils.json_to_sheet([{
+      'Total Engagement': data.financialSummary.totalRevenue,
+      'Baseline Activity': data.financialSummary.totalExpenses,
+      'Net Growth': data.financialSummary.grossProfit,
+      'Active Engagement': data.financialSummary.netIncome,
+      'Total Score': data.financialSummary.ebitda,
+      'Member Ratio': data.financialSummary.currentRatio
+    }]);
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+    XLSX.writeFile(wb, 'engagement-analytics-report.xlsx');
+  };
 
   return (
     <div className="space-y-6">
@@ -208,16 +325,32 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
           <div>
             <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Quick Actions</h4>
             <div className="space-y-2">
-              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
+              <button
+                onClick={exportToPDF}
+                className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors flex items-center"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
                 Download Engagement Report
               </button>
-              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
+              <button
+                onClick={exportToExcel}
+                className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors flex items-center"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
                 Export Activity Summary
               </button>
-              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
+              <button
+                onClick={exportToPDF}
+                className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors flex items-center"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
                 Generate Growth Report
               </button>
-              <button className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors">
+              <button
+                onClick={exportToExcel}
+                className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors flex items-center"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
                 View Activity History
               </button>
             </div>
