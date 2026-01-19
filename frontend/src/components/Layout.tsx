@@ -50,7 +50,6 @@ const navigation: {
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDashboard' },
   { name: "Reports", href: "/reports", icon: ChartBarIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDashboard' },
   { name: "User Management", href: "/users", icon: UsersIcon, roles: ['admin'], permission: 'canManageUsers' },
-  { name: "Settings", href: "/settings", icon: Cog6ToothIcon, roles: ['admin', 'owner', 'vendor'] },
   { name: "Calendar", href: "/calendar", icon: CalendarIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEvents' },
   { name: "Convention", href: "/convention", icon: BuildingOffice2Icon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEvents' },
   { name: "Success Stories", href: "/brags", icon: NewspaperIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessBrags' },
