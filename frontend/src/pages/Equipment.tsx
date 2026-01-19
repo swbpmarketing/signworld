@@ -1558,7 +1558,7 @@ const Equipment = () => {
             </div>
             <div className="mt-4 sm:mt-0 flex items-center gap-3">
               {/* Vendor-specific: Manage Listings button only */}
-              {effectiveRole === 'vendor' ? (
+              {(user?.role === 'vendor' || effectiveRole === 'vendor') ? (
                 <button
                   onClick={() => navigate('/vendor-equipment')}
                   className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
