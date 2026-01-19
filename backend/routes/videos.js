@@ -30,16 +30,71 @@ router.get('/stats', async (req, res) => {
       categoryCountsObj[cat._id] = cat.count;
     });
 
+    // Calculate total duration from all videos
+    const videos = await Video.find({ isActive: true }, 'duration');
+    let totalMinutes = 0;
+    videos.forEach(video => {
+      if (video.duration) {
+        // Duration format could be "5:30" or "1:20:45"
+        const parts = video.duration.split(':').map(p => parseInt(p) || 0);
+        if (parts.length === 2) {
+          // mm:ss format
+          totalMinutes += parts[0] + (parts[1] / 60);
+        } else if (parts.length === 3) {
+          // hh:mm:ss format
+          totalMinutes += (parts[0] * 60) + parts[1] + (parts[2] / 60);
+        }
+      }
+    });
+
+    // Format total duration
+    const totalHours = Math.floor(totalMinutes / 60);
+    const remainingMinutes = Math.floor(totalMinutes % 60);
+    const totalDuration = totalHours > 0
+      ? `${totalHours}h${remainingMinutes > 0 ? ` ${remainingMinutes}m` : ''}`
+      : `${remainingMinutes}m`;
+
+    // Calculate average rating based on likes
+    const ratingStats = await Video.aggregate([
+      { $match: { isActive: true } },
+      {
+        $project: {
+          likesCount: { $size: { $ifNull: ['$likes', []] } },
+          viewsCount: { $ifNull: ['$views', 0] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalLikes: { $sum: '$likesCount' },
+          totalViews: { $sum: '$viewsCount' },
+          videoCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Calculate rating: (likes / views) * 5, or based on engagement
+    let avgRating = 0;
+    if (ratingStats.length > 0 && ratingStats[0].totalViews > 0) {
+      // Calculate as percentage of likes to views, scaled to 5
+      const likeRatio = ratingStats[0].totalLikes / ratingStats[0].totalViews;
+      avgRating = Math.min(5, likeRatio * 10); // Scale and cap at 5
+    }
+    // Round to 1 decimal place
+    avgRating = Math.round(avgRating * 10) / 10;
+
     console.log('=== Video Stats Response ===');
     console.log('Category counts:', JSON.stringify(categoryCountsObj, null, 2));
+    console.log('Total duration:', totalDuration, `(${totalMinutes} minutes)`);
+    console.log('Avg rating:', avgRating);
 
     res.json({
       success: true,
       data: {
         totalVideos,
         totalViews: totalViews[0]?.total || 0,
-        totalDuration: '48h', // Placeholder - would need to calculate from actual durations
-        avgRating: 4.8, // Placeholder - would need to calculate from actual ratings
+        totalDuration,
+        avgRating,
         categoryCounts: categoryCountsObj
       }
     });
