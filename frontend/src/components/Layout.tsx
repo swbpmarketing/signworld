@@ -91,12 +91,10 @@ const Sidebar = memo(({
   permissions: Permissions | null;
 }) => {
   const filteredNavigation = navigation.filter(item => {
-    // For admin-only items, check actual user role (not effective/preview role)
-    // For other items, use effective role (respects preview mode)
-    const roleToCheck = (item.roles.length === 1 && item.roles[0] === 'admin') 
-      ? actualUserRole 
-      : userRole;
-    
+    // Always use actualUserRole for role checks (the role from JWT token)
+    // Preview mode permissions are handled separately via hasPermission()
+    const roleToCheck = actualUserRole;
+
     // First check role-based access
     if (roleToCheck && !item.roles.includes(roleToCheck)) {
       return false;
@@ -127,7 +125,12 @@ const Sidebar = memo(({
         {/* Portal Title */}
         <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            {userRole === 'admin' ? 'Admin Portal' : userRole === 'vendor' ? 'Partner Portal' : 'Owner Portal'}
+            {(() => {
+              console.log('Sidebar - actualUserRole:', actualUserRole, 'userRole:', userRole);
+              if (actualUserRole === 'admin' || userRole === 'admin') return 'Admin Portal';
+              if (actualUserRole === 'vendor' || userRole === 'vendor') return 'Partner Portal';
+              return 'Owner Portal';
+            })()}
           </p>
         </div>
 
