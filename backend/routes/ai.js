@@ -334,8 +334,9 @@ IMPORTANT SECTION NAMES TO USE:
 /**
  * POST /api/ai/chat
  * Handle AI chat requests and proxy to OpenRouter
+ * @access Private (authenticated users)
  */
-router.post('/chat', async (req, res) => {
+router.post('/chat', protect, async (req, res) => {
   try {
     const { messages, userRole, userName, userCompany } = req.body;
 
@@ -383,12 +384,21 @@ router.post('/chat', async (req, res) => {
       max_tokens: 500
     };
 
-    // Call AI API
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody)
-    });
+    // Call AI API with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    let response;
+    try {
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -443,26 +453,36 @@ router.post('/enhance-feedback', protect, async (req, res) => {
       ? `You are a helpful assistant that improves bug report descriptions. Given a user's bug description, enhance it to be clearer and more detailed. Also extract or suggest steps to reproduce, expected behavior, and actual behavior if possible. Respond in JSON format with these fields: enhancedDescription, stepsToReproduce, expectedBehavior, actualBehavior. Keep responses concise but informative.`
       : `You are a helpful assistant that improves feature request descriptions. Given a user's feature request, enhance it to be clearer and more compelling. Respond in JSON format with these fields: enhancedDescription (the improved description). Keep the response concise but informative.`;
 
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`,
-        ...(USE_OPENAI ? {} : {
-          'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
-          'X-Title': 'SignWorld Portal'
-        })
-      },
-      body: JSON.stringify({
-        model: USE_OPENAI ? 'gpt-3.5-turbo' : 'openai/gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Please enhance this ${type === 'bug' ? 'bug report' : 'feature request'}: ${description}` }
-        ],
-        temperature: 0.7,
-        max_tokens: 500
-      })
-    });
+    // Add timeout for external API call
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    let response;
+    try {
+      response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`,
+          ...(USE_OPENAI ? {} : {
+            'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
+            'X-Title': 'SignWorld Portal'
+          })
+        },
+        body: JSON.stringify({
+          model: USE_OPENAI ? 'gpt-3.5-turbo' : 'openai/gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Please enhance this ${type === 'bug' ? 'bug report' : 'feature request'}: ${description}` }
+          ],
+          temperature: 0.7,
+          max_tokens: 500
+        }),
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       console.error('AI API error:', response.status, response.statusText);

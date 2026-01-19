@@ -40,9 +40,11 @@ router.get('/', protect, handlePreviewMode, async (req, res) => {
 
     // Search in title and description
     if (search) {
+      // Escape special regex characters to prevent ReDoS attacks
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { title: { $regex: escapedSearch, $options: 'i' } },
+        { description: { $regex: escapedSearch, $options: 'i' } }
       ];
     }
 
@@ -609,6 +611,16 @@ router.delete('/:id/comment/:commentId', protect, async (req, res) => {
     // Remove comment
     comment.deleteOne();
     await report.save();
+
+    // Emit real-time update for comment deletion
+    const io = req.app.get('io');
+    if (io) {
+      io.to('bug-reports').emit('bugReport:commentDeleted', {
+        reportId: report._id,
+        commentId: req.params.commentId,
+        commentsCount: report.comments.length
+      });
+    }
 
     res.status(200).json({
       success: true,

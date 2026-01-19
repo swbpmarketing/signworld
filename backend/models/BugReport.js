@@ -92,6 +92,27 @@ bugReportSchema.pre('save', function(next) {
   next();
 });
 
+// Handle findByIdAndUpdate and findOneAndUpdate operations
+bugReportSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate();
+  if (!update) return next();
+
+  // Handle both direct updates and $set operator
+  const setUpdate = update.$set || update;
+
+  // Always update the timestamp
+  this.set({ updatedAt: Date.now() });
+
+  // Only set resolvedAt if status is being set to completed AND resolvedAt isn't already being set
+  const newStatus = setUpdate.status;
+  const hasResolvedAt = setUpdate.resolvedAt || (update.$set && update.$set.resolvedAt);
+  if (newStatus === 'completed' && !hasResolvedAt) {
+    this.set({ resolvedAt: Date.now() });
+  }
+
+  next();
+});
+
 // Indexes for better query performance
 bugReportSchema.index({ status: 1, createdAt: -1 });
 bugReportSchema.index({ author: 1, createdAt: -1 });
