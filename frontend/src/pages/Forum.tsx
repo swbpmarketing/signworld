@@ -1234,6 +1234,10 @@ const Forum = () => {
                 {stats.trendingTags.map((tag) => (
                   <button
                     key={tag.name}
+                    onClick={() => {
+                      setSearchInput(tag.name);
+                      setSearchQuery(tag.name);
+                    }}
                     className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   >
                     #{tag.name}
