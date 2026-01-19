@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   TrophyIcon,
@@ -380,10 +380,14 @@ const Brags = () => {
   }, [user, canManage, effectiveRole]);
 
   // Re-fetch when filters change
+  const isInitialMount = useRef(true);
   useEffect(() => {
-    if (!loading) {
-      fetchStories(1, false);
+    // Skip the initial mount to avoid double-fetching
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
     }
+    fetchStories(1, false);
   }, [selectedCategory, searchQuery, sortBy]);
 
   // Socket.io real-time updates
