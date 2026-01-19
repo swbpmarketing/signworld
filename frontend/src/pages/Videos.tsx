@@ -168,6 +168,8 @@ const Videos = () => {
   const [sortBy, setSortBy] = useState('newest');
   const [bookmarkedVideos, setBookmarkedVideos] = useState<Set<string>>(new Set());
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(12);
 
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -191,12 +193,13 @@ const Videos = () => {
 
   // Fetch videos
   const { data: videosData, isLoading: videosLoading } = useQuery({
-    queryKey: ['videos', selectedCategory, searchQuery, sortBy],
+    queryKey: ['videos', selectedCategory, searchQuery, sortBy, currentPage, itemsPerPage],
     queryFn: () => getVideos({
       category: categoryMapping[selectedCategory] || 'all',
       search: searchQuery,
       sort: sortBy,
-      limit: 50,
+      page: currentPage,
+      limit: itemsPerPage,
     }),
   });
 
@@ -321,12 +324,24 @@ const Videos = () => {
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     setSearchQuery(searchInput);
+    setCurrentPage(1); // Reset to first page on new search
   };
 
   const handleClearSearch = () => {
     setSearchInput('');
     setSearchQuery('');
+    setCurrentPage(1); // Reset to first page
   };
+
+  // Reset page when category or playlist changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, selectedPlaylist]);
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
 
   const toggleBookmark = (videoId: string) => {
     setBookmarkedVideos(prev => {
@@ -804,108 +819,195 @@ const Videos = () => {
 
           {/* Video Grid */}
           {!videosLoading && videos.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
-            {videos.map((video) => (
-              <div
-                key={video._id}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
-              >
-                <div
-                  onClick={() => openVideo(video)}
-                  className="aspect-w-16 aspect-h-9 relative group">
-                  <img
-                    src={video.thumbnail || video.thumbnailUrl || 'https://via.placeholder.com/640x360?text=Video'}
-                    alt={video.title}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <PlaySolidIcon className="h-12 w-12 text-white" />
-                  </div>
-                  {video.isNew && (
-                    <div className="absolute top-2 left-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
-                        New
-                      </span>
-                    </div>
-                  )}
-                  {video.duration && (
-                    <div className="absolute bottom-2 right-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded bg-black bg-opacity-75 text-white text-xs">
-                        {video.duration}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2 gap-2">
-                    <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 flex-1">
-                      {video.title}
-                    </h4>
-                    <div className="flex items-center">
-                      <VideoOptionsMenu
-                        video={video}
-                        onEdit={() => {
-                          setEditingVideo(video);
-                          setEditFormData({
-                            title: video.title,
-                            description: video.description || '',
-                            category: video.category,
-                            duration: video.duration || '',
-                            tags: video.tags || [],
-                            presenter: video.presenter || { name: '', title: '', company: '' },
-                            isFeatured: video.isFeatured,
-                          });
-                          setShowEditModal(true);
-                        }}
-                        onDelete={() => deleteVideoMutation.mutate(video._id)}
-                        canRemoveVideo={canRemoveVideo}
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
+                {videos.map((video) => (
+                  <div
+                    key={video._id}
+                    className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  >
+                    <div
+                      onClick={() => openVideo(video)}
+                      className="aspect-w-16 aspect-h-9 relative group">
+                      <img
+                        src={video.thumbnail || video.thumbnailUrl || 'https://via.placeholder.com/640x360?text=Video'}
+                        alt={video.title}
+                        className="w-full h-48 object-cover"
                       />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleBookmark(video._id);
-                        }}
-                        className="ml-1 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                      >
-                        {video.isBookmarked ? (
-                          <BookmarkSolidIcon className="h-5 w-5 text-primary-600 dark:text-primary-500" />
-                        ) : (
-                          <BookmarkIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                        )}
-                      </button>
+                      <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <PlaySolidIcon className="h-12 w-12 text-white" />
+                      </div>
+                      {video.isNew && (
+                        <div className="absolute top-2 left-2">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500 text-white">
+                            New
+                          </span>
+                        </div>
+                      )}
+                      {video.duration && (
+                        <div className="absolute bottom-2 right-2">
+                          <span className="inline-flex items-center px-2 py-1 rounded bg-black bg-opacity-75 text-white text-xs">
+                            {video.duration}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                    <div className="p-4">
+                      <div className="flex items-start justify-between mb-2 gap-2">
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 flex-1">
+                          {video.title}
+                        </h4>
+                        <div className="flex items-center">
+                          <VideoOptionsMenu
+                            video={video}
+                            onEdit={() => {
+                              setEditingVideo(video);
+                              setEditFormData({
+                                title: video.title,
+                                description: video.description || '',
+                                category: video.category,
+                                duration: video.duration || '',
+                                tags: video.tags || [],
+                                presenter: video.presenter || { name: '', title: '', company: '' },
+                                isFeatured: video.isFeatured,
+                              });
+                              setShowEditModal(true);
+                            }}
+                            onDelete={() => deleteVideoMutation.mutate(video._id)}
+                            canRemoveVideo={canRemoveVideo}
+                          />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleBookmark(video._id);
+                            }}
+                            className="ml-1 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                          >
+                            {video.isBookmarked ? (
+                              <BookmarkSolidIcon className="h-5 w-5 text-primary-600 dark:text-primary-500" />
+                            ) : (
+                              <BookmarkIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
 
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      video.level === 'Beginner' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                      video.level === 'Intermediate' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
-                      'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                    }`}>
-                      {video.level}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {backendToUICategory[video.category] || video.category}
-                    </span>
-                  </div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          video.level === 'Beginner' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                          video.level === 'Intermediate' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                          'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                        }`}>
+                          {video.level}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {backendToUICategory[video.category] || video.category}
+                        </span>
+                      </div>
 
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
-                      <span>{video.instructor}</span>
-                      <div className="flex items-center">
-                        <StarSolidIcon className="h-4 w-4 text-yellow-400 mr-1" />
-                        <span>{video.likes?.length || 0}</span>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+                          <span>{video.instructor}</span>
+                          <div className="flex items-center">
+                            <StarSolidIcon className="h-4 w-4 text-yellow-400 mr-1" />
+                            <span>{video.likes?.length || 0}</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+                          <span className="whitespace-nowrap">{video.views?.toLocaleString() || 0} views</span>
+                          <span className="whitespace-nowrap">{video.uploadDate}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
-                      <span className="whitespace-nowrap">{video.views?.toLocaleString() || 0} views</span>
-                      <span className="whitespace-nowrap">{video.uploadDate}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {videosData?.pagination && videosData.pagination.pages > 1 && (
+                <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  {/* Page Info */}
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, videosData.pagination.total)} of {videosData.pagination.total} videos
+                  </div>
+
+                  {/* Pagination Controls */}
+                  <div className="flex items-center gap-2">
+                    {/* Previous Button */}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+
+                    {/* Page Numbers */}
+                    <div className="flex items-center gap-1">
+                      {/* First Page */}
+                      {currentPage > 3 && (
+                        <>
+                          <button
+                            onClick={() => setCurrentPage(1)}
+                            className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            1
+                          </button>
+                          {currentPage > 4 && (
+                            <span className="px-2 text-gray-500 dark:text-gray-400">...</span>
+                          )}
+                        </>
+                      )}
+
+                      {/* Page Buttons */}
+                      {Array.from({ length: videosData.pagination.pages }, (_, i) => i + 1)
+                        .filter(page => {
+                          // Show current page, 2 before, and 2 after
+                          return page >= currentPage - 2 && page <= currentPage + 2;
+                        })
+                        .map(page => (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              page === currentPage
+                                ? 'bg-primary-600 text-white'
+                                : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))
+                      }
+
+                      {/* Last Page */}
+                      {currentPage < videosData.pagination.pages - 2 && (
+                        <>
+                          {currentPage < videosData.pagination.pages - 3 && (
+                            <span className="px-2 text-gray-500 dark:text-gray-400">...</span>
+                          )}
+                          <button
+                            onClick={() => setCurrentPage(videosData.pagination.pages)}
+                            className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            {videosData.pagination.pages}
+                          </button>
+                        </>
+                      )}
                     </div>
+
+                    {/* Next Button */}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(videosData.pagination.pages, prev + 1))}
+                      disabled={currentPage === videosData.pagination.pages}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
                   </div>
                 </div>
-              </div>
-            ))}
-            </div>
+              )}
+            </>
           )}
 
           {/* Empty State */}
