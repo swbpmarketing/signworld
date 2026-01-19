@@ -29,6 +29,8 @@ const uploadToS3 = async (fileBuffer, fileName, mimeType, folder = '') => {
   };
 
   try {
+    console.log('Starting S3 upload:', { bucket: process.env.AWS_S3_BUCKET, key, mimeType });
+
     const upload = new Upload({
       client: s3Client,
       params: uploadParams,
@@ -38,10 +40,16 @@ const uploadToS3 = async (fileBuffer, fileName, mimeType, folder = '') => {
 
     // Return public URL
     const publicUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    console.log('S3 upload successful:', publicUrl);
     return publicUrl;
   } catch (error) {
-    console.error('S3 upload error:', error);
-    throw new Error(`Failed to upload file to S3: ${error.message}`);
+    console.error('S3 upload error details:', {
+      message: error.message,
+      code: error.code,
+      statusCode: error.$metadata?.httpStatusCode,
+      fullError: error
+    });
+    throw new Error(`Failed to upload file to S3: ${error.message} (Code: ${error.code})`);
   }
 };
 
