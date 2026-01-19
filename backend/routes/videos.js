@@ -151,6 +151,7 @@ router.get('/', async (req, res) => {
       .sort(sortOption)
       .limit(limit * 1)
       .skip((page - 1) * limit)
+      .populate('uploadedBy', 'name role')
       .select('-__v');
 
     // Get total count for pagination

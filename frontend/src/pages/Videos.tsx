@@ -429,14 +429,31 @@ const Videos = () => {
   };
 
   // Transform API data to UI format
-  const allVideos: VideoUI[] = (videosData?.data || []).map((video: VideoType) => ({
-    ...video,
-    isBookmarked: bookmarkedVideos.has(video._id),
-    isNew: new Date(video.createdAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000,
-    level: 'Intermediate' as const,
-    instructor: video.presenter?.name || 'Sign Pro Academy',
-    uploadDate: new Date(video.publishedAt || video.createdAt).toLocaleDateString(),
-  }));
+  const allVideos: VideoUI[] = (videosData?.data || []).map((video: VideoType) => {
+    // Determine instructor name based on uploader role
+    let instructorName = 'SignWorld Business Partners'; // Default
+
+    if (video.presenter?.name) {
+      instructorName = video.presenter.name;
+    } else if (video.uploadedBy) {
+      // If uploaded by admin, show "SignWorld Business Partners"
+      // If uploaded by owner, show the owner's name
+      if (video.uploadedBy.role === 'admin') {
+        instructorName = 'SignWorld Business Partners';
+      } else if (video.uploadedBy.role === 'owner') {
+        instructorName = video.uploadedBy.name;
+      }
+    }
+
+    return {
+      ...video,
+      isBookmarked: bookmarkedVideos.has(video._id),
+      isNew: new Date(video.createdAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000,
+      level: 'Intermediate' as const,
+      instructor: instructorName,
+      uploadDate: new Date(video.publishedAt || video.createdAt).toLocaleDateString(),
+    };
+  });
 
   // Filter by playlist if one is selected
   const videos: VideoUI[] = selectedPlaylist
