@@ -394,18 +394,18 @@ const BugReports = () => {
   // Kanban Card Component
   const KanbanCard = ({ report }: { report: BugReport }) => (
     <div
-      className="bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-750 transition-colors border border-gray-700 hover:border-gray-600"
+      className="bg-white dark:bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
       onClick={() => openDetailModal(report)}
     >
       {/* Header with type badge */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           {report.type === 'bug' ? (
-            <BugAntIcon className="h-4 w-4 text-red-400 flex-shrink-0" />
+            <BugAntIcon className="h-4 w-4 text-red-500 dark:text-red-400 flex-shrink-0" />
           ) : (
-            <LightBulbIcon className="h-4 w-4 text-yellow-400 flex-shrink-0" />
+            <LightBulbIcon className="h-4 w-4 text-yellow-500 dark:text-yellow-400 flex-shrink-0" />
           )}
-          <span className="text-xs text-gray-400 uppercase font-medium">
+          <span className="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium">
             {report.type === 'bug' ? 'Bug' : 'Feature'}
           </span>
         </div>
@@ -415,12 +415,12 @@ const BugReports = () => {
       </div>
 
       {/* Title */}
-      <h4 className="text-sm font-medium text-gray-100 mb-2 line-clamp-2">
+      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
         {report.title}
       </h4>
 
       {/* Description preview */}
-      <p className="text-xs text-gray-400 mb-3 line-clamp-2">
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">
         {report.description}
       </p>
 
@@ -469,9 +469,9 @@ const BugReports = () => {
     const StatusIcon = config.icon;
 
     return (
-      <div className={`flex-1 min-w-[280px] bg-gray-900/50 rounded-xl border-t-4 ${config.color}`}>
+      <div className={`flex-1 min-w-[280px] bg-gray-100 dark:bg-gray-900/50 rounded-xl border-t-4 ${config.color}`}>
         {/* Column Header */}
-        <div className={`px-4 py-3 ${config.headerBg} rounded-t-lg border-b border-gray-700`}>
+        <div className={`px-4 py-3 ${config.headerBg} rounded-t-lg border-b border-gray-200 dark:border-gray-700`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <StatusIcon className={`h-5 w-5 ${config.headerText}`} />
@@ -481,9 +481,9 @@ const BugReports = () => {
             {status === 'pending' && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="p-1 hover:bg-gray-700 rounded transition-colors"
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
               >
-                <PlusIcon className="h-5 w-5 text-gray-400" />
+                <PlusIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               </button>
             )}
           </div>
@@ -540,7 +540,7 @@ const BugReports = () => {
           placeholder="Search by #, title, or description..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
         />
       </div>
 
@@ -563,21 +563,21 @@ const BugReports = () => {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/60" onClick={closeCreateModal} />
-            <div className="relative bg-gray-800 rounded-xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
-              <div className="sticky top-0 bg-gray-800 px-6 py-4 border-b border-gray-700 z-10">
+              <div className="sticky top-0 bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700 z-10">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-white">Submit Feedback</h2>
-                    <p className="text-sm text-gray-400 mt-1">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Submit Feedback</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       Report a bug or request a new feature. We appreciate your feedback!
                     </p>
                   </div>
                   <button
                     onClick={closeCreateModal}
-                    className="p-1 hover:bg-gray-700 rounded-lg transition-colors"
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
-                    <XMarkIcon className="h-6 w-6 text-gray-400" />
+                    <XMarkIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
                   </button>
                 </div>
               </div>
@@ -585,7 +585,7 @@ const BugReports = () => {
               <form onSubmit={handleCreateSubmit} className="p-6 space-y-5">
                 {/* Type Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Type
                   </label>
                   <div className="flex gap-3">
@@ -595,7 +595,7 @@ const BugReports = () => {
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
                         newReport.type === 'bug'
                           ? 'bg-red-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
                       <BugAntIcon className="h-5 w-5" />
@@ -607,7 +607,7 @@ const BugReports = () => {
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
                         newReport.type === 'feature'
                           ? 'bg-primary-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
                       <LightBulbIcon className="h-5 w-5" />
@@ -618,7 +618,7 @@ const BugReports = () => {
 
                 {/* Title */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Title
                   </label>
                   <input
@@ -626,14 +626,14 @@ const BugReports = () => {
                     value={newReport.title}
                     onChange={(e) => setNewReport({ ...newReport, title: e.target.value })}
                     placeholder="Brief description of the bug"
-                    className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                   />
                 </div>
 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Description
                   </label>
                   <textarea
@@ -641,7 +641,7 @@ const BugReports = () => {
                     onChange={(e) => setNewReport({ ...newReport, description: e.target.value })}
                     placeholder="Describe what happened..."
                     rows={3}
-                    className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                     required
                   />
                 </div>
@@ -649,7 +649,7 @@ const BugReports = () => {
                 {/* Steps to Reproduce - only show for bugs */}
                 {newReport.type === 'bug' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Steps to Reproduce
                     </label>
                     <textarea
@@ -657,7 +657,7 @@ const BugReports = () => {
                       onChange={(e) => setNewReport({ ...newReport, stepsToReproduce: e.target.value })}
                       placeholder="1. Go to... 2. Click on... 3. See error"
                       rows={3}
-                      className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                     />
                     <p className="text-xs text-gray-500 mt-1.5">Help us reproduce the issue</p>
                   </div>
@@ -667,7 +667,7 @@ const BugReports = () => {
                 {newReport.type === 'bug' && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Expected Behavior
                       </label>
                       <input
@@ -675,11 +675,11 @@ const BugReports = () => {
                         value={newReport.expectedBehavior}
                         onChange={(e) => setNewReport({ ...newReport, expectedBehavior: e.target.value })}
                         placeholder="What should happen?"
-                        className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Actual Behavior
                       </label>
                       <input
@@ -687,7 +687,7 @@ const BugReports = () => {
                         value={newReport.actualBehavior}
                         onChange={(e) => setNewReport({ ...newReport, actualBehavior: e.target.value })}
                         placeholder="What actually happened?"
-                        className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                   </div>
@@ -695,7 +695,7 @@ const BugReports = () => {
 
                 {/* Attachments */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Attachments
                   </label>
                   <input
@@ -709,7 +709,7 @@ const BugReports = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-600 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   >
                     <ArrowUpTrayIcon className="h-5 w-5" />
                     Upload Screenshot/Video
@@ -722,9 +722,9 @@ const BugReports = () => {
                       {attachments.map((file, index) => (
                         <div
                           key={index}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 rounded-lg text-sm"
+                          className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm"
                         >
-                          <span className="text-gray-300 truncate max-w-[150px]">{file.name}</span>
+                          <span className="text-gray-700 dark:text-gray-300 truncate max-w-[150px]">{file.name}</span>
                           <button
                             type="button"
                             onClick={() => removeAttachment(index)}
@@ -739,12 +739,12 @@ const BugReports = () => {
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-700">
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     type="button"
                     onClick={handleEnhanceWithAI}
                     disabled={isEnhancing || !newReport.description.trim()}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <SparklesIcon className="h-5 w-5" />
                     {isEnhancing ? 'Enhancing...' : 'Enhance with AI'}
@@ -754,7 +754,7 @@ const BugReports = () => {
                     <button
                       type="button"
                       onClick={closeCreateModal}
-                      className="px-4 py-2 text-gray-400 hover:text-gray-300 transition-colors"
+                      className="px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                     >
                       Cancel
                     </button>
@@ -778,15 +778,15 @@ const BugReports = () => {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4">
             <div className="fixed inset-0 bg-black/60" onClick={() => setShowDetailModal(false)} />
-            <div className="relative bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               {/* Header */}
-              <div className="sticky top-0 bg-gray-800 px-6 py-4 border-b border-gray-700 z-10">
+              <div className="sticky top-0 bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700 z-10">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
                     {selectedReport.type === 'bug' ? (
-                      <BugAntIcon className="h-6 w-6 text-red-400" />
+                      <BugAntIcon className="h-6 w-6 text-red-500 dark:text-red-400" />
                     ) : (
-                      <LightBulbIcon className="h-6 w-6 text-yellow-400" />
+                      <LightBulbIcon className="h-6 w-6 text-yellow-500 dark:text-yellow-400" />
                     )}
                     <span className={`px-2 py-1 rounded text-xs font-medium ${priorityConfig[selectedReport.priority].color}`}>
                       {priorityConfig[selectedReport.priority].label}
@@ -797,12 +797,12 @@ const BugReports = () => {
                   </div>
                   <button
                     onClick={() => setShowDetailModal(false)}
-                    className="p-1 hover:bg-gray-700 rounded-lg transition-colors"
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
-                    <XMarkIcon className="h-6 w-6 text-gray-400" />
+                    <XMarkIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
                   </button>
                 </div>
-                <h2 className="text-xl font-semibold text-white mt-3">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mt-3">
                   {selectedReport.title}
                 </h2>
               </div>
@@ -810,7 +810,7 @@ const BugReports = () => {
               {/* Content */}
               <div className="px-6 py-4 space-y-6">
                 {/* Meta info */}
-                <div className="flex items-center gap-4 text-sm text-gray-400">
+                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                   <div className="flex items-center gap-2">
                     {selectedReport.author.profileImage ? (
                       <img
@@ -829,8 +829,8 @@ const BugReports = () => {
 
                 {/* Description */}
                 <div>
-                  <h3 className="text-sm font-medium text-gray-300 mb-2">Description</h3>
-                  <p className="text-gray-300 whitespace-pre-wrap">
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</h3>
+                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                     {selectedReport.description}
                   </p>
                 </div>
@@ -838,8 +838,8 @@ const BugReports = () => {
                 {/* Steps to reproduce */}
                 {selectedReport.stepsToReproduce && (
                   <div>
-                    <h3 className="text-sm font-medium text-gray-300 mb-2">Steps to Reproduce</h3>
-                    <p className="text-gray-300 whitespace-pre-wrap">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Steps to Reproduce</h3>
+                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                       {selectedReport.stepsToReproduce}
                     </p>
                   </div>
@@ -850,14 +850,14 @@ const BugReports = () => {
                   <div className="grid grid-cols-2 gap-4">
                     {selectedReport.expectedBehavior && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-300 mb-2">Expected Behavior</h3>
-                        <p className="text-gray-300">{selectedReport.expectedBehavior}</p>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Expected Behavior</h3>
+                        <p className="text-gray-700 dark:text-gray-300">{selectedReport.expectedBehavior}</p>
                       </div>
                     )}
                     {selectedReport.actualBehavior && (
                       <div>
-                        <h3 className="text-sm font-medium text-gray-300 mb-2">Actual Behavior</h3>
-                        <p className="text-gray-300">{selectedReport.actualBehavior}</p>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Actual Behavior</h3>
+                        <p className="text-gray-700 dark:text-gray-300">{selectedReport.actualBehavior}</p>
                       </div>
                     )}
                   </div>
@@ -866,7 +866,7 @@ const BugReports = () => {
                 {/* Attachments */}
                 {selectedReport.attachments && selectedReport.attachments.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-medium text-gray-300 mb-2">Attachments</h3>
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Attachments</h3>
                     <div className="flex flex-wrap gap-2">
                       {selectedReport.attachments.map((attachment, index) => (
                         <a
@@ -874,7 +874,7 @@ const BugReports = () => {
                           href={attachment.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3 py-1.5 bg-gray-700 rounded-lg text-sm text-primary-400 hover:text-primary-300"
+                          className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300"
                         >
                           {attachment.filename}
                         </a>
@@ -885,8 +885,8 @@ const BugReports = () => {
 
                 {/* Admin Status Control */}
                 {isAdmin && (
-                  <div className="bg-gray-700/50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-300 mb-3">Update Status (Admin)</h3>
+                  <div className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Update Status (Admin)</h3>
                     <div className="flex flex-wrap gap-2">
                       {(['pending', 'in_progress', 'rejected', 'completed'] as const).map((status) => (
                         <button
@@ -896,7 +896,7 @@ const BugReports = () => {
                           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                             selectedReport.status === status
                               ? `${statusConfig[status].headerBg} ${statusConfig[status].headerText}`
-                              : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                              : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
                           }`}
                         >
                           {statusConfig[status].label}
@@ -912,8 +912,8 @@ const BugReports = () => {
                     onClick={() => handleVote(selectedReport._id)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                       selectedReport.hasVoted
-                        ? 'bg-primary-600/20 text-primary-400 border border-primary-500'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        ? 'bg-primary-600/20 text-primary-600 dark:text-primary-400 border border-primary-500'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
                     <ChevronUpIcon className="h-5 w-5" />
@@ -924,7 +924,7 @@ const BugReports = () => {
 
                 {/* Comments section */}
                 <div>
-                  <h3 className="text-sm font-medium text-gray-300 mb-3">
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                     Comments ({selectedReport.commentsCount})
                   </h3>
 
@@ -934,7 +934,7 @@ const BugReports = () => {
                       <p className="text-gray-500 text-sm">No comments yet</p>
                     ) : (
                       selectedReport.comments.map((comment) => (
-                        <div key={comment._id} className="bg-gray-700/50 rounded-lg p-3">
+                        <div key={comment._id} className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-3">
                           <div className="flex items-center gap-2 mb-2">
                             {comment.user.profileImage ? (
                               <img
@@ -945,14 +945,14 @@ const BugReports = () => {
                             ) : (
                               <UserCircleIcon className="h-6 w-6 text-gray-400" />
                             )}
-                            <span className="text-sm font-medium text-gray-200">
+                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
                               {comment.user.name}
                             </span>
                             <span className="text-xs text-gray-500">
                               {formatTimeAgo(comment.createdAt)}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-300">{comment.text}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{comment.text}</p>
                         </div>
                       ))
                     )}
@@ -965,7 +965,7 @@ const BugReports = () => {
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       placeholder="Add a comment..."
-                      className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                       onKeyPress={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
