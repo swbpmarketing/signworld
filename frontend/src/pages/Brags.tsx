@@ -547,7 +547,6 @@ const Brags = () => {
   // Handle category click
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Load more stories
