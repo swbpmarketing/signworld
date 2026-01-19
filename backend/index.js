@@ -468,6 +468,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/equipment-stats', require('./routes/equipmentStats'));
+app.use('/api/bug-reports', require('./routes/bugReports'));
 
 // Add API route debugging
 app.use('/api/*', (req, res, next) => {

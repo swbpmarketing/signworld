@@ -1,6 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const router = express.Router();
+const { protect } = require('../middleware/auth');
 
 // API configuration - supports both OpenAI and OpenRouter
 const USE_OPENAI = process.env.OPENAI_API_KEY ? true : false;
@@ -408,6 +409,116 @@ router.post('/chat', async (req, res) => {
   } catch (error) {
     console.error('AI chat error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// @desc    Enhance feedback description using AI
+// @route   POST /api/ai/enhance-feedback
+// @access  Private (authenticated users)
+router.post('/enhance-feedback', protect, async (req, res) => {
+  try {
+    const { description, type } = req.body;
+
+    if (!description) {
+      return res.status(400).json({ success: false, error: 'Description is required' });
+    }
+
+    const API_KEY = USE_OPENAI ? OPENAI_API_KEY : OPENROUTER_API_KEY;
+    const API_URL = USE_OPENAI ? OPENAI_API_URL : OPENROUTER_API_URL;
+
+    if (!API_KEY) {
+      // Return the original description if no AI key is configured
+      return res.json({
+        success: true,
+        data: {
+          enhancedDescription: description,
+          stepsToReproduce: '',
+          expectedBehavior: '',
+          actualBehavior: ''
+        }
+      });
+    }
+
+    const systemPrompt = type === 'bug'
+      ? `You are a helpful assistant that improves bug report descriptions. Given a user's bug description, enhance it to be clearer and more detailed. Also extract or suggest steps to reproduce, expected behavior, and actual behavior if possible. Respond in JSON format with these fields: enhancedDescription, stepsToReproduce, expectedBehavior, actualBehavior. Keep responses concise but informative.`
+      : `You are a helpful assistant that improves feature request descriptions. Given a user's feature request, enhance it to be clearer and more compelling. Respond in JSON format with these fields: enhancedDescription (the improved description). Keep the response concise but informative.`;
+
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+        ...(USE_OPENAI ? {} : {
+          'HTTP-Referer': process.env.CLIENT_URL || 'http://localhost:5173',
+          'X-Title': 'SignWorld Portal'
+        })
+      },
+      body: JSON.stringify({
+        model: USE_OPENAI ? 'gpt-3.5-turbo' : 'openai/gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Please enhance this ${type === 'bug' ? 'bug report' : 'feature request'}: ${description}` }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      })
+    });
+
+    if (!response.ok) {
+      console.error('AI API error:', response.status, response.statusText);
+      return res.json({
+        success: true,
+        data: {
+          enhancedDescription: description,
+          stepsToReproduce: '',
+          expectedBehavior: '',
+          actualBehavior: ''
+        }
+      });
+    }
+
+    const data = await response.json();
+    const aiMessage = data.choices[0]?.message?.content;
+
+    if (!aiMessage) {
+      return res.json({
+        success: true,
+        data: {
+          enhancedDescription: description,
+          stepsToReproduce: '',
+          expectedBehavior: '',
+          actualBehavior: ''
+        }
+      });
+    }
+
+    // Try to parse JSON response
+    try {
+      const parsedResponse = JSON.parse(aiMessage);
+      return res.json({
+        success: true,
+        data: {
+          enhancedDescription: parsedResponse.enhancedDescription || description,
+          stepsToReproduce: parsedResponse.stepsToReproduce || '',
+          expectedBehavior: parsedResponse.expectedBehavior || '',
+          actualBehavior: parsedResponse.actualBehavior || ''
+        }
+      });
+    } catch {
+      // If not valid JSON, use the raw response as the enhanced description
+      return res.json({
+        success: true,
+        data: {
+          enhancedDescription: aiMessage,
+          stepsToReproduce: '',
+          expectedBehavior: '',
+          actualBehavior: ''
+        }
+      });
+    }
+  } catch (error) {
+    console.error('AI enhance-feedback error:', error);
+    res.status(500).json({ success: false, error: 'Failed to enhance feedback' });
   }
 });
 

@@ -15,6 +15,23 @@ const fileFilter = (req, file, cb) => {
       cb(new Error('Only image files are allowed for images/gallery/logo/image/thumbnail'), false);
     }
   }
+  // Accept attachments (images and videos) for bug reports
+  else if (file.fieldname === 'attachments') {
+    const allowedMimes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'video/mp4',
+      'video/webm',
+      'video/quicktime'
+    ];
+    if (allowedMimes.includes(file.mimetype) || file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image and video files are allowed for attachments'), false);
+    }
+  }
   // Accept videos
   else if (file.fieldname === 'video') {
     const allowedVideoMimes = [
@@ -115,7 +132,9 @@ const uploadFilesToS3 = async (req, res, next) => {
 
       console.log('Folder detection - URL:', url, 'Path:', path_str, 'isLibraryRoute:', isLibraryRoute, 'fieldname:', file.fieldname);
 
-      if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'image' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail') {
+      if (file.fieldname === 'attachments') {
+        folder = 'bug-reports';
+      } else if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'image' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail') {
         folder = 'images';
       } else if (file.fieldname === 'file' && isLibraryRoute) {
         // Library file uploads
@@ -217,5 +236,13 @@ module.exports = {
   ],
 
   // Single video upload
-  videoSingle: (fieldName = 'video') => [uploadVideo.single(fieldName), uploadFilesToS3]
+  videoSingle: (fieldName = 'video') => [uploadVideo.single(fieldName), uploadFilesToS3],
+
+  // For bug reports with attachments (images and videos)
+  bugReportFiles: [
+    upload.fields([
+      { name: 'attachments', maxCount: 5 }
+    ]),
+    uploadFilesToS3
+  ]
 };
