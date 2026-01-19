@@ -48,6 +48,7 @@ const VendorMap = lazy(() => import('./pages/VendorMap'));
 const VendorEquipment = lazy(() => import('./pages/VendorEquipment'));
 const VendorReports = lazy(() => import('./pages/VendorReports'));
 const VendorInquiries = lazy(() => import('./pages/VendorInquiries'));
+const BugReports = lazy(() => import('./pages/BugReports'));
 
 // Loading component for Suspense fallback
 const LoadingFallback = () => (
@@ -237,6 +238,11 @@ function App() {
                   <Route path="vendor-inquiries" element={
                     <ProtectedRoute allowedRoles={['admin', 'vendor']} requiredPermission="canAccessEquipment">
                       <VendorInquiries />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="bug-reports" element={
+                    <ProtectedRoute>
+                      <BugReports />
                     </ProtectedRoute>
                   } />
                 </Route>

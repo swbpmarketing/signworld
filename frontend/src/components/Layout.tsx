@@ -32,6 +32,7 @@ import {
   InboxIcon,
   EyeIcon,
   XMarkIcon,
+  BugAntIcon,
 } from "@heroicons/react/24/outline";
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import AISearchModal from "./AISearchModal";
@@ -65,6 +66,7 @@ const navigation: {
   { name: "My Inquiries", href: "/vendor-inquiries", icon: InboxIcon, roles: ['vendor'], permission: 'canAccessEquipment' },
   { name: "Business Profile", href: "/vendor-profile", icon: BuildingStorefrontIcon, roles: ['vendor'], permission: 'canAccessDashboard' },
   { name: "FAQs", href: "/faqs", icon: QuestionMarkCircleIcon, roles: ['admin', 'owner', 'vendor'] },
+  { name: "Bug Reports", href: "/bug-reports", icon: BugAntIcon, roles: ['admin', 'owner', 'vendor'] },
 ];
 
 // Memoized Sidebar component - only re-renders when props change
