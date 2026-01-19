@@ -798,21 +798,30 @@ const FAQs = () => {
 
       {/* Quick Help Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow cursor-pointer">
+        <a
+          href="tel:1-800-744-6967"
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow cursor-pointer block"
+        >
           <PhoneIcon className="h-10 w-10 text-primary-600 dark:text-primary-500 mb-4" />
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Call Support</h3>
           <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-4">Speak directly with our support team</p>
           <p className="text-primary-600 dark:text-primary-400 font-medium">1-800-SIGNWORLD</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Mon-Fri 8AM-6PM EST</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow cursor-pointer">
+        </a>
+        <a
+          href="mailto:support@signcompany.com"
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow cursor-pointer block"
+        >
           <EnvelopeIcon className="h-10 w-10 text-primary-600 dark:text-primary-500 mb-4" />
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Email Support</h3>
           <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-4">Get help via email</p>
           <p className="text-primary-600 dark:text-primary-400 font-medium">support@signcompany.com</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Response within 24 hours</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow cursor-pointer">
+        </a>
+        <div
+          onClick={() => navigate('/library')}
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow cursor-pointer"
+        >
           <DocumentTextIcon className="h-10 w-10 text-primary-600 dark:text-primary-500 mb-4" />
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Documentation</h3>
           <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mb-4">Browse our resource library</p>
@@ -828,11 +837,17 @@ const FAQs = () => {
           Our support team is standing by to assist you with any questions or issues you may have.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors">
+          <button
+            onClick={() => navigate('/chat?support=true')}
+            className="inline-flex items-center justify-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+          >
             <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
             Start Live Chat
           </button>
-          <button className="inline-flex items-center px-6 py-3 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors border border-primary-200">
+          <button
+            onClick={() => navigate('/calendar')}
+            className="inline-flex items-center justify-center px-6 py-3 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors border border-primary-200"
+          >
             <PhoneIcon className="h-5 w-5 mr-2" />
             Schedule a Call
           </button>
