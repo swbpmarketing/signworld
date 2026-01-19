@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CalendarDaysIcon, MapPinIcon, ClockIcon, TicketIcon, UserGroupIcon, SparklesIcon, MicrophoneIcon, AcademicCapIcon, GlobeAmericasIcon, Cog6ToothIcon, PhotoIcon, DocumentIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -9,7 +9,7 @@ import ToastContainer from '../components/ToastContainer';
 import CustomSelect from '../components/CustomSelect';
 
 const API_URL = import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV
+  ((import.meta.env as any).DEV
     ? 'http://localhost:5000/api'
     : 'https://sign-company.onrender.com/api');
 
@@ -180,19 +180,32 @@ const Convention = () => {
     }
   }, [displayConvention?.registrationOptions]);
 
-  // Load registration state from localStorage when convention changes
+  // Load registration state from convention data and localStorage when convention changes
   useEffect(() => {
     if (displayConvention?._id) {
       const registeredKey = `convention_registered_${displayConvention._id}`;
       const calendarAddedKey = `convention_calendar_${displayConvention._id}`;
 
-      const wasRegistered = localStorage.getItem(registeredKey) === 'true';
+      // Check attendees list first (source of truth)
+      let registered = false;
+      if (user) {
+        const userId = user._id || user.id;
+        registered = displayConvention.attendees?.some(
+          (a: any) => (a.userId === userId) || (a.email === user.email)
+        );
+      }
+
+      // Fallback to localStorage if not found in attendees
+      if (!registered) {
+        registered = localStorage.getItem(registeredKey) === 'true';
+      }
+
       const wasCalendarAdded = localStorage.getItem(calendarAddedKey) === 'true';
 
-      setIsRegistered(wasRegistered);
+      setIsRegistered(registered);
       setHasAddedToCalendar(wasCalendarAdded);
     }
-  }, [displayConvention?._id]);
+  }, [displayConvention?._id, displayConvention?.attendees, user]);
 
   // Save registration state to localStorage
   useEffect(() => {
@@ -595,6 +608,8 @@ const Convention = () => {
           company: '',
           bio: '',
           topic: '',
+          day: '',
+          time: '',
           imageUrl: '',
           email: '',
           linkedin: '',
@@ -932,7 +947,9 @@ const Convention = () => {
     }
 
     try {
+      // @ts-ignore
       const jsPDF = (await import('jspdf')).jsPDF;
+      // @ts-ignore
       const html2canvas = (await import('html2canvas')).default;
 
       // Create a temporary element with ticket content
@@ -1703,6 +1720,12 @@ const Convention = () => {
                         Thank you for registering for {displayConvention?.title}.
                         We've sent a confirmation email with your ticket details.
                       </p>
+                      <button
+                        disabled
+                        className="w-full py-3 px-6 bg-green-600 text-white font-medium rounded-lg cursor-not-allowed shadow-sm mb-6"
+                      >
+                        Registered
+                      </button>
                       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
                         <button
                           onClick={handleDownloadTicket}
@@ -1731,7 +1754,7 @@ const Convention = () => {
                       <button
                         onClick={handleCompleteRegistration}
                         disabled={registrationLoading}
-                        className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {registrationLoading ? 'Registering...' : 'Complete Registration'}
                       </button>
