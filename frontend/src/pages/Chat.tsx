@@ -850,7 +850,7 @@ const Chat = () => {
         </div>
 
         {/* Contacts List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {filteredContacts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
               <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
@@ -1011,7 +1011,7 @@ const Chat = () => {
             </header>
 
             {/* Messages Area */}
-            <main className="flex-1 overflow-y-auto scroll-smooth">
+            <main className="flex-1 overflow-y-auto scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <div className="px-4 py-8 sm:px-6 lg:px-8 space-y-4">
                 {loadingMessages ? (
                   <div className="flex items-center justify-center py-12">
@@ -1549,7 +1549,7 @@ const Chat = () => {
                   autoFocus
                 />
               </div>
-              <div className="max-h-64 overflow-y-auto">
+              <div className="max-h-64 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {loadingUsers ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
