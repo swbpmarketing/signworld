@@ -370,7 +370,7 @@ const UserManagement = () => {
                   className="relative inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 active:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors whitespace-nowrap"
                 >
                   <ClipboardDocumentCheckIcon className="h-5 w-5 sm:mr-2" />
-                  <span className="hidden sm:inline">View Pending Request</span>
+                  <span className="hidden sm:inline">View Pending User Request</span>
                   {statsData?.inactive && statsData.inactive > 0 && (
                     <span className="absolute -top-2 -right-2 flex items-center justify-center h-5 w-5 text-xs font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-primary-600">
                       {statsData.inactive > 9 ? '9+' : statsData.inactive}
