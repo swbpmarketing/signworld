@@ -128,6 +128,7 @@ const Forum = () => {
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTag, setSelectedTag] = useState('');
   const [threads, setThreads] = useState<ForumThread[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -152,6 +153,7 @@ const Forum = () => {
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     setSearchQuery(searchInput);
+    setSelectedTag(''); // Clear tag filter when searching
   };
 
   const handleClearSearch = () => {
@@ -227,6 +229,7 @@ const Forum = () => {
         sort: sortMap[sortBy],
         ...(categoryValue && categoryValue !== 'all' && { category: categoryValue }),
         ...(searchQuery && { search: searchQuery }),
+        ...(selectedTag && { tag: selectedTag }),
       });
 
       const response = await fetch(`/api/forum?${queryParams}`, {
@@ -452,14 +455,18 @@ const Forum = () => {
     setPage(1);
     fetchThreads(1, false);
     fetchStats();
-  }, [selectedCategory, sortBy, effectiveRole]);
+  }, [selectedCategory, sortBy, effectiveRole, selectedTag]);
 
   // Debounced search
+  const isInitialSearchMount = useRef(true);
   useEffect(() => {
+    // Skip initial mount
+    if (isInitialSearchMount.current) {
+      isInitialSearchMount.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
-      if (!loading) {
-        fetchThreads(1, false);
-      }
+      fetchThreads(1, false);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -1198,6 +1205,23 @@ const Forum = () => {
             />
           </div>
         </form>
+        {/* Active Tag Filter Indicator */}
+        {selectedTag && (
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400">Filtering by tag:</span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300">
+              #{selectedTag}
+              <button
+                onClick={() => setSelectedTag('')}
+                className="ml-2 hover:text-primary-900 dark:hover:text-primary-100"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
@@ -1235,10 +1259,15 @@ const Forum = () => {
                   <button
                     key={tag.name}
                     onClick={() => {
-                      setSearchInput(tag.name);
-                      setSearchQuery(tag.name);
+                      setSelectedTag(selectedTag === tag.name ? '' : tag.name);
+                      setSearchInput('');
+                      setSearchQuery('');
                     }}
-                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                      selectedTag === tag.name
+                        ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 ring-1 ring-primary-500'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
                   >
                     #{tag.name}
                     <span className="ml-1 text-gray-500 dark:text-gray-400">({tag.count})</span>
