@@ -8,43 +8,37 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const Playlist = require('../models/Playlist');
 const Video = require('../models/Video');
 
-const samplePlaylists = [
-  {
-    name: 'New Owner Essentials',
-    description: 'Everything you need to know to get started with your sign business',
-    isPublic: true,
-    isActive: true,
-    sortOrder: 1,
+// Category display names and descriptions
+const categoryConfig = {
+  'training': {
+    name: 'Installation Training',
+    description: 'Master installation techniques for signs and vehicle wraps'
   },
-  {
-    name: 'Advanced Techniques',
-    description: 'Master advanced sign making and installation techniques',
-    isPublic: true,
-    isActive: true,
-    sortOrder: 2,
+  'marketing': {
+    name: 'Vehicle Wraps & Marketing',
+    description: 'Learn how to market your sign business and create stunning vehicle wraps'
   },
-  {
-    name: 'Marketing Mastery',
-    description: 'Learn how to market your sign business effectively',
-    isPublic: true,
-    isActive: true,
-    sortOrder: 3,
+  'technical': {
+    name: 'Technical Training',
+    description: 'Technical skills and best practices for sign professionals'
   },
-  {
-    name: 'Equipment Maintenance',
-    description: 'Keep your equipment running smoothly with these maintenance guides',
-    isPublic: true,
-    isActive: true,
-    sortOrder: 4,
+  'business': {
+    name: 'Business Growth',
+    description: 'Grow your sign business with proven strategies and insights'
   },
-  {
-    name: 'Vehicle Wrap Training',
-    description: 'Complete guide to vehicle wraps from start to finish',
-    isPublic: true,
-    isActive: true,
-    sortOrder: 5,
+  'product-demo': {
+    name: 'Product Demonstrations',
+    description: 'See our products and materials in action'
   },
-];
+  'webinar': {
+    name: 'Webinars & Workshops',
+    description: 'Live sessions and recorded webinars from industry experts'
+  },
+  'other': {
+    name: 'General Topics',
+    description: 'Miscellaneous tips, tricks, and industry insights'
+  }
+};
 
 const seedPlaylists = async () => {
   try {
@@ -52,29 +46,73 @@ const seedPlaylists = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('Connected to MongoDB');
 
-    // Get existing videos to add to playlists
-    const videos = await Video.find({ isActive: true }).limit(20);
-    console.log(`Found ${videos.length} videos to potentially add to playlists`);
+    // Get all active videos
+    const videos = await Video.find({ isActive: true });
+    console.log(`Found ${videos.length} total videos`);
+
+    // Get unique categories from existing videos
+    const categories = [...new Set(videos.map(v => v.category))].filter(Boolean);
+    console.log(`Found ${categories.length} unique categories:`, categories);
 
     // Clear existing playlists
     await Playlist.deleteMany({});
     console.log('Cleared existing playlists');
 
-    // Create playlists and distribute videos
-    for (let i = 0; i < samplePlaylists.length; i++) {
-      const playlistData = samplePlaylists[i];
+    // Create playlists dynamically based on categories
+    let sortOrder = 1;
+    for (const category of categories) {
+      // Get all videos in this category
+      const categoryVideos = videos.filter(v => v.category === category);
 
-      // Add some videos to each playlist (distribute evenly)
-      const startIdx = Math.floor((i / samplePlaylists.length) * videos.length);
-      const endIdx = Math.floor(((i + 1) / samplePlaylists.length) * videos.length);
-      const playlistVideos = videos.slice(startIdx, endIdx).map(v => v._id);
+      if (categoryVideos.length === 0) continue;
+
+      // Get config for this category, or create default
+      const config = categoryConfig[category] || {
+        name: category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' '),
+        description: `Videos about ${category.replace(/-/g, ' ')}`
+      };
 
       const playlist = await Playlist.create({
-        ...playlistData,
-        videos: playlistVideos,
+        name: config.name,
+        description: config.description,
+        videos: categoryVideos.map(v => v._id),
+        isPublic: true,
+        isActive: true,
+        sortOrder: sortOrder++,
       });
 
-      console.log(`Created playlist: ${playlist.name} with ${playlistVideos.length} videos`);
+      console.log(`✅ Created playlist: "${playlist.name}" with ${categoryVideos.length} videos`);
+    }
+
+    // Create a "Featured" playlist with featured videos
+    const featuredVideos = videos.filter(v => v.isFeatured);
+    if (featuredVideos.length > 0) {
+      const featuredPlaylist = await Playlist.create({
+        name: 'Featured Videos',
+        description: 'Our top recommended videos to get you started',
+        videos: featuredVideos.map(v => v._id),
+        isPublic: true,
+        isActive: true,
+        sortOrder: 0, // Show first
+      });
+      console.log(`✅ Created playlist: "${featuredPlaylist.name}" with ${featuredVideos.length} videos`);
+    }
+
+    // Create a "Most Popular" playlist with most viewed videos
+    const popularVideos = videos
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 10);
+
+    if (popularVideos.length > 0) {
+      const popularPlaylist = await Playlist.create({
+        name: 'Most Popular',
+        description: 'The most watched videos by our community',
+        videos: popularVideos.map(v => v._id),
+        isPublic: true,
+        isActive: true,
+        sortOrder: sortOrder++,
+      });
+      console.log(`✅ Created playlist: "${popularPlaylist.name}" with ${popularVideos.length} videos`);
     }
 
     console.log('\n✅ Playlists seeded successfully!');
