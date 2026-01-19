@@ -1025,7 +1025,6 @@ const Forum = () => {
   // Handle category selection
   const handleCategoryClick = (categoryName: string) => {
     setSelectedCategory(categoryName);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Format date
