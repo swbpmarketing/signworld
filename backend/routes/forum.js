@@ -754,6 +754,106 @@ router.post('/:id/subscribe', protect, async (req, res) => {
   }
 });
 
+// @desc    Pin/Unpin thread
+// @route   POST /api/forum/:id/pin
+// @access  Private (Admin only)
+router.post('/:id/pin', protect, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only admins can pin threads'
+      });
+    }
+
+    const thread = await ForumThread.findById(req.params.id);
+
+    if (!thread) {
+      return res.status(404).json({
+        success: false,
+        error: 'Thread not found'
+      });
+    }
+
+    // Toggle pin status
+    thread.isPinned = !thread.isPinned;
+    await thread.save();
+
+    // Emit real-time event
+    const io = req.app.get('io');
+    if (io) {
+      io.to('forum').emit('thread:update', {
+        threadId: req.params.id,
+        isPinned: thread.isPinned
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        isPinned: thread.isPinned
+      }
+    });
+  } catch (error) {
+    console.error('Error toggling pin:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle pin'
+    });
+  }
+});
+
+// @desc    Lock/Unlock thread
+// @route   POST /api/forum/:id/lock
+// @access  Private (Admin only)
+router.post('/:id/lock', protect, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only admins can lock threads'
+      });
+    }
+
+    const thread = await ForumThread.findById(req.params.id);
+
+    if (!thread) {
+      return res.status(404).json({
+        success: false,
+        error: 'Thread not found'
+      });
+    }
+
+    // Toggle lock status
+    thread.isLocked = !thread.isLocked;
+    await thread.save();
+
+    // Emit real-time event
+    const io = req.app.get('io');
+    if (io) {
+      io.to('forum').emit('thread:update', {
+        threadId: req.params.id,
+        isLocked: thread.isLocked
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        isLocked: thread.isLocked
+      }
+    });
+  } catch (error) {
+    console.error('Error toggling lock:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle lock'
+    });
+  }
+});
+
 // @desc    Get forum statistics
 // @route   GET /api/forum/stats/overview
 // @access  Public
