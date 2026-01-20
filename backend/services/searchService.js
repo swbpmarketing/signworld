@@ -46,7 +46,7 @@ class SearchService {
             {
               role: 'system',
               content: `You are a search intent parser for a sign company dashboard. Parse the user's query and return a JSON object with:
-                - dataTypes: array of types to search (files, owners, events, forum, stories, suppliers)
+                - dataTypes: array of types to search (files, owners, events, forum, stories, videos, equipment, suppliers)
                 - filters: object with specific filters (dateRange, location, tags, etc.)
                 - keywords: array of important keywords
                 - sortBy: how to sort results (relevance, date, popularity)`
@@ -73,7 +73,7 @@ class SearchService {
       console.error('Intent parsing error:', error);
       // Fallback intent
       return {
-        dataTypes: ['files', 'owners', 'events', 'forum', 'stories'],
+        dataTypes: ['files', 'owners', 'events', 'forum', 'stories', 'videos', 'equipment', 'suppliers'],
         filters: {},
         keywords: query.split(' ').filter(w => w.length > 2),
         sortBy: 'relevance'
@@ -100,16 +100,25 @@ class SearchService {
     if (intent.dataTypes.includes('stories')) {
       searches.push(this.searchStories(intent));
     }
+    if (intent.dataTypes.includes('videos')) {
+      searches.push(this.searchVideos(intent));
+    }
+    if (intent.dataTypes.includes('equipment')) {
+      searches.push(this.searchEquipment(intent));
+    }
+    if (intent.dataTypes.includes('suppliers')) {
+      searches.push(this.searchSuppliers(intent));
+    }
 
     const results = await Promise.all(searches);
     return this.mergeAndRankResults(results.flat(), intent);
   }
 
   async searchFiles(intent) {
-    const File = require('../models/File');
-    const query = this.buildMongoQuery(intent, ['name', 'description', 'tags']);
-    
-    const files = await File.find(query)
+    const LibraryFile = require('../models/LibraryFile');
+    const query = this.buildMongoQuery(intent, ['title', 'fileName', 'description', 'tags']);
+
+    const files = await LibraryFile.find(query)
       .limit(10)
       .sort(this.getSortCriteria(intent.sortBy));
 
@@ -117,12 +126,12 @@ class SearchService {
       id: file._id,
       type: 'file',
       category: 'files',
-      title: file.name,
+      title: file.fileName || file.title || 'Untitled',
       description: file.description,
-      link: `/library/file/${file._id}`,
+      link: `/library?id=${file._id}`,
       metadata: {
-        size: file.size,
-        type: file.mimeType,
+        size: file.fileSize,
+        type: file.fileType,
         date: file.createdAt,
         downloads: file.downloadCount
       },
@@ -131,18 +140,19 @@ class SearchService {
   }
 
   async searchOwners(intent) {
-    const Owner = require('../models/Owner');
-    const query = this.buildMongoQuery(intent, ['name', 'company', 'specialties', 'city', 'state']);
-    
+    const User = require('../models/User');
+    const query = this.buildMongoQuery(intent, ['name', 'company', 'specialties', 'address.city', 'address.state']);
+    query.role = 'owner'; // Only search owners
+
     if (intent.filters.location) {
       query.$or = query.$or || [];
       query.$or.push(
-        { city: new RegExp(intent.filters.location, 'i') },
-        { state: new RegExp(intent.filters.location, 'i') }
+        { 'address.city': new RegExp(intent.filters.location, 'i') },
+        { 'address.state': new RegExp(intent.filters.location, 'i') }
       );
     }
 
-    const owners = await Owner.find(query)
+    const owners = await User.find(query)
       .limit(10)
       .sort(this.getSortCriteria(intent.sortBy));
 
@@ -151,11 +161,11 @@ class SearchService {
       type: 'owner',
       category: 'owners',
       title: owner.name,
-      description: `${owner.company} - ${owner.city}, ${owner.state}`,
+      description: `${owner.company || ''} - ${owner.address?.city || ''}, ${owner.address?.state || ''}`,
       link: `/owners/${owner._id}`,
       metadata: {
         specialties: owner.specialties,
-        openDate: owner.openDate,
+        company: owner.company,
         author: owner.name
       },
       score: this.calculateRelevanceScore(owner, intent)
@@ -165,7 +175,7 @@ class SearchService {
   async searchEvents(intent) {
     const Event = require('../models/Event');
     const query = this.buildMongoQuery(intent, ['title', 'description', 'location']);
-    
+
     if (intent.filters.dateRange) {
       query.date = this.parseDateRange(intent.filters.dateRange);
     }
@@ -180,7 +190,7 @@ class SearchService {
       category: 'events',
       title: event.title,
       description: event.description,
-      link: `/events/${event._id}`,
+      link: `/calendar?id=${event._id}`,
       metadata: {
         date: event.date,
         location: event.location,
@@ -191,10 +201,10 @@ class SearchService {
   }
 
   async searchForum(intent) {
-    const ForumPost = require('../models/ForumPost');
+    const ForumThread = require('../models/ForumThread');
     const query = this.buildMongoQuery(intent, ['title', 'content', 'tags']);
-    
-    const posts = await ForumPost.find(query)
+
+    const posts = await ForumThread.find(query)
       .populate('author', 'name')
       .limit(10)
       .sort(this.getSortCriteria(intent.sortBy));
@@ -205,7 +215,7 @@ class SearchService {
       category: 'forum',
       title: post.title,
       description: post.content.substring(0, 150) + '...',
-      link: `/forum/post/${post._id}`,
+      link: `/forum/thread/${post._id}`,
       metadata: {
         author: post.author?.name,
         date: post.createdAt,
@@ -217,10 +227,10 @@ class SearchService {
   }
 
   async searchStories(intent) {
-    const Story = require('../models/Story');
+    const Brag = require('../models/Brag');
     const query = this.buildMongoQuery(intent, ['title', 'content', 'tags']);
-    
-    const stories = await Story.find(query)
+
+    const stories = await Brag.find(query)
       .populate('author', 'name')
       .limit(10)
       .sort(this.getSortCriteria(intent.sortBy));
@@ -228,16 +238,90 @@ class SearchService {
     return stories.map(story => ({
       id: story._id,
       type: 'story',
-      category: 'insights',
+      category: 'stories',
       title: story.title,
       description: story.summary || story.content.substring(0, 150) + '...',
-      link: `/stories/${story._id}`,
+      link: `/brags?id=${story._id}`,
       metadata: {
         author: story.author?.name,
         date: story.createdAt,
         category: story.category
       },
       score: this.calculateRelevanceScore(story, intent)
+    }));
+  }
+
+  async searchVideos(intent) {
+    const Video = require('../models/Video');
+    const query = this.buildMongoQuery(intent, ['title', 'description', 'tags']);
+
+    const videos = await Video.find(query)
+      .limit(10)
+      .sort(this.getSortCriteria(intent.sortBy));
+
+    return videos.map(video => ({
+      id: video._id,
+      type: 'video',
+      category: 'videos',
+      title: video.title || 'Untitled Video',
+      description: video.description,
+      link: `/videos?id=${video._id}`,
+      metadata: {
+        category: video.category,
+        views: video.views,
+        date: video.createdAt
+      },
+      score: this.calculateRelevanceScore(video, intent)
+    }));
+  }
+
+  async searchEquipment(intent) {
+    const Equipment = require('../models/Equipment');
+    const query = this.buildMongoQuery(intent, ['name', 'description', 'brand', 'category']);
+
+    const equipment = await Equipment.find(query)
+      .limit(10)
+      .sort(this.getSortCriteria(intent.sortBy));
+
+    return equipment.map(item => ({
+      id: item._id,
+      type: 'equipment',
+      category: 'equipment',
+      title: item.name || 'Untitled Equipment',
+      description: item.description,
+      link: `/equipment/${item._id}`,
+      metadata: {
+        brand: item.brand,
+        model: item.model,
+        category: item.category,
+        date: item.createdAt
+      },
+      score: this.calculateRelevanceScore(item, intent)
+    }));
+  }
+
+  async searchSuppliers(intent) {
+    const Partner = require('../models/Partner');
+    const query = this.buildMongoQuery(intent, ['name', 'description', 'category']);
+
+    const suppliers = await Partner.find(query)
+      .populate('vendorId', 'name')
+      .limit(10)
+      .sort(this.getSortCriteria(intent.sortBy));
+
+    return suppliers.map(supplier => ({
+      id: supplier._id,
+      type: 'supplier',
+      category: 'suppliers',
+      title: supplier.name || 'Untitled Supplier',
+      description: supplier.description,
+      link: `/partners?id=${supplier._id}`,
+      metadata: {
+        category: supplier.category,
+        vendor: supplier.vendorId?.name,
+        date: supplier.createdAt
+      },
+      score: this.calculateRelevanceScore(supplier, intent)
     }));
   }
 
@@ -294,12 +378,12 @@ class SearchService {
     // Fallback to simple keyword search
     const keywords = query.split(' ').filter(w => w.length > 2);
     const intent = {
-      dataTypes: ['files', 'owners', 'events', 'forum', 'stories'],
+      dataTypes: ['files', 'owners', 'events', 'forum', 'stories', 'videos', 'equipment', 'suppliers'],
       filters: {},
       keywords,
       sortBy: 'relevance'
     };
-    
+
     return this.executeSearch(intent);
   }
 
@@ -339,12 +423,13 @@ class SearchService {
     return ranges[dateRange] || { $gte: new Date(now.getFullYear(), 0, 1) };
   }
 
-  async saveSearchHistory(userId, query) {
+  async saveSearchHistory(userId, query, conversation = []) {
     const SearchHistory = require('../models/SearchHistory');
-    
+
     await SearchHistory.create({
       user: userId,
       query,
+      conversation,
       timestamp: new Date()
     });
 
@@ -355,7 +440,7 @@ class SearchService {
         .find({ user: userId })
         .sort({ timestamp: 1 })
         .limit(count - 100);
-      
+
       await SearchHistory.deleteMany({
         _id: { $in: oldestSearches.map(s => s._id) }
       });
@@ -390,12 +475,13 @@ class SearchService {
 
   async getRecentSearches(userId, limit = 10) {
     const SearchHistory = require('../models/SearchHistory');
-    
+
     const searches = await SearchHistory
       .find({ user: userId })
       .sort({ timestamp: -1 })
       .limit(limit)
-      .distinct('query');
+      .select('query conversation timestamp')
+      .lean();
 
     return searches;
   }
