@@ -2,6 +2,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
+const searchService = require('../services/searchService');
 
 // API configuration - supports both OpenAI and OpenRouter
 const USE_OPENAI = process.env.OPENAI_API_KEY ? true : false;
@@ -332,16 +333,163 @@ IMPORTANT SECTION NAMES TO USE:
 };
 
 /**
+ * Detect if the user's message is a conversational question (not a search query)
+ */
+const isConversationalQuery = (message) => {
+  const conversationalPhrases = [
+    'how do i', 'how can i', 'how to', 'what is', 'what are', 'what can',
+    'why', 'when', 'help me', 'can you', 'could you', 'would you',
+    'tell me about', 'explain', 'guide me', 'walk me through'
+  ];
+
+  const lowerMessage = message.toLowerCase();
+  return conversationalPhrases.some(phrase => lowerMessage.includes(phrase));
+};
+
+/**
+ * Detect if the user's message is a search query
+ */
+const isSearchQuery = (message) => {
+  // If it's a conversational question, it's not a search query
+  if (isConversationalQuery(message)) {
+    return false;
+  }
+
+  const searchKeywords = [
+    'search', 'find', 'look for', 'looking for', 'show me', 'where can i find',
+    'where is', 'locate', 'get me', 'i need', 'do you have',
+    'is there', 'are there', 'any'
+  ];
+
+  const lowerMessage = message.toLowerCase();
+  const hasSearchKeywords = searchKeywords.some(keyword => lowerMessage.includes(keyword));
+
+  // If it has search keywords, it's definitely a search
+  if (hasSearchKeywords) {
+    return true;
+  }
+
+  // Otherwise, if the message is short (less than 10 words), treat it as a search query by default
+  const wordCount = message.trim().split(/\s+/).length;
+  return wordCount < 10;
+};
+
+/**
+ * Extract data type filters from user message
+ */
+const extractDataTypeFilters = (message) => {
+  const typeKeywords = {
+    'files': ['document', 'file', 'pdf', 'download', 'guide', 'manual'],
+    'videos': ['video', 'training video', 'tutorial', 'watch'],
+    'stories': ['story', 'stories', 'success', 'brag', 'achievement'],
+    'forum': ['forum', 'discussion', 'thread', 'post', 'conversation'],
+    'events': ['event', 'calendar', 'meeting', 'convention'],
+    'owners': ['owner', 'franchise owner', 'franchisee'],
+    'suppliers': ['vendor', 'supplier', 'partner'],
+    'equipment': ['equipment', 'machine', 'tool', 'printer', 'cutter']
+  };
+
+  const lowerMessage = message.toLowerCase();
+  const filters = [];
+
+  for (const [type, keywords] of Object.entries(typeKeywords)) {
+    if (keywords.some(keyword => lowerMessage.includes(keyword))) {
+      filters.push(type);
+    }
+  }
+
+  // If no specific filters found, return all types
+  return filters.length > 0 ? filters : ['files', 'owners', 'events', 'forum', 'stories', 'suppliers', 'videos', 'equipment'];
+};
+
+/**
+ * Format search results for AI response
+ */
+const formatSearchResults = (results) => {
+  if (!results || results.length === 0) {
+    return "I couldn't find any results matching your search. Try different keywords or browse the relevant sections directly.";
+  }
+
+  let response = `I found ${results.length} result${results.length > 1 ? 's' : ''} for you:\n\n`;
+
+  results.slice(0, 5).forEach((result, index) => {
+    response += `${index + 1}. ${result.title || 'Untitled'}\n`;
+  });
+
+  if (results.length > 5) {
+    response += `\n...and ${results.length - 5} more results.`;
+  }
+
+  return response;
+};
+
+/**
  * POST /api/ai/chat
  * Handle AI chat requests and proxy to OpenRouter
  * @access Private (authenticated users)
  */
 router.post('/chat', protect, async (req, res) => {
   try {
-    const { messages, userRole, userName, userCompany } = req.body;
+    const { messages, userRole, userName, userCompany, dataTypeFilters } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Invalid messages format' });
+    }
+
+    // Get the last user message
+    const lastMessage = messages[messages.length - 1];
+    const userMessage = lastMessage?.content || '';
+
+    // Check if this is a search query (either has search keywords OR user selected filters)
+    const hasSearchKeywords = isSearchQuery(userMessage);
+    const hasFiltersSelected = dataTypeFilters && dataTypeFilters.length > 0;
+    const shouldSearch = hasSearchKeywords || hasFiltersSelected;
+
+    // If it's a search query, perform the search
+    if (shouldSearch) {
+      try {
+        // Extract or use provided data type filters
+        const filters = dataTypeFilters && dataTypeFilters.length > 0
+          ? dataTypeFilters
+          : extractDataTypeFilters(userMessage);
+
+        // Create search intent
+        const intent = {
+          dataTypes: filters,
+          filters: {},
+          keywords: userMessage.split(' ').filter(w => w.length > 2),
+          sortBy: 'relevance'
+        };
+
+        // Execute search
+        const searchResults = await searchService.executeSearch(intent);
+
+        // Format results and return
+        const formattedResults = formatSearchResults(searchResults);
+
+        // Build complete conversation with search results
+        const conversationWithResults = [
+          ...messages,
+          {
+            role: 'assistant',
+            content: formattedResults,
+            searchResults: searchResults.slice(0, 10)
+          }
+        ];
+
+        // Save search history with complete conversation including search results
+        await searchService.saveSearchHistory(req.user._id, userMessage, conversationWithResults);
+
+        return res.json({
+          message: formattedResults,
+          searchResults: searchResults.slice(0, 10), // Return top 10 results
+          isSearchResult: true
+        });
+      } catch (searchError) {
+        console.error('Search execution error:', searchError);
+        console.error('Error stack:', searchError.stack);
+        // Fall through to AI chat if search fails
+      }
     }
 
     // Create role-specific context with user identity
