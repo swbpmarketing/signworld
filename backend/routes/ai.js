@@ -338,8 +338,10 @@ IMPORTANT SECTION NAMES TO USE:
 const isConversationalQuery = (message) => {
   const conversationalPhrases = [
     'how do i', 'how can i', 'how to', 'what is', 'what are', 'what can',
+    'where do i', 'where can i', 'where is', 'where are', 'where should',
     'why', 'when', 'help me', 'can you', 'could you', 'would you',
-    'tell me about', 'explain', 'guide me', 'walk me through'
+    'tell me about', 'explain', 'guide me', 'walk me through',
+    'show me how', 'i want to', 'i need to', 'i\'d like to'
   ];
 
   const lowerMessage = message.toLowerCase();
