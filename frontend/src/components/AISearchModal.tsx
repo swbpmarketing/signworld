@@ -5,7 +5,9 @@ import {
   XMarkIcon,
   SparklesIcon,
   ArrowRightIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  Bars3Icon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
 import { chatWithAI, extractSuggestions } from '../services/openRouterService';
@@ -19,20 +21,52 @@ interface AISearchModalProps {
   userCompany?: string;
 }
 
+interface SearchResult {
+  id: string;
+  type: string;
+  category: string;
+  title: string;
+  description?: string;
+  link: string;
+  metadata?: any;
+}
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   suggestions?: Array<{ title: string; href: string; description: string }>;
+  searchResults?: SearchResult[];
   error?: boolean;
 }
 
-// Conversation history for AI context
-const conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+// Data type filter options
+const DATA_TYPE_FILTERS = [
+  { id: 'all', label: 'All', value: [] },
+  { id: 'files', label: 'Documents', value: ['files'] },
+  { id: 'videos', label: 'Videos', value: ['videos'] },
+  { id: 'forum', label: 'Forum', value: ['forum'] },
+  { id: 'stories', label: 'Stories', value: ['stories'] },
+  { id: 'events', label: 'Events', value: ['events'] },
+  { id: 'owners', label: 'Owners', value: ['owners'] },
+  { id: 'suppliers', label: 'Vendors', value: ['suppliers'] },
+  { id: 'equipment', label: 'Equipment', value: ['equipment'] },
+];
+
+// Conversation history for AI context (includes searchResults for saving/restoring)
+const conversationHistory: Array<{ role: 'user' | 'assistant'; content: string; searchResults?: SearchResult[] }> = [];
 
 const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userCompany }: AISearchModalProps) => {
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<Array<{
+    _id: string;
+    query: string;
+    conversation: Array<{ role: 'user' | 'assistant'; content: string; searchResults?: SearchResult[] }>;
+    timestamp: string;
+  }>>([]);
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +90,26 @@ const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userComp
     scrollToBottom();
   }, [messages]);
 
+  // Fetch search history
+  const fetchSearchHistory = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9000/api';
+      const response = await fetch(`${API_URL}/search/recent?limit=10`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSearchHistory(data.searches || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch search history:', error);
+    }
+  };
+
   // Generate personalized welcome message based on user info
   const getWelcomeMessage = () => {
     const greeting = userName ? `Hi ${userName}!` : 'Hi there!';
@@ -74,6 +128,7 @@ const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userComp
     if (!isOpen) {
       setQuery('');
       setMessages([]);
+      setIsSidebarOpen(false);
       // Clear conversation history when modal closes
       conversationHistory.length = 0;
     } else {
@@ -82,31 +137,38 @@ const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userComp
         role: 'assistant',
         content: getWelcomeMessage()
       }]);
+      // Fetch search history
+      fetchSearchHistory();
     }
   }, [isOpen, userName, userRole]);
 
-  const generateAIResponse = async (userQuery: string): Promise<Message> => {
+  const generateAIResponse = async (userQuery: string, filters?: string[]): Promise<Message> => {
     try {
       // Add user message to conversation history
       conversationHistory.push({ role: 'user', content: userQuery });
 
-      // Call OpenRouter API with user context
-      const aiResponse = await chatWithAI(conversationHistory, {
+      // Call OpenRouter API with user context and optional filters
+      const response = await chatWithAI(conversationHistory, {
         role: userRoleRef.current,
         name: userNameRef.current,
         company: userCompanyRef.current
+      }, filters);
+
+      // Add AI response to conversation history (with searchResults if present)
+      conversationHistory.push({
+        role: 'assistant',
+        content: response.message,
+        searchResults: response.searchResults
       });
 
-      // Add AI response to conversation history
-      conversationHistory.push({ role: 'assistant', content: aiResponse });
-
       // Extract suggestions from the response (filtered by user role)
-      const suggestions = extractSuggestions(aiResponse, userRoleRef.current);
+      const suggestions = extractSuggestions(response.message, userRoleRef.current);
 
       return {
         role: 'assistant',
-        content: aiResponse,
-        suggestions: suggestions.length > 0 ? suggestions : undefined
+        content: response.message,
+        suggestions: suggestions.length > 0 ? suggestions : undefined,
+        searchResults: response.searchResults,
       };
     } catch (error: any) {
       console.error('AI Error:', error);
@@ -133,8 +195,8 @@ const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userComp
     setIsLoading(true);
 
     try {
-      // Get AI response
-      const aiResponse = await generateAIResponse(currentQuery);
+      // Get AI response with selected filters
+      const aiResponse = await generateAIResponse(currentQuery, selectedFilters.length > 0 ? selectedFilters : undefined);
       setMessages(prev => [...prev, aiResponse]);
 
       // Show error toast if there was an error
@@ -153,9 +215,55 @@ const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userComp
     }
   };
 
+  const handleFilterToggle = (filterValue: string[]) => {
+    console.log('Filter toggled:', filterValue);
+    setSelectedFilters(filterValue);
+  };
+
+  const handleSearchResultClick = (link: string) => {
+    navigate(link);
+    onClose();
+  };
+
   const handleSuggestionClick = (href: string) => {
     navigate(href);
     onClose();
+  };
+
+  const handleHistoryClick = (historyItem: {
+    _id: string;
+    query: string;
+    conversation: Array<{ role: 'user' | 'assistant'; content: string; searchResults?: SearchResult[] }>;
+    timestamp: string;
+  }) => {
+    // Restore the conversation
+    if (historyItem.conversation && historyItem.conversation.length > 0) {
+      // Clear current conversation history
+      conversationHistory.length = 0;
+
+      // Convert conversation to Message format and restore conversation history
+      const restoredMessages: Message[] = historyItem.conversation.map(msg => {
+        // Add to conversation history for AI context (with searchResults)
+        conversationHistory.push({
+          role: msg.role,
+          content: msg.content,
+          searchResults: msg.searchResults
+        });
+
+        return {
+          role: msg.role,
+          content: msg.content,
+          searchResults: msg.searchResults
+        };
+      });
+
+      setMessages(restoredMessages);
+    } else {
+      // If no conversation, just fill the query
+      setQuery(historyItem.query);
+    }
+
+    setIsSidebarOpen(false);
   };
 
   // Role-specific quick prompts
@@ -215,6 +323,13 @@ const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userComp
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-3">
+                    {/* Hamburger Menu */}
+                    <button
+                      onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                      className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <Bars3Icon className="h-5 w-5" />
+                    </button>
                     <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
                       <SparklesIcon className="w-6 h-6 text-white" />
                     </div>
@@ -231,8 +346,38 @@ const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userComp
                   </button>
                 </div>
 
+                {/* Main Content with Sidebar */}
+                <div className="flex flex-1 overflow-hidden">
+                  {/* Sidebar */}
+                  <div className={`${isSidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900`}>
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-4">
+                        <ClockIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Recent Searches</h4>
+                      </div>
+                      <div className="space-y-1">
+                        {searchHistory.length > 0 ? (
+                          searchHistory.map((historyItem, index) => (
+                            <button
+                              key={historyItem._id || index}
+                              onClick={() => handleHistoryClick(historyItem)}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors truncate"
+                            >
+                              {historyItem.query}
+                            </button>
+                          ))
+                        ) : (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 px-3 py-2">No recent searches</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Main Chat Area */}
+                  <div className="flex-1 flex flex-col overflow-hidden">
+
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   {messages.map((message, index) => (
                     <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[80%] ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
@@ -250,6 +395,37 @@ const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userComp
                           )}
                           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                         </div>
+
+                        {/* Search Results */}
+                        {message.searchResults && message.searchResults.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Search Results:</p>
+                            {message.searchResults.slice(0, 5).map((result, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => handleSearchResultClick(result.link)}
+                                className="w-full flex items-start justify-between px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all group text-left"
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-primary-700 dark:group-hover:text-primary-400">
+                                      {result.title}
+                                    </p>
+                                    <span className="text-xs px-2 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded-full">
+                                      {result.category}
+                                    </span>
+                                  </div>
+                                  {result.description && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                                      {result.description}
+                                    </p>
+                                  )}
+                                </div>
+                                <ArrowRightIcon className="w-4 h-4 text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors flex-shrink-0 mt-1 ml-2" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
 
                         {/* Suggestions */}
                         {message.suggestions && message.suggestions.length > 0 && (
@@ -312,13 +488,40 @@ const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userComp
 
                 {/* Input */}
                 <form onSubmit={handleSubmit} className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                  {/* Filter Chips */}
+                  <div className="mb-3">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Search in:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {DATA_TYPE_FILTERS.map((filter) => {
+                        const isSelected = selectedFilters.length === 0
+                          ? filter.id === 'all'
+                          : filter.value.length > 0 && filter.value.every(v => selectedFilters.includes(v));
+
+                        return (
+                          <button
+                            key={filter.id}
+                            type="button"
+                            onClick={() => handleFilterToggle(filter.value)}
+                            className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                              isSelected
+                                ? 'bg-primary-600 text-white'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                            }`}
+                          >
+                            {filter.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="flex items-center space-x-3">
                     <div className="flex-1 relative">
                       <input
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Ask me anything..."
+                        placeholder="Ask me anything or search for specific content..."
                         className="w-full px-4 py-3 pr-12 bg-gray-100 dark:bg-gray-700 border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                         disabled={isLoading}
                       />
@@ -335,6 +538,8 @@ const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userComp
                     Press Enter to send • Powered by OpenRouter AI
                   </p>
                 </form>
+                  </div>
+                </div>
               </Dialog.Panel>
             </Transition.Child>
           </div>
