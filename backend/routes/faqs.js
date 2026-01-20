@@ -61,13 +61,19 @@ router.get('/stats', async (req, res) => {
 // @route   GET /api/faqs
 // @access  Public
 router.get('/', async (req, res) => {
+  // Prevent browser caching so votes are always fresh
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
   try {
     const {
       category,
       search,
       limit = 50,
       page = 1,
-      sort = 'order'
+      sort = 'order',
+      visitorId
     } = req.query;
 
     // Build query
@@ -102,20 +108,30 @@ router.get('/', async (req, res) => {
         sortOption = { order: 1, createdAt: -1 };
     }
 
-    // Execute query with pagination
+    // Execute query with pagination - use lean() to bypass Mongoose caching
     const faqs = await FAQ.find(query)
       .sort(sortOption)
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .select('-__v');
+      .select('-__v')
+      .lean();
 
     // Get total count for pagination
     const count = await FAQ.countDocuments(query);
 
     // Transform the data to match frontend expectations
     const transformedFAQs = faqs.map(faq => {
-      const helpfulCount = faq.helpful.filter(h => h.isHelpful).length;
-      const notHelpfulCount = faq.helpful.filter(h => !h.isHelpful).length;
+      const helpfulCount = faq.helpful.filter(h => h.isHelpful === true).length;
+      const notHelpfulCount = faq.helpful.filter(h => h.isHelpful === false).length;
+
+      // Find user's existing vote if visitorId provided
+      let userVote = null;
+      if (visitorId) {
+        const existingVote = faq.helpful.find(h => h.visitorId === visitorId);
+        if (existingVote) {
+          userVote = existingVote.isHelpful ? 'helpful' : 'not-helpful';
+        }
+      }
 
       return {
         _id: faq._id,
@@ -127,6 +143,7 @@ router.get('/', async (req, res) => {
         views: faq.views,
         helpful: helpfulCount,
         notHelpful: notHelpfulCount,
+        userVote: userVote,
         order: faq.order,
         createdAt: faq.createdAt,
         updatedAt: faq.updatedAt
@@ -236,6 +253,10 @@ router.post('/:id/helpful', async (req, res) => {
   try {
     const { isHelpful, visitorId } = req.body;
 
+    console.log('=== FAQ VOTE REQUEST ===');
+    console.log('FAQ ID:', req.params.id);
+    console.log('Request body:', { isHelpful, visitorId });
+
     if (typeof isHelpful !== 'boolean') {
       return res.status(400).json({
         success: false,
@@ -243,7 +264,49 @@ router.post('/:id/helpful', async (req, res) => {
       });
     }
 
-    const faq = await FAQ.findById(req.params.id);
+    // Use visitorId or IP as unique identifier for anonymous votes
+    const uniqueId = String(visitorId || req.ip);
+    console.log('Using uniqueId:', uniqueId);
+
+    // First, try to update existing vote using atomic operation
+    const updateResult = await FAQ.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        'helpful.visitorId': uniqueId
+      },
+      {
+        $set: {
+          'helpful.$.isHelpful': isHelpful,
+          'helpful.$.createdAt': new Date()
+        }
+      },
+      { new: true }
+    );
+
+    console.log('Update existing vote result:', updateResult ? 'Found and updated' : 'Not found');
+
+    let faq;
+    if (updateResult) {
+      // Existing vote was updated
+      faq = updateResult;
+    } else {
+      // No existing vote, add new one
+      console.log('Adding new vote...');
+      faq = await FAQ.findByIdAndUpdate(
+        req.params.id,
+        {
+          $push: {
+            helpful: {
+              visitorId: uniqueId,
+              isHelpful: isHelpful,
+              createdAt: new Date()
+            }
+          }
+        },
+        { new: true }
+      );
+      console.log('New vote added, total votes:', faq?.helpful?.length);
+    }
 
     if (!faq) {
       return res.status(404).json({
@@ -252,30 +315,11 @@ router.post('/:id/helpful', async (req, res) => {
       });
     }
 
-    // Use visitorId or IP as unique identifier for anonymous votes
-    const uniqueId = visitorId || req.ip;
+    const helpfulCount = faq.helpful.filter(h => h.isHelpful === true).length;
+    const notHelpfulCount = faq.helpful.filter(h => h.isHelpful === false).length;
 
-    // Check if this visitor already voted
-    const existingVoteIndex = faq.helpful.findIndex(
-      h => h.visitorId === uniqueId
-    );
-
-    if (existingVoteIndex !== -1) {
-      // Update existing vote
-      faq.helpful[existingVoteIndex].isHelpful = isHelpful;
-    } else {
-      // Add new vote
-      faq.helpful.push({
-        visitorId: uniqueId,
-        isHelpful,
-        createdAt: new Date()
-      });
-    }
-
-    await faq.save();
-
-    const helpfulCount = faq.helpful.filter(h => h.isHelpful).length;
-    const notHelpfulCount = faq.helpful.filter(h => !h.isHelpful).length;
+    console.log('Final counts:', { helpfulCount, notHelpfulCount, totalVotes: faq.helpful.length });
+    console.log('=== END FAQ VOTE ===');
 
     res.json({
       success: true,

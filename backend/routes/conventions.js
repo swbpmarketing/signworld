@@ -31,10 +31,46 @@ router.get('/', async (req, res) => {
 
     const conventions = await Convention.find(filter).sort('-startDate');
 
-    // Convert to JSON and add status
+    // Get all user IDs from attendees who have missing names
+    const allAttendeeUserIds = new Set();
+    conventions.forEach(c => {
+      if (c.attendees) {
+        c.attendees.forEach(a => {
+          if (!a.firstName && !a.lastName && a.userId) {
+            allAttendeeUserIds.add(a.userId.toString());
+          }
+        });
+      }
+    });
+
+    // Fetch user names if needed
+    let userMap = new Map();
+    if (allAttendeeUserIds.size > 0) {
+      const users = await User.find({ _id: { $in: Array.from(allAttendeeUserIds) } }).select('_id name');
+      userMap = new Map(users.map(u => [u._id.toString(), u.name]));
+    }
+
+    // Convert to JSON and add status, populate missing attendee names
     const conventionsWithStatus = conventions.map(c => {
       const data = c.toJSON();
       data.status = getConventionStatus(c.startDate, c.endDate);
+
+      // Populate missing firstName/lastName for attendees
+      if (data.attendees && data.attendees.length > 0) {
+        data.attendees = data.attendees.map(attendee => {
+          if (!attendee.firstName && !attendee.lastName && attendee.userId) {
+            const userName = userMap.get(attendee.userId.toString()) || '';
+            const nameParts = userName.trim().split(' ');
+            return {
+              ...attendee,
+              firstName: nameParts[0] || '',
+              lastName: nameParts.slice(1).join(' ') || ''
+            };
+          }
+          return attendee;
+        });
+      }
+
       return data;
     });
 
@@ -71,6 +107,32 @@ router.get('/:id', async (req, res) => {
     // Get convention data and add status
     const conventionData = convention.toJSON();
     conventionData.status = getConventionStatus(convention.startDate, convention.endDate);
+
+    // Populate missing firstName/lastName for attendees from User collection
+    if (conventionData.attendees && conventionData.attendees.length > 0) {
+      const attendeesWithMissingNames = conventionData.attendees.filter(
+        a => !a.firstName && !a.lastName && a.userId
+      );
+
+      if (attendeesWithMissingNames.length > 0) {
+        const userIds = attendeesWithMissingNames.map(a => a.userId);
+        const users = await User.find({ _id: { $in: userIds } }).select('_id name');
+        const userMap = new Map(users.map(u => [u._id.toString(), u.name]));
+
+        conventionData.attendees = conventionData.attendees.map(attendee => {
+          if (!attendee.firstName && !attendee.lastName && attendee.userId) {
+            const userName = userMap.get(attendee.userId.toString()) || '';
+            const nameParts = userName.trim().split(' ');
+            return {
+              ...attendee,
+              firstName: nameParts[0] || '',
+              lastName: nameParts.slice(1).join(' ') || ''
+            };
+          }
+          return attendee;
+        });
+      }
+    }
 
     res.json({
       success: true,
@@ -795,14 +857,19 @@ router.post('/:id/register', protect, async (req, res) => {
     }
 
     // Get user info
-    const user = await User.findById(req.user.id).select('firstName lastName email');
+    const user = await User.findById(req.user.id).select('name email');
+
+    // Split name into firstName and lastName
+    const nameParts = (user.name || '').trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
 
     // Add user to attendees
     convention.attendees.push({
       userId: req.user.id,
       email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      firstName: firstName,
+      lastName: lastName,
       registeredAt: new Date()
     });
 
@@ -829,7 +896,7 @@ router.post('/:id/register', protect, async (req, res) => {
     try {
       await emailService.sendConventionRegistrationEmail({
         to: user.email,
-        name: `${user.firstName} ${user.lastName}`,
+        name: user.name || `${firstName} ${lastName}`,
         convention: convention
       });
     } catch (emailError) {

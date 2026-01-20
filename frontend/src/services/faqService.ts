@@ -11,6 +11,7 @@ export type FAQ = {
   views: number;
   helpful: number;
   notHelpful: number;
+  userVote?: 'helpful' | 'not-helpful' | null;
   order?: number;
   createdAt: string;
   updatedAt: string;
@@ -57,6 +58,16 @@ export type HelpfulVoteResponse = {
   };
 };
 
+// Helper function to get or create a visitor ID for anonymous voting
+export const getVisitorId = (): string => {
+  let visitorId = localStorage.getItem('faq-visitor-id');
+  if (!visitorId) {
+    visitorId = 'visitor_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+    localStorage.setItem('faq-visitor-id', visitorId);
+  }
+  return visitorId;
+};
+
 // Get all FAQs with filters
 export const getFAQs = async (params: GetFAQsParams = {}): Promise<GetFAQsResponse> => {
   const queryParams = new URLSearchParams();
@@ -65,6 +76,8 @@ export const getFAQs = async (params: GetFAQsParams = {}): Promise<GetFAQsRespon
   if (params.page) queryParams.append('page', params.page.toString());
   if (params.limit) queryParams.append('limit', params.limit.toString());
   if (params.sort) queryParams.append('sort', params.sort);
+  // Include visitorId to get user's vote status
+  queryParams.append('visitorId', getVisitorId());
   const response = await api.get(`/faqs?${queryParams.toString()}`);
   return response.data;
 };
@@ -116,16 +129,6 @@ export const updateFAQ = async (id: string, faqData: Partial<CreateFAQData>): Pr
 export const deleteFAQ = async (id: string): Promise<{ success: boolean; data: object }> => {
   const response = await api.delete(`/faqs/${id}`);
   return response.data;
-};
-
-// Helper function to get or create a visitor ID for anonymous voting
-const getVisitorId = (): string => {
-  let visitorId = localStorage.getItem('faq-visitor-id');
-  if (!visitorId) {
-    visitorId = 'visitor_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-    localStorage.setItem('faq-visitor-id', visitorId);
-  }
-  return visitorId;
 };
 
 export default {

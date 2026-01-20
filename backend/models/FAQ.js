@@ -39,7 +39,10 @@ const faqSchema = new mongoose.Schema({
     visitorId: {
       type: String,
     },
-    isHelpful: Boolean,
+    isHelpful: {
+      type: Boolean,
+      required: true,
+    },
     createdAt: {
       type: Date,
       default: Date.now,

@@ -98,8 +98,12 @@ const UserManagement = () => {
     queryFn: async () => {
       const params: Record<string, any> = { page, limit, search: searchQuery };
       if (roleFilter !== 'all') params.role = roleFilter;
-      // Always fetch only approved/active users for this list.
-      params.isActive = true;
+      // Filter by active/inactive status
+      if (statusFilter === 'active') {
+        params.isActive = true;
+      } else if (statusFilter === 'inactive') {
+        params.isActive = false;
+      }
       const response = await api.get('/users', { params });
       return response.data;
     }
@@ -487,10 +491,12 @@ const UserManagement = () => {
           </div>
         </button>
 
-        <Link
-          to="/new-users"
+        <button
+          onClick={() => { setRoleFilter('all'); setStatusFilter('inactive'); setPage(1); }}
           className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 transition-all ${
-            'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+            statusFilter === 'inactive'
+              ? 'border-red-500 shadow-md'
+              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
           }`}
         >
           <div className="flex items-center gap-3">
@@ -502,7 +508,7 @@ const UserManagement = () => {
               <p className="text-xs text-gray-500 dark:text-gray-400">Inactive</p>
             </div>
           </div>
-        </Link>
+        </button>
       </div>
 
       {/* Search and Filters Bar */}
