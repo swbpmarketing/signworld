@@ -26,6 +26,7 @@ import {
 import { getFAQs, getFAQStats, voteFAQHelpful, incrementFAQView, createFAQ } from '../services/faqService';
 import type { FAQ } from '../services/faqService';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 // Icon type from heroicons
 type HeroIcon = typeof BookOpenIcon;
@@ -73,7 +74,6 @@ const FAQs = () => {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFAQs, setExpandedFAQs] = useState<string[]>([]);
-  const [helpfulVotes, setHelpfulVotes] = useState<{ [key: string]: 'helpful' | 'not-helpful' | null }>({});
 
   // Add FAQ modal state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -98,7 +98,7 @@ const FAQs = () => {
       search: searchQuery || undefined,
       limit: 50
     }),
-    staleTime: 30000,
+    staleTime: 0, // Always fetch fresh data to get updated vote counts
   });
 
   // Fetch FAQ stats
@@ -196,6 +196,10 @@ const FAQs = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['faqs'] });
     },
+    onError: (error) => {
+      console.error('Vote failed:', error);
+      toast.error('Failed to save your feedback. Please try again.');
+    },
   });
 
   // View increment mutation
@@ -272,18 +276,13 @@ const FAQs = () => {
     }
   };
 
-  const handleHelpfulVote = (faqId: string, vote: 'helpful' | 'not-helpful') => {
-    const currentVote = helpfulVotes[faqId];
-    const newVote = currentVote === vote ? null : vote;
-
-    setHelpfulVotes(prev => ({
-      ...prev,
-      [faqId]: newVote
-    }));
-
-    if (newVote !== null) {
-      voteMutation.mutate({ id: faqId, isHelpful: newVote === 'helpful' });
+  const handleHelpfulVote = (faqId: string, vote: 'helpful' | 'not-helpful', currentUserVote: string | null | undefined) => {
+    // If clicking the same vote, do nothing (can't unvote)
+    if (currentUserVote === vote) {
+      return;
     }
+    // Submit the vote
+    voteMutation.mutate({ id: faqId, isHelpful: vote === 'helpful' });
   };
 
   const getCategoryDisplay = (category: string) => {
@@ -744,25 +743,27 @@ const FAQs = () => {
                             <p className="text-sm text-gray-600 dark:text-gray-400">Was this helpful?</p>
                             <div className="flex items-center gap-4">
                               <button
-                                onClick={() => handleHelpfulVote(faq._id, 'helpful')}
+                                onClick={() => handleHelpfulVote(faq._id, 'helpful', faq.userVote)}
+                                disabled={faq.userVote === 'helpful'}
                                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                                  helpfulVotes[faq._id] === 'helpful'
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                  faq.userVote === 'helpful'
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 ring-2 ring-green-500'
                                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                                 }`}
                               >
                                 <CheckCircleIcon className="h-4 w-4" />
-                                Yes ({faq.helpful + (helpfulVotes[faq._id] === 'helpful' ? 1 : 0)})
+                                Yes ({faq.helpful})
                               </button>
                               <button
-                                onClick={() => handleHelpfulVote(faq._id, 'not-helpful')}
+                                onClick={() => handleHelpfulVote(faq._id, 'not-helpful', faq.userVote)}
+                                disabled={faq.userVote === 'not-helpful'}
                                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                                  helpfulVotes[faq._id] === 'not-helpful'
-                                    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                  faq.userVote === 'not-helpful'
+                                    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 ring-2 ring-red-500'
                                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                                 }`}
                               >
-                                No ({faq.notHelpful + (helpfulVotes[faq._id] === 'not-helpful' ? 1 : 0)})
+                                No ({faq.notHelpful})
                               </button>
                             </div>
                           </div>
