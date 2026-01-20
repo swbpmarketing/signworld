@@ -15,6 +15,7 @@ import {
   PencilIcon,
   TrashIcon,
   ArchiveBoxIcon,
+  ArrowUturnLeftIcon,
 } from '@heroicons/react/24/outline';
 import { CheckIcon as CheckSolidIcon } from '@heroicons/react/24/solid';
 import { Menu, Transition } from '@headlessui/react';
@@ -33,6 +34,8 @@ import {
   editMessage,
   deleteConversation,
   archiveConversation,
+  getArchivedConversations,
+  unarchiveConversation,
 } from '../services/chatService';
 import type { Conversation, Message, ChatUser } from '../services/chatService';
 import toast from 'react-hot-toast';
@@ -76,6 +79,9 @@ const Chat = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const [displayUserId, setDisplayUserId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedContacts, setArchivedContacts] = useState<Contact[]>([]);
+  const [loadingArchived, setLoadingArchived] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -128,6 +134,13 @@ const Chat = () => {
   useEffect(() => {
     fetchConversations();
   }, []);
+
+  // Fetch archived conversations when switching to archived view
+  useEffect(() => {
+    if (showArchived) {
+      fetchArchivedConversations();
+    }
+  }, [showArchived]);
 
   // Polling for new messages as a fallback (less frequent since we have sockets)
   useEffect(() => {
@@ -292,6 +305,34 @@ const Chat = () => {
       setContacts(formattedContacts);
     } catch (error) {
       // Silent fail for background refresh
+    }
+  };
+
+  const fetchArchivedConversations = async () => {
+    try {
+      setLoadingArchived(true);
+      const data = await getArchivedConversations();
+      const formattedContacts = data.map(conv => formatConversationToContact(conv));
+      setArchivedContacts(formattedContacts);
+    } catch (error) {
+      console.error('Failed to fetch archived conversations:', error);
+      toast.error('Failed to load archived conversations');
+    } finally {
+      setLoadingArchived(false);
+    }
+  };
+
+  const handleUnarchiveConversation = async (conversationId: string) => {
+    try {
+      await unarchiveConversation(conversationId);
+      // Remove from archived list
+      setArchivedContacts(prev => prev.filter(c => c.conversationId !== conversationId));
+      // Refresh main conversations list
+      fetchConversationsQuietly();
+      toast.success('Conversation restored');
+    } catch (error) {
+      console.error('Failed to unarchive conversation:', error);
+      toast.error('Failed to restore conversation');
     }
   };
 
@@ -814,115 +855,193 @@ const Chat = () => {
               <PlusIcon className="h-5 w-5" />
             </button>
           </div>
-          {/* Role Filter Pills */}
-          <div className="flex justify-end gap-2 mt-3">
+          {/* Chats/Archived Tabs */}
+          <div className="flex gap-1 mt-3 border-b border-gray-200 dark:border-gray-700">
             <button
-              onClick={() => setRoleFilter('all')}
-              className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-                roleFilter === 'all'
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 ring-1 ring-green-500/50'
-                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              onClick={() => setShowArchived(false)}
+              className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+                !showArchived
+                  ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              All
+              Chats
             </button>
             <button
-              onClick={() => setRoleFilter('owner')}
-              className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-                roleFilter === 'owner'
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 ring-1 ring-green-500/50'
-                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              onClick={() => setShowArchived(true)}
+              className={`flex-1 px-3 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                showArchived
+                  ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              Owners
-            </button>
-            <button
-              onClick={() => setRoleFilter('partner')}
-              className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-                roleFilter === 'partner'
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 ring-1 ring-green-500/50'
-                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              Partners
+              <ArchiveBoxIcon className="h-4 w-4" />
+              Archived
             </button>
           </div>
+
+          {/* Role Filter Pills - only show for active chats */}
+          {!showArchived && (
+            <div className="flex justify-end gap-2 mt-3">
+              <button
+                onClick={() => setRoleFilter('all')}
+                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                  roleFilter === 'all'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 ring-1 ring-green-500/50'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setRoleFilter('owner')}
+                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                  roleFilter === 'owner'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 ring-1 ring-green-500/50'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                Owners
+              </button>
+              <button
+                onClick={() => setRoleFilter('partner')}
+                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                  roleFilter === 'partner'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 ring-1 ring-green-500/50'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                Partners
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Contacts List */}
         <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {filteredContacts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
-                <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+          {showArchived ? (
+            // Archived Contacts List
+            loadingArchived ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-primary-600"></div>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">No conversations yet</p>
-              <button
-                onClick={() => setShowNewChatModal(true)}
-                className="mt-3 text-sm text-primary-600 hover:text-primary-700 font-medium"
-              >
-                Start a new chat
-              </button>
-            </div>
-          ) : (
-            filteredContacts.map((contact) => (
-              <button
-                key={contact.conversationId || contact.id}
-                onClick={() => handleSelectContact(contact)}
-                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
-                  selectedContact?.conversationId === contact.conversationId
-                    ? 'bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500'
-                    : 'border-l-4 border-transparent'
-                }`}
-              >
-                <div className="relative flex-shrink-0">
-                  <div className={`h-12 w-12 rounded-full flex items-center justify-center text-white font-semibold ${
-                    selectedContact?.conversationId === contact.conversationId
-                      ? 'bg-primary-500'
-                      : 'bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700'
-                  }`}>
-                    {contact.avatar}
-                  </div>
-                  {/* Presence indicator */}
-                  <span 
-                    className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white dark:ring-gray-900 ${
-                      contact.isOnline 
-                        ? 'bg-green-500' 
-                        : 'bg-gray-400 dark:bg-gray-500'
-                    }`}
-                    title={contact.isOnline ? 'Online' : 'Offline'}
-                  />
+            ) : archivedContacts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
+                  <ArchiveBoxIcon className="h-6 w-6 text-gray-400" />
                 </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="flex items-center justify-between">
-                    <h4 className={`font-semibold truncate ${
-                      selectedContact?.conversationId === contact.conversationId
-                        ? 'text-primary-600 dark:text-primary-400'
-                        : 'text-gray-900 dark:text-gray-100'
-                    }`}>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No archived conversations</p>
+                <button
+                  onClick={() => setShowArchived(false)}
+                  className="mt-3 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  Go back to chats
+                </button>
+              </div>
+            ) : (
+              archivedContacts.map((contact) => (
+                <div
+                  key={contact.conversationId || contact.id}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border-l-4 border-transparent"
+                >
+                  <div className="relative flex-shrink-0">
+                    <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-semibold bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700 opacity-75">
+                      {contact.avatar}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <h4 className="font-semibold truncate text-gray-700 dark:text-gray-300">
                       {contact.name}
                     </h4>
-                    <span className={`text-xs flex-shrink-0 ml-2 ${
-                      contact.unreadCount > 0
-                        ? 'text-primary-600 dark:text-primary-400 font-medium'
-                        : 'text-gray-500 dark:text-gray-400'
-                    }`}>
-                      {formatTime(contact.lastMessageTime)}
-                    </span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                      {contact.lastMessage || 'No messages'}
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                    {contact.lastMessage || 'No messages yet'}
-                  </p>
+                  <button
+                    onClick={() => handleUnarchiveConversation(contact.conversationId!)}
+                    className="flex-shrink-0 p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+                    title="Restore conversation"
+                  >
+                    <ArrowUturnLeftIcon className="h-5 w-5" />
+                  </button>
                 </div>
-                {contact.unreadCount > 0 && (
-                  <span className="flex-shrink-0 inline-flex items-center justify-center h-5 min-w-[1.25rem] px-1.5 rounded-full bg-primary-500 text-white text-xs font-medium">
-                    {contact.unreadCount}
-                  </span>
-                )}
-              </button>
-            ))
+              ))
+            )
+          ) : (
+            // Active Contacts List
+            filteredContacts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
+                  <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No conversations yet</p>
+                <button
+                  onClick={() => setShowNewChatModal(true)}
+                  className="mt-3 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  Start a new chat
+                </button>
+              </div>
+            ) : (
+              filteredContacts.map((contact) => (
+                <button
+                  key={contact.conversationId || contact.id}
+                  onClick={() => handleSelectContact(contact)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+                    selectedContact?.conversationId === contact.conversationId
+                      ? 'bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500'
+                      : 'border-l-4 border-transparent'
+                  }`}
+                >
+                  <div className="relative flex-shrink-0">
+                    <div className={`h-12 w-12 rounded-full flex items-center justify-center text-white font-semibold ${
+                      selectedContact?.conversationId === contact.conversationId
+                        ? 'bg-primary-500'
+                        : 'bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700'
+                    }`}>
+                      {contact.avatar}
+                    </div>
+                    {/* Presence indicator */}
+                    <span
+                      className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white dark:ring-gray-900 ${
+                        contact.isOnline
+                          ? 'bg-green-500'
+                          : 'bg-gray-400 dark:bg-gray-500'
+                      }`}
+                      title={contact.isOnline ? 'Online' : 'Offline'}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="flex items-center justify-between">
+                      <h4 className={`font-semibold truncate ${
+                        selectedContact?.conversationId === contact.conversationId
+                          ? 'text-primary-600 dark:text-primary-400'
+                          : 'text-gray-900 dark:text-gray-100'
+                      }`}>
+                        {contact.name}
+                      </h4>
+                      <span className={`text-xs flex-shrink-0 ml-2 ${
+                        contact.unreadCount > 0
+                          ? 'text-primary-600 dark:text-primary-400 font-medium'
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}>
+                        {formatTime(contact.lastMessageTime)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                      {contact.lastMessage || 'No messages yet'}
+                    </p>
+                  </div>
+                  {contact.unreadCount > 0 && (
+                    <span className="flex-shrink-0 inline-flex items-center justify-center h-5 min-w-[1.25rem] px-1.5 rounded-full bg-primary-500 text-white text-xs font-medium">
+                      {contact.unreadCount}
+                    </span>
+                  )}
+                </button>
+              ))
+            )
           )}
         </div>
       </aside>

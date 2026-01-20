@@ -200,6 +200,27 @@ export const archiveConversation = async (conversationId: string): Promise<void>
   }
 };
 
+// Get archived conversations
+export const getArchivedConversations = async (): Promise<Conversation[]> => {
+  try {
+    const response = await api.get('/chat/conversations/archived');
+    return response.data.data;
+  } catch (error: any) {
+    console.error('Error fetching archived conversations:', error);
+    throw new Error(error.response?.data?.error || 'Failed to fetch archived conversations');
+  }
+};
+
+// Unarchive a conversation
+export const unarchiveConversation = async (conversationId: string): Promise<void> => {
+  try {
+    await api.post(`/chat/conversations/${conversationId}/unarchive`);
+  } catch (error: any) {
+    console.error('Error unarchiving conversation:', error);
+    throw new Error(error.response?.data?.error || 'Failed to unarchive conversation');
+  }
+};
+
 // Send a message with file attachment
 export const sendMessageWithFile = async (
   conversationId: string,
