@@ -9,24 +9,53 @@ interface UserContext {
   company?: string;
 }
 
+interface SearchResult {
+  id: string;
+  type: string;
+  category: string;
+  title: string;
+  description?: string;
+  link: string;
+  metadata?: any;
+}
+
+interface ChatResponse {
+  message: string;
+  searchResults?: SearchResult[];
+  isSearchResult?: boolean;
+}
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:9000/api';
 
 export const chatWithAI = async (
   messages: ChatMessage[],
-  userContext?: UserContext
-): Promise<string> => {
+  userContext?: UserContext,
+  dataTypeFilters?: string[]
+): Promise<ChatResponse> => {
   try {
+    // Get auth token from localStorage
+    const token = localStorage.getItem('token');
+
+    const requestBody = {
+      messages,
+      userRole: userContext?.role,
+      userName: userContext?.name,
+      userCompany: userContext?.company,
+      dataTypeFilters: dataTypeFilters || []
+    };
+
+    console.log('Frontend sending to AI chat:', {
+      dataTypeFilters,
+      lastMessage: messages[messages.length - 1]?.content
+    });
+
     const response = await fetch(`${API_URL}/ai/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
       },
-      body: JSON.stringify({
-        messages,
-        userRole: userContext?.role,
-        userName: userContext?.name,
-        userCompany: userContext?.company
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -35,9 +64,15 @@ export const chatWithAI = async (
     }
 
     const data = await response.json();
-    return data.message || 'Sorry, I could not generate a response.';
+    return {
+      message: data.message || 'Sorry, I could not generate a response.',
+      searchResults: data.searchResults,
+      isSearchResult: data.isSearchResult
+    };
   } catch (error) {
-    console.error('AI Chat Error:', error);
+    if (import.meta.env.DEV) {
+      console.error('AI Chat Error:', error);
+    }
     throw error;
   }
 };
