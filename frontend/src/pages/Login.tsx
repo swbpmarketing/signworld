@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 
 interface LoginFormData {
   email: string;
@@ -15,6 +15,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showCredentials, setShowCredentials] = useState(false);
   const {
     register,
     handleSubmit,
@@ -197,43 +198,58 @@ const Login = () => {
             </form>
 
             {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/30 backdrop-blur-md">
-              <p className="text-xs text-blue-300 font-medium text-center mb-4">
-                📝 Demo Credentials
-              </p>
+            <div className="mt-6 bg-blue-500/10 rounded-lg border border-blue-500/30 backdrop-blur-md overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowCredentials(!showCredentials)}
+                className="w-full p-4 flex items-center justify-between text-blue-300 hover:bg-blue-500/10 transition-colors"
+              >
+                <span className="text-xs font-medium">📝 Demo Credentials</span>
+                {showCredentials ? (
+                  <ChevronUpIcon className="h-4 w-4" />
+                ) : (
+                  <ChevronDownIcon className="h-4 w-4" />
+                )}
+              </button>
 
-              <div className="space-y-3">
-                {/* Admin */}
-                <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
-                  <p className="text-xs font-semibold text-blue-300 mb-1">Admin</p>
-                  <p className="text-xs text-gray-300">
-                    Email: <span className="font-semibold text-gray-100">admin@signcompany.com</span>
-                  </p>
-                  <p className="text-xs text-gray-300">
-                    Password: <span className="font-semibold text-gray-100">admin123</span>
-                  </p>
-                </div>
+              <div
+                className={`transition-all duration-300 ease-in-out ${
+                  showCredentials ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                } overflow-hidden`}
+              >
+                <div className="px-4 pb-4 space-y-3">
+                  {/* Admin */}
+                  <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
+                    <p className="text-xs font-semibold text-blue-300 mb-1">Admin</p>
+                    <p className="text-xs text-gray-300">
+                      Email: <span className="font-semibold text-gray-100">admin@signcompany.com</span>
+                    </p>
+                    <p className="text-xs text-gray-300">
+                      Password: <span className="font-semibold text-gray-100">admin123</span>
+                    </p>
+                  </div>
 
-                {/* Owner */}
-                <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
-                  <p className="text-xs font-semibold text-green-300 mb-1">Owner</p>
-                  <p className="text-xs text-gray-300">
-                    Email: <span className="font-semibold text-gray-100">owner@signcompany.com</span>
-                  </p>
-                  <p className="text-xs text-gray-300">
-                    Password: <span className="font-semibold text-gray-100">owner123</span>
-                  </p>
-                </div>
+                  {/* Owner */}
+                  <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
+                    <p className="text-xs font-semibold text-green-300 mb-1">Owner</p>
+                    <p className="text-xs text-gray-300">
+                      Email: <span className="font-semibold text-gray-100">owner@signcompany.com</span>
+                    </p>
+                    <p className="text-xs text-gray-300">
+                      Password: <span className="font-semibold text-gray-100">owner123</span>
+                    </p>
+                  </div>
 
-                {/* Vendor */}
-                <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
-                  <p className="text-xs font-semibold text-purple-300 mb-1">Vendor</p>
-                  <p className="text-xs text-gray-300">
-                    Email: <span className="font-semibold text-gray-100">vendor@example.com</span>
-                  </p>
-                  <p className="text-xs text-gray-300">
-                    Password: <span className="font-semibold text-gray-100">vendor123</span>
-                  </p>
+                  {/* Vendor */}
+                  <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
+                    <p className="text-xs font-semibold text-purple-300 mb-1">Vendor</p>
+                    <p className="text-xs text-gray-300">
+                      Email: <span className="font-semibold text-gray-100">vendor@example.com</span>
+                    </p>
+                    <p className="text-xs text-gray-300">
+                      Password: <span className="font-semibold text-gray-100">vendor123</span>
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
