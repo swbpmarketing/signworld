@@ -55,6 +55,7 @@ router.get('/conversations', protect, handlePreviewMode, async (req, res) => {
     const conversations = await Conversation.find({
       participants: targetUserId,
       isActive: true,
+      isArchived: { $ne: true },
     })
       .populate('participants', 'name email role avatar')
       .populate('lastMessage')
@@ -595,6 +596,101 @@ router.post('/conversations/:id/archive', protect, handlePreviewMode, blockPrevi
     res.status(500).json({
       success: false,
       error: 'Failed to archive conversation',
+    });
+  }
+});
+
+// @desc    Get archived conversations
+// @route   GET /api/chat/conversations/archived
+// @access  Private
+router.get('/conversations/archived', protect, handlePreviewMode, async (req, res) => {
+  try {
+    const targetUserId = req.previewMode.active
+      ? req.previewMode.previewUser._id
+      : req.user._id;
+
+    const conversations = await Conversation.find({
+      participants: targetUserId,
+      isActive: true,
+      isArchived: true,
+    })
+      .populate('participants', 'name email role avatar')
+      .populate('lastMessage')
+      .sort({ lastMessageAt: -1 });
+
+    const formattedConversations = conversations.map(conv => {
+      const unreadEntry = conv.unreadCounts.find(
+        uc => uc.user.toString() === targetUserId.toString()
+      );
+
+      const otherParticipant = conv.participants.find(
+        p => p._id.toString() !== targetUserId.toString()
+      );
+
+      return {
+        _id: conv._id,
+        participants: conv.participants,
+        otherParticipant,
+        isGroup: conv.isGroup,
+        groupName: conv.groupName,
+        groupAvatar: conv.groupAvatar,
+        lastMessage: conv.lastMessage,
+        lastMessageAt: conv.lastMessageAt,
+        lastMessagePreview: conv.lastMessagePreview,
+        unreadCount: unreadEntry?.count || 0,
+        createdAt: conv.createdAt,
+        isArchived: true,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: formattedConversations,
+    });
+  } catch (error) {
+    console.error('Error fetching archived conversations:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch archived conversations',
+    });
+  }
+});
+
+// @desc    Unarchive a conversation
+// @route   POST /api/chat/conversations/:id/unarchive
+// @access  Private
+router.post('/conversations/:id/unarchive', protect, handlePreviewMode, blockPreviewWrites, async (req, res) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id);
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        error: 'Conversation not found',
+      });
+    }
+
+    // Check if user is a participant
+    const isParticipant = conversation.participants.some(p => p.toString() === req.user._id.toString());
+    if (!isParticipant) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to unarchive this conversation',
+      });
+    }
+
+    conversation.isArchived = false;
+    await conversation.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Conversation restored',
+    });
+  } catch (error) {
+    console.error('Error unarchiving conversation:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to unarchive conversation',
     });
   }
 });
