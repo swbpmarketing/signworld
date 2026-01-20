@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { usePreviewMode } from '../context/PreviewModeContext';
@@ -141,6 +141,9 @@ const BugReports = () => {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxAttachments, setLightboxAttachments] = useState<{ url: string; mimetype: string; filename: string }[]>([]);
 
   // Fetch bug reports
   const { data: reportsData, isLoading } = useQuery({
@@ -390,6 +393,51 @@ const BugReports = () => {
     if (diffDays < 7) return `${diffDays}d ago`;
     return formatDate(dateString);
   };
+
+  const isImage = (mimetype: string) => mimetype.startsWith('image/');
+  const isVideo = (mimetype: string) => mimetype.startsWith('video/');
+
+  const openLightbox = (attachments: { url: string; mimetype: string; filename: string }[], index: number) => {
+    setLightboxAttachments(attachments);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    setLightboxIndex(0);
+    setLightboxAttachments([]);
+  };
+
+  const navigateLightbox = useCallback((direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setLightboxIndex(prev => (prev === 0 ? lightboxAttachments.length - 1 : prev - 1));
+    } else {
+      setLightboxIndex(prev => (prev === lightboxAttachments.length - 1 ? 0 : prev + 1));
+    }
+  }, [lightboxAttachments.length]);
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (!lightboxOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'Escape':
+          closeLightbox();
+          break;
+        case 'ArrowLeft':
+          navigateLightbox('prev');
+          break;
+        case 'ArrowRight':
+          navigateLightbox('next');
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxOpen, navigateLightbox]);
 
   // Kanban Card Component
   const KanbanCard = ({ report }: { report: BugReport }) => (
@@ -718,17 +766,44 @@ const BugReports = () => {
 
                   {/* Attachment previews */}
                   {attachments.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
                       {attachments.map((file, index) => (
                         <div
                           key={index}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm"
+                          className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700"
                         >
-                          <span className="text-gray-700 dark:text-gray-300 truncate max-w-[150px]">{file.name}</span>
+                          {file.type.startsWith('image/') ? (
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={file.name}
+                              className="w-full h-24 object-cover"
+                            />
+                          ) : file.type.startsWith('video/') ? (
+                            <div className="relative w-full h-24 bg-gray-800 flex items-center justify-center">
+                              <video
+                                src={URL.createObjectURL(file)}
+                                className="w-full h-24 object-cover"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
+                                  <svg className="w-5 h-5 text-gray-800 ml-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full h-24 flex items-center justify-center">
+                              <span className="text-gray-500 text-xs">{file.name}</span>
+                            </div>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                            <p className="text-white text-xs truncate">{file.name}</p>
+                          </div>
                           <button
                             type="button"
                             onClick={() => removeAttachment(index)}
-                            className="text-gray-400 hover:text-red-400"
+                            className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <XMarkIcon className="h-4 w-4" />
                           </button>
@@ -770,6 +845,110 @@ const BugReports = () => {
               </form>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Lightbox Modal */}
+      {lightboxOpen && lightboxAttachments.length > 0 && (
+        <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center">
+          {/* Close button */}
+          <button
+            onClick={closeLightbox}
+            className="absolute top-4 right-4 p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"
+          >
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+
+          {/* Counter */}
+          <div className="absolute top-4 left-4 text-white/80 text-sm bg-white/10 px-3 py-1 rounded-full">
+            {lightboxIndex + 1} / {lightboxAttachments.length}
+          </div>
+
+          {/* Navigation buttons */}
+          {lightboxAttachments.length > 1 && (
+            <>
+              <button
+                onClick={() => navigateLightbox('prev')}
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={() => navigateLightbox('next')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </>
+          )}
+
+          {/* Content */}
+          <div className="max-w-[90vw] max-h-[85vh] flex items-center justify-center">
+            {isImage(lightboxAttachments[lightboxIndex].mimetype) ? (
+              <img
+                src={lightboxAttachments[lightboxIndex].url}
+                alt={lightboxAttachments[lightboxIndex].filename}
+                className="max-w-full max-h-[85vh] object-contain rounded-lg"
+              />
+            ) : isVideo(lightboxAttachments[lightboxIndex].mimetype) ? (
+              <video
+                src={lightboxAttachments[lightboxIndex].url}
+                controls
+                autoPlay
+                className="max-w-full max-h-[85vh] rounded-lg"
+              />
+            ) : (
+              <div className="text-white text-center">
+                <p className="text-lg mb-4">{lightboxAttachments[lightboxIndex].filename}</p>
+                <a
+                  href={lightboxAttachments[lightboxIndex].url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
+                >
+                  Download File
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Filename */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-sm bg-white/10 px-4 py-2 rounded-full max-w-[80vw] truncate">
+            {lightboxAttachments[lightboxIndex].filename}
+          </div>
+
+          {/* Thumbnail strip */}
+          {lightboxAttachments.length > 1 && (
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-2 bg-white/10 p-2 rounded-lg max-w-[80vw] overflow-x-auto">
+              {lightboxAttachments.map((attachment, index) => (
+                <button
+                  key={index}
+                  onClick={() => setLightboxIndex(index)}
+                  className={`flex-shrink-0 w-16 h-12 rounded overflow-hidden border-2 transition-colors ${
+                    index === lightboxIndex ? 'border-primary-500' : 'border-transparent hover:border-white/50'
+                  }`}
+                >
+                  {isImage(attachment.mimetype) ? (
+                    <img src={attachment.url} alt="" className="w-full h-full object-cover" />
+                  ) : isVideo(attachment.mimetype) ? (
+                    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                      <span className="text-white text-xs">File</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -866,18 +1045,50 @@ const BugReports = () => {
                 {/* Attachments */}
                 {selectedReport.attachments && selectedReport.attachments.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Attachments</h3>
-                    <div className="flex flex-wrap gap-2">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      Attachments ({selectedReport.attachments.length})
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {selectedReport.attachments.map((attachment, index) => (
-                        <a
+                        <div
                           key={index}
-                          href={attachment.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300"
+                          className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 cursor-pointer hover:border-primary-500 transition-colors"
+                          onClick={() => openLightbox(selectedReport.attachments!, index)}
                         >
-                          {attachment.filename}
-                        </a>
+                          {isImage(attachment.mimetype) ? (
+                            <img
+                              src={attachment.url}
+                              alt={attachment.filename}
+                              className="w-full h-28 object-cover"
+                            />
+                          ) : isVideo(attachment.mimetype) ? (
+                            <div className="relative w-full h-28 bg-gray-800">
+                              <video
+                                src={attachment.url}
+                                className="w-full h-28 object-cover"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                  <svg className="w-6 h-6 text-gray-800 ml-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full h-28 flex items-center justify-center">
+                              <span className="text-gray-500 text-sm">{attachment.filename}</span>
+                            </div>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                            <p className="text-white text-xs truncate">{attachment.filename}</p>
+                          </div>
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                            <span className="opacity-0 group-hover:opacity-100 text-white text-sm font-medium bg-black/50 px-3 py-1 rounded-full transition-opacity">
+                              View
+                            </span>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
