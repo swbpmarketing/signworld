@@ -459,23 +459,23 @@ const MapSearch = () => {
               />
 
               {/* Map Legend */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-4">
+              <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 text-sm">
+                  <div className="flex items-center justify-center flex-wrap gap-3 sm:gap-4">
                     <div className="flex items-center">
-                      <div className="h-3 w-3 bg-green-500 rounded-full mr-2"></div>
-                      <span className="text-gray-600 dark:text-gray-400">Open Now</span>
+                      <div className="h-3 w-3 bg-green-500 rounded-full mr-1.5 sm:mr-2 flex-shrink-0"></div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm whitespace-nowrap">Open Now</span>
                     </div>
                     <div className="flex items-center">
-                      <div className="h-3 w-3 bg-red-500 rounded-full mr-2"></div>
-                      <span className="text-gray-600 dark:text-gray-400">Closed</span>
+                      <div className="h-3 w-3 bg-red-500 rounded-full mr-1.5 sm:mr-2 flex-shrink-0"></div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm whitespace-nowrap">Closed</span>
                     </div>
                     <div className="flex items-center">
-                      <div className="h-3 w-3 bg-primary-600 rounded-full mr-2"></div>
-                      <span className="text-gray-600 dark:text-gray-400">Selected</span>
+                      <div className="h-3 w-3 bg-primary-600 rounded-full mr-1.5 sm:mr-2 flex-shrink-0"></div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm whitespace-nowrap">Selected</span>
                     </div>
                   </div>
-                  <span className="text-gray-500 dark:text-gray-400">{searchedLocations.length} locations found</span>
+                  <span className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm whitespace-nowrap">{searchedLocations.length} locations found</span>
                 </div>
               </div>
             </div>

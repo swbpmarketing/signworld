@@ -987,87 +987,97 @@ const Library = () => {
       </div>
 
       {/* Category Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 px-4 py-4 overflow-hidden relative">
-        <div
-          className={`flex items-center gap-2 pb-2 ${
-            showAllCategories ? 'flex-wrap' : 'overflow-x-auto scrollbar-hide'
-          } ${
-            !showAllCategories && categories.filter(c => c.count > 0).length > 3 ? 'pr-20' : ''
-          }`}
-          style={showAllCategories ? undefined : { scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`inline-flex items-center px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-              selectedCategory === 'all'
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 px-4 py-4 overflow-hidden">
+        <div className="relative">
+          <div
+            className={`flex items-center gap-2 ${
+              showAllCategories ? 'flex-wrap' : 'overflow-x-auto scrollbar-hide'
+            } ${
+              !showAllCategories && categories.filter(c => c.count > 0).length > 3 ? 'pr-20' : ''
             }`}
+            style={showAllCategories ? undefined : { scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            <HomeIcon className="h-4 w-4 mr-2" />
-            All Files
-            <span className="ml-2 text-xs opacity-75">({stats?.overview?.totalFiles || 0})</span>
-          </button>
-          {/* Built-in categories with files */}
-          {Object.entries(categoryMeta).map(([key, meta]) => {
-            const cat = categories.find(c => c.id === key);
-            // Only show if category has files
-            if (!cat || cat.count === 0) return null;
-            return (
-              <button
-                key={key}
-                onClick={() => setSelectedCategory(key)}
-                className={`inline-flex items-center px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                  selectedCategory === key
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                <FolderIcon className="h-4 w-4 mr-2" />
-                {meta.name}
-                <span className="ml-2 text-xs opacity-75">({cat.count})</span>
-              </button>
-            );
-          })}
-          {/* Custom categories (not in categoryMeta) */}
-          {categories.map((cat) => {
-            if (categoryMeta[cat.id]) return null; // Skip if already shown above
-            if (cat.count === 0) return null; // Hide categories with no files
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`inline-flex items-center px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                  selectedCategory === cat.id
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                <FolderIcon className="h-4 w-4 mr-2" />
-                {cat.name}
-                <span className="ml-2 text-xs opacity-75">({cat.count})</span>
-              </button>
-            );
-          })}
-        </div>
-        {/* Toggle to expand/collapse categories - Always visible on the right */}
-        {categories.filter(c => c.count > 0).length > 3 && (
-          <button
-            type="button"
-            onClick={() => setShowAllCategories(prev => !prev)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 z-10"
-          >
-            <span>{showAllCategories ? 'Collapse' : 'More'}</span>
-            <ChevronDownIcon
-              className={`ml-1 h-4 w-4 transform transition-transform ${
-                showAllCategories ? 'rotate-180' : ''
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className={`inline-flex items-center px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                selectedCategory === 'all'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
-            />
-          </button>
-        )}
-        {/* Gradient fade effect when collapsed to indicate more content */}
-        {!showAllCategories && categories.filter(c => c.count > 0).length > 3 && (
-          <div className="absolute right-16 top-0 bottom-2 w-8 bg-gradient-to-l from-white dark:from-gray-800 to-transparent pointer-events-none z-0" />
+            >
+              <HomeIcon className="h-4 w-4 mr-2" />
+              All Files
+              <span className="ml-2 text-xs opacity-75">({stats?.overview?.totalFiles || 0})</span>
+            </button>
+            {/* Built-in categories with files */}
+            {Object.entries(categoryMeta).map(([key, meta]) => {
+              const cat = categories.find(c => c.id === key);
+              // Only show if category has files
+              if (!cat || cat.count === 0) return null;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSelectedCategory(key)}
+                  className={`inline-flex items-center px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                    selectedCategory === key
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <FolderIcon className="h-4 w-4 mr-2" />
+                  {meta.name}
+                  <span className="ml-2 text-xs opacity-75">({cat.count})</span>
+                </button>
+              );
+            })}
+            {/* Custom categories (not in categoryMeta) */}
+            {categories.map((cat) => {
+              if (categoryMeta[cat.id]) return null; // Skip if already shown above
+              if (cat.count === 0) return null; // Hide categories with no files
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`inline-flex items-center px-4 py-2 rounded-lg transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                    selectedCategory === cat.id
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <FolderIcon className="h-4 w-4 mr-2" />
+                  {cat.name}
+                  <span className="ml-2 text-xs opacity-75">({cat.count})</span>
+                </button>
+              );
+            })}
+          </div>
+          {/* Toggle to expand/collapse categories - Position depends on expanded state */}
+          {categories.filter(c => c.count > 0).length > 3 && !showAllCategories && (
+            <>
+              <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white dark:from-gray-800 to-transparent pointer-events-none z-0" />
+              <button
+                type="button"
+                onClick={() => setShowAllCategories(true)}
+                className="absolute right-0 top-1/2 -translate-y-1/2 inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 z-10"
+              >
+                <span>More</span>
+                <ChevronDownIcon className="ml-1 h-4 w-4" />
+              </button>
+            </>
+          )}
+        </div>
+        {/* Collapse button when expanded - shown below the categories */}
+        {categories.filter(c => c.count > 0).length > 3 && showAllCategories && (
+          <div className="flex justify-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={() => setShowAllCategories(false)}
+              className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <span>Collapse</span>
+              <ChevronDownIcon className="ml-1 h-4 w-4 rotate-180" />
+            </button>
+          </div>
         )}
       </div>
 
