@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { EyeIcon, EyeSlashIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, ChevronDownIcon, ChevronUpIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
 
 interface LoginFormData {
   email: string;
@@ -47,6 +47,15 @@ const Login = () => {
       toast.error(error.message || 'Login failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied to clipboard!`);
+    } catch (error) {
+      toast.error('Failed to copy to clipboard');
     }
   };
 
@@ -221,34 +230,94 @@ const Login = () => {
                   {/* Admin */}
                   <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
                     <p className="text-xs font-semibold text-blue-300 mb-1">Admin</p>
-                    <p className="text-xs text-gray-300">
-                      Email: <span className="font-semibold text-gray-100">admin@signcompany.com</span>
-                    </p>
-                    <p className="text-xs text-gray-300">
-                      Password: <span className="font-semibold text-gray-100">admin123</span>
-                    </p>
+                    <div className="flex items-center justify-between group">
+                      <p className="text-xs text-gray-300">
+                        Email: <span className="font-semibold text-gray-100">admin@signcompany.com</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('admin@signcompany.com', 'Email')}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700/40 rounded"
+                        title="Copy email"
+                      >
+                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-400 hover:text-blue-400" />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between group">
+                      <p className="text-xs text-gray-300">
+                        Password: <span className="font-semibold text-gray-100">admin123</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('admin123', 'Password')}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700/40 rounded"
+                        title="Copy password"
+                      >
+                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-400 hover:text-blue-400" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Owner */}
                   <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
                     <p className="text-xs font-semibold text-green-300 mb-1">Owner</p>
-                    <p className="text-xs text-gray-300">
-                      Email: <span className="font-semibold text-gray-100">owner@signcompany.com</span>
-                    </p>
-                    <p className="text-xs text-gray-300">
-                      Password: <span className="font-semibold text-gray-100">owner123</span>
-                    </p>
+                    <div className="flex items-center justify-between group">
+                      <p className="text-xs text-gray-300">
+                        Email: <span className="font-semibold text-gray-100">owner@signcompany.com</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('owner@signcompany.com', 'Email')}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700/40 rounded"
+                        title="Copy email"
+                      >
+                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-400 hover:text-green-400" />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between group">
+                      <p className="text-xs text-gray-300">
+                        Password: <span className="font-semibold text-gray-100">owner123</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('owner123', 'Password')}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700/40 rounded"
+                        title="Copy password"
+                      >
+                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-400 hover:text-green-400" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Vendor */}
                   <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
                     <p className="text-xs font-semibold text-purple-300 mb-1">Vendor</p>
-                    <p className="text-xs text-gray-300">
-                      Email: <span className="font-semibold text-gray-100">vendor@example.com</span>
-                    </p>
-                    <p className="text-xs text-gray-300">
-                      Password: <span className="font-semibold text-gray-100">vendor123</span>
-                    </p>
+                    <div className="flex items-center justify-between group">
+                      <p className="text-xs text-gray-300">
+                        Email: <span className="font-semibold text-gray-100">vendor@example.com</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('vendor@example.com', 'Email')}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700/40 rounded"
+                        title="Copy email"
+                      >
+                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-400 hover:text-purple-400" />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between group">
+                      <p className="text-xs text-gray-300">
+                        Password: <span className="font-semibold text-gray-100">vendor123</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('vendor123', 'Password')}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700/40 rounded"
+                        title="Copy password"
+                      >
+                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-400 hover:text-purple-400" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

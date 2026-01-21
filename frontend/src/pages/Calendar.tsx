@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, ClockIcon, MapPinIcon, UserGroupIcon, XMarkIcon, PlusIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday, startOfDay, addDays } from 'date-fns';
 import CalendarShareLinks from '../components/calendar/CalendarShareLinks';
@@ -35,6 +36,7 @@ interface Event {
 const Calendar = () => {
   const { user, isAdmin } = useAuth();
   const currentUserId = user?._id || user?.id;
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -177,6 +179,21 @@ const Calendar = () => {
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  // Auto-open event from search results
+  useEffect(() => {
+    const eventId = searchParams.get('id');
+    if (eventId && events.length > 0) {
+      const event = events.find(e => e.id === eventId);
+      if (event) {
+        setSelectedEvent(event);
+        setSearchParams({});
+      } else {
+        toast.error('Event not found');
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, events, setSearchParams]);
 
   // Handle event RSVP
   const handleEventRsvp = async (eventId: string, status: 'confirmed' | 'declined') => {
@@ -354,7 +371,7 @@ const Calendar = () => {
     .slice(0, 5);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-tour="calendar-content">
       {/* Loading State */}
       {loading && (
         <div className="bg-white dark:bg-gray-800 shadow-sm rounded-xl p-8 border border-gray-100 dark:border-gray-700">

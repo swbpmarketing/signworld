@@ -32,6 +32,7 @@ import {
   ArrowsRightLeftIcon,
   PaperAirplaneIcon,
   ArrowLeftIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon, HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
@@ -147,6 +148,7 @@ const Equipment = () => {
 
   // Track where user came from (for back navigation)
   const [cameFrom, setCameFrom] = useState<string | null>(null);
+  const [showMobileCategoriesDropdown, setShowMobileCategoriesDropdown] = useState(false);
 
   // Financing calculator state
   const [financingForm, setFinancingForm] = useState({
@@ -1409,7 +1411,7 @@ const Equipment = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="equipment-content">
       {/* Modals */}
       <EquipmentDetailModal />
       <CartDrawer />
@@ -1595,26 +1597,26 @@ const Equipment = () => {
       </div>
 
       {/* Benefits Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
-          <TagIcon className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <p className="text-lg font-bold text-gray-900 dark:text-gray-100">Member Pricing</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Save up to 40%</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-3 sm:p-6 text-center">
+          <TagIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 mx-auto mb-1 sm:mb-2" />
+          <p className="text-sm sm:text-lg font-bold text-gray-900 dark:text-gray-100">Member Pricing</p>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Save up to 40%</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
-          <TruckIcon className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-          <p className="text-lg font-bold text-gray-900 dark:text-gray-100">Free Shipping</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">On orders $500+</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-3 sm:p-6 text-center">
+          <TruckIcon className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mx-auto mb-1 sm:mb-2" />
+          <p className="text-sm sm:text-lg font-bold text-gray-900 dark:text-gray-100">Free Shipping</p>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">On orders $500+</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
-          <ShieldCheckIcon className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-          <p className="text-lg font-bold text-gray-900 dark:text-gray-100">Warranty Plus</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Extended coverage</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-3 sm:p-6 text-center">
+          <ShieldCheckIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 mx-auto mb-1 sm:mb-2" />
+          <p className="text-sm sm:text-lg font-bold text-gray-900 dark:text-gray-100">Warranty Plus</p>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Extended coverage</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
-          <SparklesIcon className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-          <p className="text-lg font-bold text-gray-900 dark:text-gray-100">0% Financing</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Up to 60 months</p>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-3 sm:p-6 text-center">
+          <SparklesIcon className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600 mx-auto mb-1 sm:mb-2" />
+          <p className="text-sm sm:text-lg font-bold text-gray-900 dark:text-gray-100">0% Financing</p>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Up to 60 months</p>
         </div>
       </div>
 
@@ -1688,8 +1690,156 @@ const Equipment = () => {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
+        {/* Categories - Mobile Dropdown */}
+        <div className="lg:hidden space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <button
+              onClick={() => setShowMobileCategoriesDropdown(!showMobileCategoriesDropdown)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Categories</h3>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  ({categories.find(c => c.key === selectedCategory)?.name || 'All Equipment'})
+                </span>
+              </div>
+              <ChevronDownIcon
+                className={`h-5 w-5 text-gray-500 transition-transform ${showMobileCategoriesDropdown ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {showMobileCategoriesDropdown && (
+              <div className="border-t border-gray-100 dark:border-gray-700 p-2">
+                <nav className="space-y-1">
+                  {categories.map((category) => (
+                    <button
+                      key={category.key}
+                      onClick={() => {
+                        handleCategoryChange(category.key);
+                        setShowMobileCategoriesDropdown(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between transition-all duration-200 ${
+                        selectedCategory === category.key
+                          ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <category.icon className={`h-5 w-5 mr-3 ${
+                          selectedCategory === category.key ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
+                        }`} />
+                        <span className="text-sm">{category.name}</span>
+                      </div>
+                      <span className={`text-sm ${
+                        selectedCategory === category.key ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
+                      }`}>
+                        {category.count}
+                      </span>
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            )}
+          </div>
+
+          {/* Brands Filter - Mobile */}
+          {brands.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Brands</h3>
+                {selectedBrands.size > 0 && (
+                  <button
+                    onClick={() => setSelectedBrands(new Set())}
+                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {brands.map((brand) => {
+                  const brandCount = stats?.brandCounts?.[brand] || 0;
+                  return (
+                    <label key={brand} className="flex items-center justify-between cursor-pointer group">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedBrands.has(brand)}
+                          onChange={() => toggleBrand(brand)}
+                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">{brand}</span>
+                      </div>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">({brandCount})</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Links - Mobile */}
+          <div className="bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 rounded-xl p-6 border border-primary-200 dark:border-primary-800">
+            <h3 className="text-lg font-semibold text-primary-900 dark:text-primary-100 mb-3">Need Help?</h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowComparisonModal(true)}
+                className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium flex items-center gap-2"
+              >
+                <ArrowsRightLeftIcon className="h-4 w-4" />
+                Equipment Comparison Tool {comparisonItems.length > 0 && `(${comparisonItems.length})`} →
+              </button>
+              <button
+                onClick={() => setShowFinancingCalculator(true)}
+                className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium flex items-center gap-2"
+              >
+                <CalculatorIcon className="h-4 w-4" />
+                Financing Calculator →
+              </button>
+              <button
+                onClick={() => setShowQuoteModal(true)}
+                className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium flex items-center gap-2"
+              >
+                <DocumentTextIcon className="h-4 w-4" />
+                Request a Quote →
+              </button>
+              <button
+                onClick={() => navigate('/chat')}
+                className="w-full text-left text-sm text-primary-700 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 font-medium flex items-center gap-2"
+              >
+                <ChatBubbleLeftRightIcon className="h-4 w-4" />
+                Live Chat Support →
+              </button>
+            </div>
+          </div>
+
+          {/* Comparison Badge - Mobile */}
+          {comparisonItems.length > 0 && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  {comparisonItems.length} item{comparisonItems.length !== 1 ? 's' : ''} to compare
+                </span>
+                <button
+                  onClick={() => setComparisonItems([])}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Clear all
+                </button>
+              </div>
+              <button
+                onClick={() => setShowComparisonModal(true)}
+                className="w-full py-2 px-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <ArrowsRightLeftIcon className="h-4 w-4" />
+                Compare Now
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar - Desktop Only */}
+        <div className="hidden lg:block lg:col-span-1 space-y-6">
           {/* Categories */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="p-6">
@@ -1852,7 +2002,7 @@ const Equipment = () => {
 
           {/* Grid View */}
           {!equipmentLoading && equipmentList.length > 0 && viewMode === 'grid' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 lg:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
               {equipmentList.map((item: EquipmentType) => (
                 <div
                   key={item._id}
@@ -1862,7 +2012,7 @@ const Equipment = () => {
                     <img
                       src={item.image || 'https://via.placeholder.com/400x300?text=Equipment'}
                       alt={item.name}
-                      className="w-full h-64 object-cover cursor-pointer"
+                      className="w-full h-32 sm:h-64 object-cover cursor-pointer"
                       onClick={() => setSelectedEquipment(item)}
                     />
                     {item.isNewArrival && (
@@ -1886,8 +2036,8 @@ const Equipment = () => {
                       )}
                     </button>
                   </div>
-                  <div className="p-6">
-                    <div className="mb-2">
+                  <div className="p-3 sm:p-6">
+                    <div className="mb-1 sm:mb-2">
                       <span className="text-sm text-gray-500 dark:text-gray-400">{item.brand} • {item.model}</span>
                       <h3
                         className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mt-1 line-clamp-2 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400"
@@ -1896,9 +2046,9 @@ const Equipment = () => {
                         {item.name}
                       </h3>
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">{item.description}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2 sm:mb-4 line-clamp-2">{item.description}</p>
 
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-2 sm:mb-4">
                       <div>
                         <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{item.price}</p>
                         {item.priceNote && (
@@ -1912,7 +2062,7 @@ const Equipment = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-sm mb-4">
+                    <div className="flex items-center justify-between text-sm mb-2 sm:mb-4">
                       <span className={`inline-flex items-center ${
                         item.availability === 'in-stock' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                       }`}>
@@ -2087,24 +2237,86 @@ const Equipment = () => {
 
           {/* Pagination */}
           {pagination && pagination.pages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-8">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Previous
-              </button>
-              <span className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
-                Page {page} of {pagination.pages}
-              </span>
-              <button
-                onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
-                disabled={page === pagination.pages}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Next
-              </button>
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+              {/* Page Info */}
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, pagination.total)} of {pagination.total} items
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="flex items-center gap-2">
+                {/* Previous Button */}
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+
+                {/* Page Numbers */}
+                <div className="flex items-center gap-1">
+                  {/* First Page */}
+                  {page > 3 && (
+                    <>
+                      <button
+                        onClick={() => setPage(1)}
+                        className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        1
+                      </button>
+                      {page > 4 && (
+                        <span className="px-2 text-gray-500 dark:text-gray-400">...</span>
+                      )}
+                    </>
+                  )}
+
+                  {/* Page Buttons */}
+                  {Array.from({ length: pagination.pages }, (_, i) => i + 1)
+                    .filter(pageNum => {
+                      // Show current page, 2 before, and 2 after
+                      return pageNum >= page - 2 && pageNum <= page + 2;
+                    })
+                    .map(pageNum => (
+                      <button
+                        key={pageNum}
+                        onClick={() => setPage(pageNum)}
+                        className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          pageNum === page
+                            ? 'bg-primary-600 text-white'
+                            : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))
+                  }
+
+                  {/* Last Page */}
+                  {page < pagination.pages - 2 && (
+                    <>
+                      {page < pagination.pages - 3 && (
+                        <span className="px-2 text-gray-500 dark:text-gray-400">...</span>
+                      )}
+                      <button
+                        onClick={() => setPage(pagination.pages)}
+                        className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        {pagination.pages}
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Next Button */}
+                <button
+                  onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                  disabled={page === pagination.pages}
+                  className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>

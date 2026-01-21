@@ -46,26 +46,27 @@ const navigation: {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   roles: string[];
   permission?: keyof Permissions;
+  tourId: string;
 }[] = [
-  { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDashboard' },
-  { name: "Reports", href: "/reports", icon: ChartBarIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDashboard' },
-  { name: "User Management", href: "/users", icon: UsersIcon, roles: ['admin'], permission: 'canManageUsers' },
-  { name: "Calendar", href: "/calendar", icon: CalendarIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEvents' },
-  { name: "Convention", href: "/convention", icon: BuildingOffice2Icon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEvents' },
-  { name: "Success Stories", href: "/brags", icon: NewspaperIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessBrags' },
-  { name: "Forum", href: "/forum", icon: ChatBubbleLeftRightIcon, roles: ['admin', 'owner'], permission: 'canAccessForum' },
-  { name: "Chat", href: "/chat", icon: ChatBubbleLeftIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessChat' },
-  { name: "Library", href: "/library", icon: FolderIcon, roles: ['admin', 'owner'], permission: 'canAccessLibrary' },
-  { name: "Owners Roster", href: "/owners", icon: UserGroupIcon, roles: ['admin', 'owner'], permission: 'canAccessDirectory' },
-  { name: "Map Search", href: "/map", icon: MapIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDirectory' },
-  { name: "Partners", href: "/partners", icon: UserGroupIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessPartners' },
-  { name: "Videos", href: "/videos", icon: VideoCameraIcon, roles: ['admin', 'owner'], permission: 'canAccessVideos' },
-  { name: "Equipment", href: "/equipment", icon: ShoppingBagIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEquipment' },
-  { name: "My Listings", href: "/vendor-equipment", icon: ClipboardDocumentListIcon, roles: ['vendor'], permission: 'canListEquipment' },
-  { name: "My Inquiries", href: "/vendor-inquiries", icon: InboxIcon, roles: ['vendor'], permission: 'canAccessEquipment' },
-  { name: "Business Profile", href: "/vendor-profile", icon: BuildingStorefrontIcon, roles: ['vendor'], permission: 'canAccessDashboard' },
-  { name: "FAQs", href: "/faqs", icon: QuestionMarkCircleIcon, roles: ['admin', 'owner', 'vendor'] },
-  { name: "Bug Reports", href: "/bug-reports", icon: BugAntIcon, roles: ['admin', 'owner', 'vendor'] },
+  { name: "Dashboard", href: "/dashboard", icon: HomeIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDashboard', tourId: 'nav-dashboard' },
+  { name: "Reports", href: "/reports", icon: ChartBarIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDashboard', tourId: 'nav-reports' },
+  { name: "User Management", href: "/users", icon: UsersIcon, roles: ['admin'], permission: 'canManageUsers', tourId: 'nav-user-management' },
+  { name: "Calendar", href: "/calendar", icon: CalendarIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEvents', tourId: 'nav-calendar' },
+  { name: "Convention", href: "/convention", icon: BuildingOffice2Icon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEvents', tourId: 'nav-convention' },
+  { name: "Success Stories", href: "/brags", icon: NewspaperIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessBrags', tourId: 'nav-brags' },
+  { name: "Forum", href: "/forum", icon: ChatBubbleLeftRightIcon, roles: ['admin', 'owner'], permission: 'canAccessForum', tourId: 'nav-forum' },
+  { name: "Chat", href: "/chat", icon: ChatBubbleLeftIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessChat', tourId: 'nav-chat' },
+  { name: "Library", href: "/library", icon: FolderIcon, roles: ['admin', 'owner'], permission: 'canAccessLibrary', tourId: 'nav-library' },
+  { name: "Owners Roster", href: "/owners", icon: UserGroupIcon, roles: ['admin', 'owner'], permission: 'canAccessDirectory', tourId: 'nav-owners' },
+  { name: "Map Search", href: "/map", icon: MapIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDirectory', tourId: 'nav-map' },
+  { name: "Partners", href: "/partners", icon: UserGroupIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessPartners', tourId: 'nav-partners' },
+  { name: "Videos", href: "/videos", icon: VideoCameraIcon, roles: ['admin', 'owner'], permission: 'canAccessVideos', tourId: 'nav-videos' },
+  { name: "Equipment", href: "/equipment", icon: ShoppingBagIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEquipment', tourId: 'nav-equipment' },
+  { name: "My Listings", href: "/vendor-equipment", icon: ClipboardDocumentListIcon, roles: ['vendor'], permission: 'canListEquipment', tourId: 'nav-vendor-equipment' },
+  { name: "My Inquiries", href: "/vendor-inquiries", icon: InboxIcon, roles: ['vendor'], permission: 'canAccessEquipment', tourId: 'nav-vendor-inquiries' },
+  { name: "Business Profile", href: "/vendor-profile", icon: BuildingStorefrontIcon, roles: ['vendor'], permission: 'canAccessDashboard', tourId: 'nav-vendor-profile' },
+  { name: "FAQs", href: "/faqs", icon: QuestionMarkCircleIcon, roles: ['admin', 'owner', 'vendor'], tourId: 'nav-faqs' },
+  { name: "Bug Reports", href: "/bug-reports", icon: BugAntIcon, roles: ['admin', 'owner', 'vendor'], tourId: 'nav-bug-reports' },
 ];
 
 // Memoized Sidebar component - only re-renders when props change
@@ -142,6 +143,7 @@ const Sidebar = memo(({
                 <Link
                   key={item.name}
                   to={item.href}
+                  data-tour={item.tourId}
                   className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
                       ? "bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
@@ -527,6 +529,7 @@ const Layout = () => {
                   <button
                     type="button"
                     onClick={handleSearchModalOpen}
+                    data-tour="search-button"
                     className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                   >
                     <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -556,6 +559,7 @@ const Layout = () => {
                   <div className="relative">
                     <button
                       type="button"
+                      data-tour="notifications-button"
                       className="relative p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                       title="Notifications"
                       onClick={(e) => {
@@ -587,6 +591,7 @@ const Layout = () => {
                   {/* User Avatar */}
                   <button
                     type="button"
+                    data-tour="user-menu"
                     className="relative"
                     onClick={handleUserMenuToggle}
                   >

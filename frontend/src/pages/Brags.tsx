@@ -21,6 +21,7 @@ import {
   PencilIcon,
   TrashIcon,
   UserIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import {
@@ -68,6 +69,7 @@ const Brags = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showMobileCategoriesDropdown, setShowMobileCategoriesDropdown] = useState(false);
 
   // My Stories state (for owners)
   const [showMyStories, setShowMyStories] = useState(false);
@@ -618,9 +620,10 @@ const Brags = () => {
     }
   };
 
-  // Check for view query param from notification and open modal
+  // Check for view/id query param from notification/search and open modal
   useEffect(() => {
-    const bragId = searchParams.get('view');
+    const bragId = searchParams.get('view') || searchParams.get('id');
+    const paramName = searchParams.get('view') ? 'view' : 'id';
     if (bragId && !showDetailModal) {
       // Fetch and open the brag modal
       const openBragFromParam = async () => {
@@ -629,16 +632,19 @@ const Brags = () => {
           if (response.success && response.data) {
             setSelectedStory(response.data);
             setShowDetailModal(true);
+            // Clear the param after opening
+            searchParams.delete(paramName);
+            setSearchParams(searchParams);
           } else {
             toast.error('Story not found');
-            // Clear invalid view param
-            searchParams.delete('view');
+            // Clear invalid param
+            searchParams.delete(paramName);
             setSearchParams(searchParams);
           }
         } catch (err) {
-          console.error('Error fetching story from notification:', err);
+          console.error('Error fetching story:', err);
           toast.error('Failed to load story');
-          searchParams.delete('view');
+          searchParams.delete(paramName);
           setSearchParams(searchParams);
         }
       };
@@ -778,7 +784,7 @@ const Brags = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="brags-content">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
         <div className="px-4 py-6 sm:px-8 sm:py-10">
@@ -932,8 +938,49 @@ const Brags = () => {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Categories Sidebar */}
-        <div className="lg:col-span-1">
+        {/* Categories - Mobile Dropdown */}
+        <div className="lg:hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <button
+              onClick={() => setShowMobileCategoriesDropdown(!showMobileCategoriesDropdown)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Categories</h3>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  ({selectedCategory === 'customer-service' ? 'Customer Service' : selectedCategory})
+                </span>
+              </div>
+              <ChevronDownIcon
+                className={`h-5 w-5 text-gray-500 transition-transform ${showMobileCategoriesDropdown ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {showMobileCategoriesDropdown && (
+              <nav className="border-t border-gray-100 dark:border-gray-700 p-2 space-y-1">
+                {categories.map((category) => (
+                  <button
+                    key={category.name}
+                    onClick={() => {
+                      handleCategoryClick(category.name);
+                      setShowMobileCategoriesDropdown(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between transition-all duration-200 ${
+                      selectedCategory === category.name
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                    }`}
+                  >
+                    <span className="capitalize text-sm">{category.name === 'customer-service' ? 'Customer Service' : category.name}</span>
+                  </button>
+                ))}
+              </nav>
+            )}
+          </div>
+        </div>
+
+        {/* Categories Sidebar - Desktop Only */}
+        <div className="hidden lg:block lg:col-span-1">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 sticky top-20">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
             <nav className="space-y-2">

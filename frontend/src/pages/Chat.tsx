@@ -827,7 +827,7 @@ const Chat = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden relative">
+    <div className="flex h-[calc(100vh-7rem)] bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden relative" data-tour="chat-content">
       {/* Contacts Sidebar */}
       <aside
         className={`${

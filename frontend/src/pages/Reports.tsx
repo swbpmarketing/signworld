@@ -182,7 +182,7 @@ const Reports = () => {
   ];
 
   return (
-    <div className="space-y-5 w-full max-w-full overflow-x-hidden">
+    <div className="space-y-5 w-full max-w-full overflow-x-hidden" data-tour="reports-content">
       {/* Header */}
       <div className="bg-blue-50 dark:bg-blue-900 rounded-lg border border-blue-100 dark:border-blue-900/30 p-4 sm:p-6 w-full max-w-full">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">

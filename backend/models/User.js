@@ -70,6 +70,11 @@ const userSchema = new mongoose.Schema({
       type: [Number], // [longitude, latitude]
     },
   },
+  // Privacy control for map display - when true, only shows city/state
+  hideExactAddress: {
+    type: Boolean,
+    default: false,
+  },
   // Business hours
   businessHours: {
     monday: { open: String, close: String, closed: { type: Boolean, default: false } },

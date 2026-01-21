@@ -241,7 +241,7 @@ const MapSearch = () => {
   const error = userLocation ? nearbyError : allError;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="map-content">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
         <div className="px-4 py-6 sm:px-8 sm:py-10">
@@ -289,44 +289,59 @@ const MapSearch = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-        <div className="space-y-4">
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row lg:flex-row gap-4">
-            <div className="flex-1 flex gap-2">
-              <div className="flex-1 relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Search by city, state, or ZIP code..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-                {searchInput && (
-                  <button
-                    type="button"
-                    onClick={handleClearSearch}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
+      <div className="relative bg-gradient-to-br from-white via-primary-50/30 to-blue-50/20 dark:from-gray-800 dark:via-gray-800 dark:to-gray-800/95 rounded-2xl sm:rounded-3xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 sm:p-8 md:p-10 overflow-hidden backdrop-blur-sm">
+        {/* Decorative gradient orbs */}
+        <div className="absolute top-0 right-0 w-48 h-48 sm:w-72 sm:h-72 bg-gradient-to-br from-primary-200/20 to-blue-200/20 dark:from-primary-900/10 dark:to-blue-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 sm:w-64 sm:h-64 bg-gradient-to-tr from-blue-200/20 to-primary-200/20 dark:from-blue-900/10 dark:to-primary-900/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+
+        <div className="relative space-y-6 sm:space-y-8">
+          {/* Title */}
+          <div className="text-center">
+            <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2 sm:mb-3 leading-tight">
+              Find Sign Companies Near You
+            </h3>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Search by location and filter by services to find the perfect partner
+            </p>
+          </div>
+
+          <form onSubmit={handleSearch} className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary-500 via-blue-500 to-purple-500 rounded-2xl opacity-0 group-hover:opacity-20 group-focus-within:opacity-30 blur-sm transition-all duration-300"></div>
+            <div className="relative flex flex-col sm:flex-row lg:flex-row gap-3 sm:gap-4">
+              <div className="flex-1 flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-gray-400 dark:text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Search by city, state, or ZIP code..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    className="w-full pl-12 sm:pl-14 pr-12 py-3.5 sm:py-4 text-base sm:text-lg border-2 border-gray-200 dark:border-gray-700 rounded-xl sm:rounded-2xl bg-white dark:bg-gray-800/80 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-0 focus:border-primary-500 dark:focus:border-primary-400 shadow-lg hover:shadow-xl focus:shadow-xl backdrop-blur-sm transition-all duration-200"
+                  />
+                  {searchInput && (
+                    <button
+                      type="button"
+                      onClick={handleClearSearch}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <MagnifyingGlassIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <span>Search</span>
+                </button>
               </div>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
-              >
-                <MagnifyingGlassIcon className="h-5 w-5" />
-                <span className="hidden sm:inline">Search</span>
-              </button>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Radius:</label>
-                <div className="w-36">
+              <div className="flex items-center gap-3 sm:gap-4 justify-center sm:justify-start">
+                <label className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Radius:</label>
+                <div className="w-36 sm:w-40">
                   <CustomSelect
                     value={radius}
                     onChange={(value) => {
@@ -349,25 +364,29 @@ const MapSearch = () => {
           </form>
 
           {/* Service Filters */}
-          <div className="border-t dark:border-gray-700 pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter by Services</h4>
-              <button
-                className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
-                onClick={() => setSelectedServices([])}
-              >
-                Clear all
-              </button>
+          <div className="pt-6 sm:pt-8 border-t border-gray-200/50 dark:border-gray-700/50">
+            <div className="flex items-center justify-center gap-2 mb-4 sm:mb-5">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent"></div>
+              <div className="flex items-center justify-between gap-3 px-4 py-1.5 rounded-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Filter by Services</h4>
+                <button
+                  className="text-xs sm:text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+                  onClick={() => setSelectedServices([])}
+                >
+                  Clear all
+                </button>
+              </div>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent"></div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
               {serviceFilters.map((service) => (
                 <button
                   key={service}
                   onClick={() => toggleService(service)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`group inline-flex items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 transform hover:-translate-y-0.5 ${
                     selectedServices.includes(service)
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg hover:shadow-xl'
+                      : 'bg-white dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-gradient-to-r hover:from-primary-50 hover:to-blue-50 dark:hover:from-primary-900/30 dark:hover:to-blue-900/30 hover:text-primary-700 dark:hover:text-primary-400 shadow-md hover:shadow-lg backdrop-blur-sm'
                   }`}
                 >
                   {service}

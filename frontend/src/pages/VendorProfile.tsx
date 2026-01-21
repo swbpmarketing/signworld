@@ -483,9 +483,9 @@ const VendorProfile = () => {
         )}
 
         {/* Create Profile Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Company Name *
@@ -679,40 +679,43 @@ const VendorProfile = () => {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="vendor-profile-content">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-4 py-6 sm:px-8 sm:py-10">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+        <div className="px-4 py-6 sm:px-6 md:px-8 sm:py-8">
+          <div className="flex flex-col gap-4">
+            {/* Logo and Title Section */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
               {formData.logo ? (
                 <img
                   src={formData.logo}
                   alt={formData.name}
-                  className="h-16 w-16 rounded-lg object-cover border-2 border-white/30"
+                  className="h-20 w-20 sm:h-16 sm:w-16 rounded-lg object-cover border-2 border-white/30 flex-shrink-0"
                 />
               ) : (
-                <div className="h-16 w-16 rounded-lg bg-white/20 flex items-center justify-center">
-                  <BuildingStorefrontIcon className="h-8 w-8 text-white" />
+                <div className="h-20 w-20 sm:h-16 sm:w-16 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <BuildingStorefrontIcon className="h-10 w-10 sm:h-8 sm:w-8 text-white" />
                 </div>
               )}
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
-                  <PencilIcon className="h-6 w-6 mr-2" />
-                  Manage Profile
+              <div className="flex-1 text-center sm:text-left">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center justify-center sm:justify-start flex-wrap gap-2">
+                  <PencilIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <span>Manage Profile</span>
                 </h1>
-                <p className="mt-1 text-lg text-primary-100">
+                <p className="mt-1 text-sm sm:text-base md:text-lg text-primary-100">
                   Update your partner profile information
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+
+            {/* Action Buttons - Full Width on Mobile */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2 w-full sm:w-auto sm:self-end">
               {isEditing ? (
                 <>
                   <button
                     onClick={handleCancelEdit}
                     disabled={saving}
-                    className="inline-flex items-center px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center justify-center px-4 py-2.5 sm:py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition-colors disabled:opacity-50 w-full sm:w-auto"
                   >
                     <XMarkIcon className="h-5 w-5 mr-2" />
                     Cancel
@@ -720,7 +723,7 @@ const VendorProfile = () => {
                   <button
                     onClick={handleSaveProfile}
                     disabled={saving}
-                    className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center justify-center px-4 py-2.5 sm:py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors disabled:opacity-50 w-full sm:w-auto"
                   >
                     {saving ? (
                       <>
@@ -738,7 +741,7 @@ const VendorProfile = () => {
               ) : (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors"
+                  className="inline-flex items-center justify-center px-4 py-2.5 sm:py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors w-full sm:w-auto"
                 >
                   <PencilIcon className="h-5 w-5 mr-2" />
                   Edit Profile
@@ -769,30 +772,31 @@ const VendorProfile = () => {
 
       {/* Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="flex space-x-8 px-6 overflow-x-auto" aria-label="Tabs">
+        <div className="border-b border-gray-200 dark:border-gray-700 overflow-hidden">
+          <nav className="flex space-x-4 sm:space-x-8 px-4 sm:px-6 overflow-x-auto scrollbar-hide -mb-px" aria-label="Tabs">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                className={`flex items-center py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 transition-colors ${
                   activeTab === tab.id
                     ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
-                <tab.icon className="h-5 w-5 mr-2" />
-                {tab.name}
+                <tab.icon className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
+                <span className="hidden xs:inline">{tab.name}</span>
+                <span className="xs:hidden">{tab.name.split(' ')[0]}</span>
               </button>
             ))}
           </nav>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Profile Info Tab */}
           {activeTab === 'profile' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Company Name *
@@ -951,8 +955,8 @@ const VendorProfile = () => {
 
           {/* Contact Tab */}
           {activeTab === 'contact' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     <span className="flex items-center"><span className="mr-2">Contact Person</span></span>
@@ -1134,16 +1138,16 @@ const VendorProfile = () => {
 
           {/* Special Offers Tab */}
           {activeTab === 'offers' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100">Your Special Offers</h4>
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h4 className="text-base sm:text-lg font-medium text-gray-900 dark:text-gray-100">Your Special Offers</h4>
                 <button
                   onClick={() => {
                     setEditingOffer(null);
                     setNewOffer({ title: '', description: '', validUntil: '', code: '', discountPercent: undefined });
                     setShowOfferModal(true);
                   }}
-                  className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  className="inline-flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors w-full sm:w-auto"
                 >
                   <PlusIcon className="h-5 w-5 mr-2" />
                   Add Offer
@@ -1151,7 +1155,7 @@ const VendorProfile = () => {
               </div>
 
               {partner?.specialOffers && partner.specialOffers.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {partner.specialOffers.map((offer) => (
                     <div key={offer._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                       <div className="flex items-start justify-between">
@@ -1218,15 +1222,15 @@ const VendorProfile = () => {
 
           {/* Documents Tab */}
           {activeTab === 'documents' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100">Documents & Collateral</h4>
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h4 className="text-base sm:text-lg font-medium text-gray-900 dark:text-gray-100">Documents & Collateral</h4>
                 <button
                   onClick={() => {
                     setNewDocument({ title: '', fileUrl: '', fileType: 'pdf' });
                     setShowDocumentModal(true);
                   }}
-                  className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  className="inline-flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors w-full sm:w-auto"
                 >
                   <PlusIcon className="h-5 w-5 mr-2" />
                   Add Document
@@ -1234,7 +1238,7 @@ const VendorProfile = () => {
               </div>
 
               {partner?.documents && partner.documents.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {partner.documents.map((doc) => (
                     <div key={doc._id} className="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                       <div className="flex-shrink-0 h-10 w-10 bg-primary-50 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
@@ -1283,9 +1287,9 @@ const VendorProfile = () => {
       {/* Offer Modal */}
       {showOfferModal && createPortal(
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
+          <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowOfferModal(false)} />
-            <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="relative bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {editingOffer ? 'Edit Offer' : 'Add New Offer'}
@@ -1355,17 +1359,17 @@ const VendorProfile = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 mt-6">
                 <button
                   onClick={() => setShowOfferModal(false)}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 w-full sm:w-auto"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveOffer}
                   disabled={saving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                  className="px-4 py-2.5 sm:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 w-full sm:w-auto"
                 >
                   {saving ? 'Saving...' : 'Save Offer'}
                 </button>
@@ -1379,9 +1383,9 @@ const VendorProfile = () => {
       {/* Document Modal */}
       {showDocumentModal && createPortal(
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
+          <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDocumentModal(false)} />
-            <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="relative bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Document</h3>
                 <button onClick={() => setShowDocumentModal(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
@@ -1428,17 +1432,17 @@ const VendorProfile = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-6">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 mt-6">
                 <button
                   onClick={() => setShowDocumentModal(false)}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 w-full sm:w-auto"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveDocument}
                   disabled={saving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                  className="px-4 py-2.5 sm:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 w-full sm:w-auto"
                 >
                   {saving ? 'Saving...' : 'Add Document'}
                 </button>
@@ -1452,9 +1456,9 @@ const VendorProfile = () => {
       {/* Confirmation Modal */}
       {confirmModal.show && createPortal(
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
+          <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmModal({ show: false, type: null, id: null, title: '' })} />
-            <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-sm w-full p-6">
+            <div className="relative bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-sm p-4 sm:p-6">
               <div className="flex items-center justify-center mb-4">
                 <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
                   <ExclamationTriangleIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
@@ -1466,17 +1470,17 @@ const VendorProfile = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
                 Are you sure you want to delete "{confirmModal.title}"? This action cannot be undone.
               </p>
-              <div className="flex justify-center gap-3">
+              <div className="flex flex-col-reverse sm:flex-row justify-center gap-2 sm:gap-3">
                 <button
                   onClick={() => setConfirmModal({ show: false, type: null, id: null, title: '' })}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-4 py-2.5 sm:py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 w-full sm:w-auto"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmDelete}
                   disabled={saving}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  className="px-4 py-2.5 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 w-full sm:w-auto"
                 >
                   {saving ? 'Deleting...' : 'Delete'}
                 </button>
