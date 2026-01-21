@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import UserSettings from '../components/profile/UserSettings';
 import emailService from '../services/emailService';
 import toast from 'react-hot-toast';
@@ -6,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePreviewMode } from '../context/PreviewModeContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../config/axios';
+import { useProductTour } from '../hooks/useProductTour';
 import {
   EnvelopeIcon,
   Cog6ToothIcon,
@@ -18,6 +20,7 @@ import {
   PaperAirplaneIcon,
   UserGroupIcon,
   EyeIcon,
+  AcademicCapIcon,
 } from '@heroicons/react/24/outline';
 
 interface SystemSettings {
@@ -64,6 +67,7 @@ interface RolePermissions {
 
 const Settings = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { getEffectiveRole, isPreviewMode } = usePreviewMode();
   const queryClient = useQueryClient();
   const effectiveRole = getEffectiveRole();
@@ -72,6 +76,9 @@ const Settings = () => {
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'system' | 'notifications' | 'broadcasts' | 'roles'>('profile');
   const [selectedRoleTab, setSelectedRoleTab] = useState<'owner' | 'vendor'>('owner');
+
+  // Product tour hook
+  const { startTour, resetTour } = useProductTour(user?._id);
 
   // System settings state
   const [systemSettings, setSystemSettings] = useState<SystemSettings>({
@@ -395,6 +402,38 @@ const Settings = () => {
           {/* Profile Settings Tab */}
           {activeTab === 'profile' && (
             <div className="space-y-6">
+              {/* Product Tour Section */}
+              <div className="bg-gradient-to-br from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 rounded-xl p-6 border-2 border-primary-200 dark:border-primary-800">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <AcademicCapIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+                      Platform Tour
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      Take a guided tour of all the features and capabilities available to you.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      // Reset tour completion status first
+                      resetTour();
+                      // Navigate to dashboard
+                      navigate('/dashboard');
+                      // Start tour after a longer delay to ensure all elements are fully rendered
+                      setTimeout(() => {
+                        startTour();
+                        toast.success('Starting product tour...');
+                      }, 800);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 transition-colors"
+                  >
+                    <AcademicCapIcon className="h-4 w-4" />
+                    Start Tour
+                  </button>
+                </div>
+              </div>
+
               {/* Email Test Section - Only for non-vendors */}
               {effectiveRole !== 'vendor' && (
                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">

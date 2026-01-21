@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   FolderIcon,
@@ -103,6 +103,7 @@ const Library = () => {
   const isAdmin = user?.role === 'admin';
   const isOwner = effectiveRole === 'owner';
   const canUpload = isAdmin || isOwner;
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // State
   const [files, setFiles] = useState<LibraryFile[]>([]);
@@ -330,6 +331,35 @@ const Library = () => {
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [openMenuId]);
+
+  // Auto-open file from search results
+  useEffect(() => {
+    const fileId = searchParams.get('id');
+    if (fileId) {
+      const fetchAndOpenFile = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(`${API_URL}/library/${fileId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await response.json();
+          if (data.success && data.data) {
+            setPreviewFile(data.data);
+            setShowPreviewModal(true);
+            setSearchParams({});
+          } else {
+            toast.error('File not found');
+            setSearchParams({});
+          }
+        } catch (error) {
+          console.error('Failed to fetch file:', error);
+          toast.error('Failed to load file');
+          setSearchParams({});
+        }
+      };
+      fetchAndOpenFile();
+    }
+  }, [searchParams, setSearchParams]);
 
   // Handle archive file
   const handleArchive = async (e: React.MouseEvent, file: LibraryFile) => {
@@ -942,7 +972,7 @@ const Library = () => {
   }
 
   return (
-    <div className="space-y-8 min-w-0 max-w-full overflow-x-hidden">
+    <div className="space-y-8 min-w-0 max-w-full overflow-x-hidden" data-tour="library-content">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
         <div className="px-4 py-6 sm:px-8 sm:py-10">

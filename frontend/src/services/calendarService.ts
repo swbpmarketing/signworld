@@ -8,7 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL ||
 // Create axios instance with base configuration
 const calendarAPI = axios.create({
   baseURL: `${API_URL}/events`,
-  timeout: 10000,
+  timeout: 30000, // Increased to 30 seconds to handle slow backend responses
 });
 
 // Add auth token and preview context to requests
@@ -134,9 +134,22 @@ export const calendarService = {
     try {
       const response = await calendarAPI.post<APIResponse<CalendarEvent>>('/', eventData);
       return response.data.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating event:', error);
-      throw new Error('Failed to create event');
+
+      // Provide specific error messages based on error type
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Request timed out. The server may be slow to respond. Please try again.');
+      } else if (error.response) {
+        // Server responded with error
+        const message = error.response.data?.message || error.response.data?.error;
+        throw new Error(message || 'Failed to create event. Please check your input.');
+      } else if (error.request) {
+        // Request made but no response
+        throw new Error('No response from server. Please check your internet connection.');
+      } else {
+        throw new Error('Failed to create event. Please try again.');
+      }
     }
   },
 

@@ -353,7 +353,7 @@ const UserManagement = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-tour="user-management-content">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
         <div className="px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10">

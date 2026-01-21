@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   VideoCameraIcon,
   PlayIcon,
@@ -13,6 +14,7 @@ import {
   BookmarkIcon,
   MagnifyingGlassIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
   StarIcon,
   ArrowTrendingUpIcon,
   PlayCircleIcon,
@@ -28,7 +30,7 @@ import { BookmarkIcon as BookmarkSolidIcon, PlayIcon as PlaySolidIcon, StarIcon 
 import CustomSelect from '../components/CustomSelect';
 import { useAuth } from '../context/AuthContext';
 import usePermissions from '../hooks/usePermissions';
-import { getVideos, getVideoStats, createVideo, uploadVideo, updateVideo, deleteVideo, incrementVideoView } from '../services/videoService';
+import { getVideos, getVideoStats, getVideo, createVideo, uploadVideo, updateVideo, deleteVideo, incrementVideoView } from '../services/videoService';
 import type { Video as VideoType, CreateVideoData } from '../services/videoService';
 import { getPlaylists } from '../services/playlistService';
 import type { Playlist } from '../services/playlistService';
@@ -160,6 +162,7 @@ const Videos = () => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [selectedCategory, setSelectedCategory] = useState('All Videos');
   const [searchInput, setSearchInput] = useState('');
@@ -170,6 +173,7 @@ const Videos = () => {
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(12);
+  const [showMobileCategoriesDropdown, setShowMobileCategoriesDropdown] = useState(false);
 
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -342,6 +346,29 @@ const Videos = () => {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
+
+  // Auto-open video from URL parameter
+  useEffect(() => {
+    const videoId = searchParams.get('id');
+    if (videoId) {
+      // Fetch the specific video by ID
+      const fetchAndOpenVideo = async () => {
+        try {
+          const response = await getVideo(videoId);
+          if (response.success && response.data) {
+            openVideo(response.data as VideoUI);
+            // Remove the id parameter from URL
+            setSearchParams({});
+          }
+        } catch (error) {
+          console.error('Failed to fetch video:', error);
+          toast.error('Video not found');
+          setSearchParams({});
+        }
+      };
+      fetchAndOpenVideo();
+    }
+  }, [searchParams, setSearchParams]);
 
   const toggleBookmark = (videoId: string) => {
     setBookmarkedVideos(prev => {
@@ -516,7 +543,7 @@ const Videos = () => {
   const canRemoveVideo = canDelete('videos');
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="videos-content">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
         <div className="px-4 py-6 sm:px-8 sm:py-10">
@@ -624,8 +651,121 @@ const Videos = () => {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
+        {/* Categories - Mobile Dropdown */}
+        <div className="lg:hidden space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <button
+              onClick={() => setShowMobileCategoriesDropdown(!showMobileCategoriesDropdown)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Categories</h3>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  ({selectedCategory})
+                </span>
+              </div>
+              <ChevronDownIcon
+                className={`h-5 w-5 text-gray-500 transition-transform ${showMobileCategoriesDropdown ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {showMobileCategoriesDropdown && (
+              <div className="border-t border-gray-100 dark:border-gray-700 p-2">
+                <nav className="space-y-1">
+                  {dynamicCategories.map((category) => {
+                    const count = category.name === 'All Videos' ? stats?.totalVideos : (stats?.categoryCounts?.[category.backendKey] || 0);
+                    return (
+                      <button
+                        key={category.name}
+                        onClick={() => {
+                          setSelectedCategory(category.name);
+                          setShowMobileCategoriesDropdown(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between transition-all duration-200 ${
+                          selectedCategory === category.name
+                            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <category.icon className={`h-5 w-5 mr-3 ${
+                            selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
+                          }`} />
+                          <span className="text-sm">{category.name}</span>
+                        </div>
+                        <span className={`text-sm ${
+                          selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+            )}
+          </div>
+
+          {/* Playlists - Mobile */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Popular Playlists</h3>
+              {selectedPlaylist && (
+                <button
+                  onClick={() => setSelectedPlaylist(null)}
+                  className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+                >
+                  Clear filter
+                </button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {playlistsData?.data && playlistsData.data.length > 0 ? (
+                playlistsData.data.map((playlist: Playlist) => {
+                  const isSelected = selectedPlaylist?._id === playlist._id;
+                  return (
+                    <button
+                      key={playlist._id}
+                      onClick={() => handlePlaylistSelect(playlist)}
+                      className={`w-full text-left p-3 rounded-lg transition-colors group ${
+                        isSelected
+                          ? 'bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className={`text-sm font-medium ${
+                            isSelected
+                              ? 'text-primary-700 dark:text-primary-400'
+                              : 'text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400'
+                          }`}>
+                            {playlist.name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {playlist.videoCount} videos • {playlist.duration}
+                          </p>
+                        </div>
+                        <ChevronRightIcon className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
+                          isSelected
+                            ? 'text-primary-600 dark:text-primary-400'
+                            : 'text-gray-400 dark:text-gray-500 group-hover:text-primary-600 dark:group-hover:text-primary-400'
+                        }`} />
+                      </div>
+                    </button>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                  No playlists available yet
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar - Desktop Only */}
+        <div className="hidden lg:block lg:col-span-1 space-y-6">
           {/* Categories */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="p-6">

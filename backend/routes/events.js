@@ -354,38 +354,49 @@ router.post('/', protect, async (req, res) => {
     const event = await Event.create(eventData);
     await event.populate('organizer', 'name email');
 
-    // Create notifications for all users about new event
-    const io = req.app.get('io');
-    try {
-      const allUsers = await User.find({
-        _id: { $ne: req.user.id },
-        isActive: true
-      }).select('_id');
-
-      for (const user of allUsers) {
-        await Notification.createAndEmit(io, {
-          recipient: user._id,
-          sender: req.user.id,
-          type: 'new_event',
-          title: 'New Event Added',
-          message: `A new event has been scheduled: "${event.title}"`,
-          referenceType: 'Event',
-          referenceId: event._id,
-          link: `/events`,
-        });
-      }
-
-      // Emit to events room for real-time updates
-      if (io) {
-        io.to('events').emit('event:new', event);
-      }
-    } catch (notifError) {
-      console.error('Error creating event notifications:', notifError);
-    }
-
+    // Send response immediately
     res.status(201).json({
       success: true,
       data: event
+    });
+
+    // Create notifications for all users about new event in background (non-blocking)
+    const io = req.app.get('io');
+
+    // Use setImmediate to run notification creation asynchronously without blocking
+    setImmediate(async () => {
+      try {
+        const allUsers = await User.find({
+          _id: { $ne: req.user.id },
+          isActive: true
+        }).select('_id');
+
+        // Create notifications without awaiting each one
+        const notificationPromises = allUsers.map(user =>
+          Notification.createAndEmit(io, {
+            recipient: user._id,
+            sender: req.user.id,
+            type: 'new_event',
+            title: 'New Event Added',
+            message: `A new event has been scheduled: "${event.title}"`,
+            referenceType: 'Event',
+            referenceId: event._id,
+            link: `/events`,
+          }).catch(err => {
+            console.error(`Failed to create notification for user ${user._id}:`, err);
+          })
+        );
+
+        // Wait for all notifications to complete
+        await Promise.all(notificationPromises);
+
+        // Emit to events room for real-time updates
+        if (io) {
+          io.to('events').emit('event:new', event);
+        }
+      } catch (notifError) {
+        console.error('Error creating event notifications:', notifError);
+      }
     });
   } catch (error) {
     console.error('Error creating event:', error);

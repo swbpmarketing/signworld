@@ -1209,7 +1209,7 @@ const Convention = () => {
   return (
     <>
       <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
-      <div className="space-y-6">
+      <div className="space-y-6" data-tour="convention-content">
       {/* Hero Section with Countdown */}
       {displayConvention ? (
       <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl shadow-lg p-3 sm:p-4 md:p-6 lg:p-8 text-white overflow-hidden">

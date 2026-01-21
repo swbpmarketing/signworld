@@ -26,6 +26,7 @@ import {
   PhotoIcon,
   CheckCircleIcon,
   UserIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import {
   HeartIcon as HeartSolidIcon,
@@ -131,6 +132,7 @@ const Forum = () => {
   const [selectedTag, setSelectedTag] = useState('');
   const [threads, setThreads] = useState<ForumThread[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showMobileCategoriesDropdown, setShowMobileCategoriesDropdown] = useState(false);
 
   // My Threads state
   const [showMyThreads, setShowMyThreads] = useState(false);
@@ -1080,7 +1082,7 @@ const Forum = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="forum-content">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
         <div className="px-4 py-6 sm:px-8 sm:py-10">
@@ -1225,8 +1227,49 @@ const Forum = () => {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Categories Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
+        {/* Categories - Mobile Dropdown */}
+        <div className="lg:hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <button
+              onClick={() => setShowMobileCategoriesDropdown(!showMobileCategoriesDropdown)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Categories</h3>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  ({selectedCategory})
+                </span>
+              </div>
+              <ChevronDownIcon
+                className={`h-5 w-5 text-gray-500 transition-transform ${showMobileCategoriesDropdown ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {showMobileCategoriesDropdown && (
+              <nav className="border-t border-gray-100 dark:border-gray-700 p-2 space-y-1">
+                {forumCategories.map((category) => (
+                  <button
+                    key={category.name}
+                    onClick={() => {
+                      handleCategoryClick(category.name);
+                      setShowMobileCategoriesDropdown(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 ${
+                      selectedCategory === category.name
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                    }`}
+                  >
+                    <span className="text-sm">{category.name}</span>
+                  </button>
+                ))}
+              </nav>
+            )}
+          </div>
+        </div>
+
+        {/* Categories Sidebar - Desktop Only */}
+        <div className="hidden lg:block lg:col-span-1 space-y-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 sticky top-20">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
             <nav className="space-y-2">

@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { lazy, Suspense } from 'react';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { DarkModeProvider } from './context/DarkModeContext';
 import { PreviewModeProvider } from './context/PreviewModeContext';
 import { PermissionsProvider } from './context/PermissionsContext';
@@ -10,6 +10,7 @@ import { PermissionsProvider } from './context/PermissionsContext';
 // Only import Layout and contexts eagerly as they're needed immediately
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ProductTour from './components/ProductTour';
 
 // Lazy load all pages for better code splitting
 const Landing = lazy(() => import('./pages/Landing'));
@@ -72,19 +73,16 @@ const queryClient = new QueryClient({
   },
 });
 
-function App() {
-  
-  
+// Wrapper component to access auth context for the product tour
+function AppContent() {
+  const { user } = useAuth();
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <DarkModeProvider>
-          <AuthProvider>
-            <PreviewModeProvider>
-              <PermissionsProvider>
-                <Toaster position="top-right" />
-                <Suspense fallback={<LoadingFallback />}>
-                  <Routes>
+    <>
+      <Toaster position="top-right" />
+      <ProductTour userId={user?._id} userRole={user?.role} />
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
@@ -248,6 +246,19 @@ function App() {
                 </Route>
                 </Routes>
               </Suspense>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <DarkModeProvider>
+          <AuthProvider>
+            <PreviewModeProvider>
+              <PermissionsProvider>
+                <AppContent />
               </PermissionsProvider>
             </PreviewModeProvider>
           </AuthProvider>

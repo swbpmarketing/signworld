@@ -86,6 +86,7 @@ interface UserSettingsFormData {
     profileVisible: boolean;
     dataSharing: boolean;
     analytics: boolean;
+    hideExactAddress: boolean;
   };
   theme: string;
   security: {
@@ -155,6 +156,7 @@ const UserSettings = () => {
       profileVisible: true,
       dataSharing: false,
       analytics: true,
+      hideExactAddress: false,
     },
     theme: 'light',
     security: {
@@ -174,6 +176,10 @@ const UserSettings = () => {
         countryCode: phoneData.countryCode,
         phone: phoneData.number,
         company: userProfile.company || prev.company,
+        privacy: {
+          ...prev.privacy,
+          hideExactAddress: userProfile.hideExactAddress ?? false,
+        },
       }));
     }
   }, [userProfile]);
@@ -233,22 +239,33 @@ const UserSettings = () => {
     // Validate form data
     const validation = validateUserSettings(formData);
     setValidationErrors(validation.errors);
-    
+
     if (!validation.isValid) {
       showError('Please fix the validation errors before saving.');
       return;
     }
-    
+
     setIsSaving(true);
     const loadingToast = showLoading('Saving your settings...');
-    
+
     try {
-      // Here you would typically make an API call to save the settings
-      // Example: await updateUserSettings(formData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      // Import updateProfile dynamically to avoid circular dependencies
+      const { updateProfile } = await import('../../services/userService');
+
+      // Prepare data for API - extract hideExactAddress from privacy and put at top level
+      const fullPhone = formData.phone ? `${formData.countryCode}${formData.phone}` : undefined;
+      const { hideExactAddress, ...otherPrivacy } = formData.privacy;
+
+      const updateData = {
+        name: formData.name,
+        company: formData.company,
+        phone: fullPhone,
+        hideExactAddress: hideExactAddress,
+        // Add other fields as needed by the API
+      };
+
+      await updateProfile(updateData);
+
       dismissToast(loadingToast);
       showSuccess('Settings saved successfully!');
       setIsEditing(false);
@@ -283,6 +300,7 @@ const UserSettings = () => {
         profileVisible: true,
         dataSharing: false,
         analytics: true,
+        hideExactAddress: false,
       },
       theme: 'light',
       security: {
@@ -582,11 +600,13 @@ const UserSettings = () => {
                 {key === 'profileVisible' && 'Profile Visibility'}
                 {key === 'dataSharing' && 'Data Sharing'}
                 {key === 'analytics' && 'Analytics & Tracking'}
+                {key === 'hideExactAddress' && 'Hide Exact Address'}
               </h5>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {key === 'profileVisible' && 'Allow other members to view your profile information'}
                 {key === 'dataSharing' && 'Share anonymized data to improve the platform'}
                 {key === 'analytics' && 'Allow analytics tracking to improve your experience'}
+                {key === 'hideExactAddress' && 'Show only city and state on maps (hides street address and ZIP code)'}
               </p>
             </div>
             <button

@@ -543,13 +543,25 @@ exports.getMapOwners = async (req, res) => {
       isActive: true,
       'location.coordinates': { $exists: true, $ne: [] }
     })
-    .select('name company address location specialties phone email profileImage businessHours yearsInBusiness')
+    .select('name company address location specialties phone email profileImage businessHours yearsInBusiness hideExactAddress')
     .lean();
 
-    // Get rating statistics for each owner
+    // Get rating statistics for each owner and respect privacy settings
     const ownersWithRatings = await Promise.all(
       owners.map(async (owner) => {
         const ratingStats = await Rating.getAverageRating(owner._id);
+
+        // Respect hideExactAddress privacy setting
+        if (owner.hideExactAddress && owner.address) {
+          owner.address = {
+            street: '', // Hide street address
+            city: owner.address.city || '',
+            state: owner.address.state || '',
+            zipCode: '', // Hide ZIP code
+            country: owner.address.country || 'USA'
+          };
+        }
+
         return {
           ...owner,
           rating: ratingStats
@@ -610,7 +622,7 @@ exports.getNearbyOwners = async (req, res) => {
     }
 
     const owners = await User.find(query)
-      .select('name company address location specialties phone email profileImage businessHours yearsInBusiness')
+      .select('name company address location specialties phone email profileImage businessHours yearsInBusiness hideExactAddress')
       .limit(parseInt(limit))
       .lean();
 
@@ -626,6 +638,17 @@ exports.getNearbyOwners = async (req, res) => {
 
         if (ownerLat && ownerLng) {
           distance = calculateDistance(latitude, longitude, ownerLat, ownerLng);
+        }
+
+        // Respect hideExactAddress privacy setting
+        if (owner.hideExactAddress && owner.address) {
+          owner.address = {
+            street: '', // Hide street address
+            city: owner.address.city || '',
+            state: owner.address.state || '',
+            zipCode: '', // Hide ZIP code
+            country: owner.address.country || 'USA'
+          };
         }
 
         return {

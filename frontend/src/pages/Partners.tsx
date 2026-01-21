@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,7 @@ import {
   WrenchScrewdriverIcon,
   MagnifyingGlassIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
   ClockIcon,
   MapPinIcon,
   XMarkIcon,
@@ -82,6 +83,7 @@ const Partners = () => {
   const { canCreate, canEdit, canDelete } = usePermissions();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState('All Partners');
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,6 +101,7 @@ const Partners = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [showMobileCategoriesDropdown, setShowMobileCategoriesDropdown] = useState(false);
 
   // Fetch partners with filters
   const { data: partnersData, isLoading: partnersLoading, error: partnersError } = useQuery({
@@ -149,6 +152,31 @@ const Partners = () => {
         icon: categoryIcons[cat.name] || BuildingOfficeIcon,
       })),
   ];
+
+  // Auto-open partner from search results
+  useEffect(() => {
+    const partnerId = searchParams.get('id');
+    if (partnerId) {
+      const fetchAndOpenPartner = async () => {
+        try {
+          const response = await getPartner(partnerId);
+          if (response.success && response.data) {
+            setSelectedPartner(response.data);
+            setShowModal(true);
+            setSearchParams({});
+          } else {
+            toast.error('Partner not found');
+            setSearchParams({});
+          }
+        } catch (error) {
+          console.error('Failed to fetch partner:', error);
+          toast.error('Failed to load partner');
+          setSearchParams({});
+        }
+      };
+      fetchAndOpenPartner();
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -332,7 +360,7 @@ const Partners = () => {
   };
 
   return (
-    <div className="space-y-8 min-w-0 max-w-full overflow-x-hidden">
+    <div className="space-y-8 min-w-0 max-w-full overflow-x-hidden" data-tour="partners-content">
       {/* Header Section */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
         <div className="px-4 py-6 sm:px-8 sm:py-10">
@@ -486,8 +514,69 @@ const Partners = () => {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Categories Sidebar */}
-        <div className="lg:col-span-1">
+        {/* Categories - Mobile Dropdown */}
+        <div className="lg:hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <button
+              onClick={() => setShowMobileCategoriesDropdown(!showMobileCategoriesDropdown)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Categories</h3>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  ({selectedCategory})
+                </span>
+              </div>
+              <ChevronDownIcon
+                className={`h-5 w-5 text-gray-500 transition-transform ${showMobileCategoriesDropdown ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {showMobileCategoriesDropdown && (
+              <div className="border-t border-gray-100 dark:border-gray-700 p-2">
+                {categoriesLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="animate-pulse h-12 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                    ))}
+                  </div>
+                ) : (
+                  <nav className="space-y-1">
+                    {categories.map((category) => (
+                      <button
+                        key={category.name}
+                        onClick={() => {
+                          setSelectedCategory(category.name);
+                          setShowMobileCategoriesDropdown(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between transition-all duration-200 group ${
+                          selectedCategory === category.name
+                            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <category.icon className={`h-5 w-5 mr-3 ${
+                            selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+                          }`} />
+                          <span className="text-sm">{category.name}</span>
+                        </div>
+                        <span className={`text-sm ${
+                          selectedCategory === category.name ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400'
+                        }`}>
+                          {category.count}
+                        </span>
+                      </button>
+                    ))}
+                  </nav>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Categories Sidebar - Desktop Only */}
+        <div className="hidden lg:block lg:col-span-1">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 sticky top-20">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
             {categoriesLoading ? (
