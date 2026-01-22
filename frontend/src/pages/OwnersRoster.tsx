@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getOwners, updateOwnerProfile } from '../services/ownerService';
+import { getOwners, updateOwnerProfile, getOwnerTerritories, getOwnerSpecialties } from '../services/ownerService';
 import type { Owner } from '../services/ownerService';
 import { useAuth } from '../context/AuthContext';
 import { usePreviewMode } from '../context/PreviewModeContext';
@@ -141,26 +141,6 @@ const staticOwners: OwnerDisplay[] = [
     certifications: ["ISA Elite", "OSHA Certified", "Sign Company Master", "LEED AP"],
     bio: "A decade of excellence in commercial signage, serving Austin's fastest-growing businesses."
   }
-];
-
-const territories = [
-  { name: "All Territories", count: 127 },
-  { name: "West Coast", count: 34 },
-  { name: "Southwest", count: 28 },
-  { name: "Midwest", count: 22 },
-  { name: "Southeast", count: 25 },
-  { name: "Northeast", count: 18 }
-];
-
-const specialtyFilters = [
-  "Vehicle Wraps",
-  "LED Signs",
-  "Monument Signs",
-  "Digital Displays",
-  "Channel Letters",
-  "Wayfinding",
-  "Neon Signs",
-  "ADA Signage"
 ];
 
 const OwnersRoster = () => {
@@ -328,18 +308,180 @@ const OwnersRoster = () => {
     }
   };
 
+  // Fetch territories (states from backend)
+  const { data: territoriesData, isLoading: territoriesLoading } = useQuery({
+    queryKey: ['ownerTerritories'],
+    queryFn: getOwnerTerritories,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+
+  // Fetch specialties
+  const { data: specialtiesData, isLoading: specialtiesLoading } = useQuery({
+    queryKey: ['ownerSpecialties'],
+    queryFn: getOwnerSpecialties,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+
+  // Map states to regions
+  const stateToRegion: { [key: string]: string } = {
+    // West Coast
+    'WA': 'West Coast', 'Washington': 'West Coast',
+    'OR': 'West Coast', 'Oregon': 'West Coast',
+    'CA': 'West Coast', 'California': 'West Coast',
+    'NV': 'West Coast', 'Nevada': 'West Coast',
+    // Southwest
+    'AZ': 'Southwest', 'Arizona': 'Southwest',
+    'NM': 'Southwest', 'New Mexico': 'Southwest',
+    'TX': 'Southwest', 'Texas': 'Southwest',
+    'OK': 'Southwest', 'Oklahoma': 'Southwest',
+    // Midwest
+    'ND': 'Midwest', 'North Dakota': 'Midwest',
+    'SD': 'Midwest', 'South Dakota': 'Midwest',
+    'NE': 'Midwest', 'Nebraska': 'Midwest',
+    'KS': 'Midwest', 'Kansas': 'Midwest',
+    'MN': 'Midwest', 'Minnesota': 'Midwest',
+    'IA': 'Midwest', 'Iowa': 'Midwest',
+    'MO': 'Midwest', 'Missouri': 'Midwest',
+    'WI': 'Midwest', 'Wisconsin': 'Midwest',
+    'IL': 'Midwest', 'Illinois': 'Midwest',
+    'MI': 'Midwest', 'Michigan': 'Midwest',
+    'IN': 'Midwest', 'Indiana': 'Midwest',
+    'OH': 'Midwest', 'Ohio': 'Midwest',
+    // Southeast
+    'AR': 'Southeast', 'Arkansas': 'Southeast',
+    'LA': 'Southeast', 'Louisiana': 'Southeast',
+    'MS': 'Southeast', 'Mississippi': 'Southeast',
+    'AL': 'Southeast', 'Alabama': 'Southeast',
+    'TN': 'Southeast', 'Tennessee': 'Southeast',
+    'KY': 'Southeast', 'Kentucky': 'Southeast',
+    'WV': 'Southeast', 'West Virginia': 'Southeast',
+    'VA': 'Southeast', 'Virginia': 'Southeast',
+    'NC': 'Southeast', 'North Carolina': 'Southeast',
+    'SC': 'Southeast', 'South Carolina': 'Southeast',
+    'GA': 'Southeast', 'Georgia': 'Southeast',
+    'FL': 'Southeast', 'Florida': 'Southeast',
+    // Northeast
+    'ME': 'Northeast', 'Maine': 'Northeast',
+    'NH': 'Northeast', 'New Hampshire': 'Northeast',
+    'VT': 'Northeast', 'Vermont': 'Northeast',
+    'MA': 'Northeast', 'Massachusetts': 'Northeast',
+    'RI': 'Northeast', 'Rhode Island': 'Northeast',
+    'CT': 'Northeast', 'Connecticut': 'Northeast',
+    'NY': 'Northeast', 'New York': 'Northeast',
+    'NJ': 'Northeast', 'New Jersey': 'Northeast',
+    'PA': 'Northeast', 'Pennsylvania': 'Northeast',
+    'DE': 'Northeast', 'Delaware': 'Northeast',
+    'MD': 'Northeast', 'Maryland': 'Northeast',
+    'DC': 'Northeast', 'District of Columbia': 'Northeast',
+  };
+
+  // Aggregate state counts into region counts
+  const aggregateRegions = (statesData: { name: string; count: number }[]) => {
+    const regionCounts: { [key: string]: number } = {
+      'West Coast': 0,
+      'Southwest': 0,
+      'Midwest': 0,
+      'Southeast': 0,
+      'Northeast': 0,
+    };
+
+    let totalCount = 0;
+
+    statesData.forEach(state => {
+      if (state.name === 'All Territories') {
+        totalCount = state.count;
+      } else {
+        const region = stateToRegion[state.name];
+        if (region) {
+          regionCounts[region] += state.count;
+        }
+      }
+    });
+
+    return [
+      { name: 'All Territories', count: totalCount },
+      { name: 'West Coast', count: regionCounts['West Coast'] },
+      { name: 'Southwest', count: regionCounts['Southwest'] },
+      { name: 'Midwest', count: regionCounts['Midwest'] },
+      { name: 'Southeast', count: regionCounts['Southeast'] },
+      { name: 'Northeast', count: regionCounts['Northeast'] },
+    ];
+  };
+
+  // Fallback data if no dynamic data available
+  const defaultTerritories = [
+    { name: "All Territories", count: 0 },
+    { name: "West Coast", count: 0 },
+    { name: "Southwest", count: 0 },
+    { name: "Midwest", count: 0 },
+    { name: "Southeast", count: 0 },
+    { name: "Northeast", count: 0 }
+  ];
+
+  const defaultSpecialties = [
+    "Vehicle Wraps",
+    "LED Signs",
+    "Monument Signs",
+    "Digital Displays",
+    "Channel Letters",
+    "Wayfinding",
+    "Neon Signs",
+    "ADA Signage"
+  ];
+
+  const territories = territoriesData && territoriesData.length > 1
+    ? aggregateRegions(territoriesData)
+    : defaultTerritories;
+  const specialtyFilters = specialtiesData && specialtiesData.length > 0 ? specialtiesData.map(s => s.name) : defaultSpecialties;
+
+  // Reverse mapping: region to states
+  const regionToStates: { [key: string]: string[] } = {
+    'West Coast': ['WA', 'Washington', 'OR', 'Oregon', 'CA', 'California', 'NV', 'Nevada'],
+    'Southwest': ['AZ', 'Arizona', 'NM', 'New Mexico', 'TX', 'Texas', 'OK', 'Oklahoma'],
+    'Midwest': ['ND', 'North Dakota', 'SD', 'South Dakota', 'NE', 'Nebraska', 'KS', 'Kansas', 'MN', 'Minnesota', 'IA', 'Iowa', 'MO', 'Missouri', 'WI', 'Wisconsin', 'IL', 'Illinois', 'MI', 'Michigan', 'IN', 'Indiana', 'OH', 'Ohio'],
+    'Southeast': ['AR', 'Arkansas', 'LA', 'Louisiana', 'MS', 'Mississippi', 'AL', 'Alabama', 'TN', 'Tennessee', 'KY', 'Kentucky', 'WV', 'West Virginia', 'VA', 'Virginia', 'NC', 'North Carolina', 'SC', 'South Carolina', 'GA', 'Georgia', 'FL', 'Florida'],
+    'Northeast': ['ME', 'Maine', 'NH', 'New Hampshire', 'VT', 'Vermont', 'MA', 'Massachusetts', 'RI', 'Rhode Island', 'CT', 'Connecticut', 'NY', 'New York', 'NJ', 'New Jersey', 'PA', 'Pennsylvania', 'DE', 'Delaware', 'MD', 'Maryland', 'DC', 'District of Columbia'],
+  };
+
   // Fetch owners from API
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['owners', page, searchQuery, selectedTerritory, selectedSpecialties],
     queryFn: async () => {
       try {
+        // Convert region to state if needed
+        let stateFilter = undefined;
+        if (selectedTerritory !== 'All Territories') {
+          // Check if it's a region or an actual state
+          if (regionToStates[selectedTerritory]) {
+            // It's a region - we'll need to filter on the frontend since backend expects single state
+            stateFilter = undefined; // Don't filter by state on backend for regions
+          } else {
+            // It's an actual state
+            stateFilter = selectedTerritory;
+          }
+        }
+
         const result = await getOwners({
           page,
           limit: 12,
           search: searchQuery || undefined,
           specialty: selectedSpecialties.length > 0 ? selectedSpecialties[0] : undefined,
-          state: selectedTerritory !== 'All Territories' ? selectedTerritory : undefined,
+          state: stateFilter,
         });
+
+        // If a region is selected, filter results on frontend
+        if (selectedTerritory !== 'All Territories' && regionToStates[selectedTerritory]) {
+          const statesInRegion = regionToStates[selectedTerritory];
+          const filtered = result.data.filter(owner =>
+            statesInRegion.includes(owner.address?.state || '')
+          );
+          return {
+            ...result,
+            data: filtered,
+            count: filtered.length,
+          };
+        }
+
         return result;
       } catch (err) {
         console.error('Error in queryFn:', err);
@@ -462,6 +604,7 @@ const OwnersRoster = () => {
                 </button>
               )}
               <button
+                  data-tour="export-owners"
                   onClick={handleExportDirectory}
                   className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
                 >
@@ -514,6 +657,7 @@ const OwnersRoster = () => {
               <div className="flex-1 relative">
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
+                  data-tour="owner-search"
                   type="text"
                   placeholder="Search by name, company, or location..."
                   value={searchInput}
@@ -573,7 +717,7 @@ const OwnersRoster = () => {
 
           {/* Expandable Filters */}
           {showFilters && (
-            <div className="border-t dark:border-gray-700 pt-4 space-y-4">
+            <div data-tour="owner-filters" className="border-t dark:border-gray-700 pt-4 space-y-4">
               <div>
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Territory</h4>
                 <div className="flex flex-wrap gap-2">
@@ -639,7 +783,7 @@ const OwnersRoster = () => {
           )}
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div data-tour="owner-cards" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {owners.map((owner) => (
             <Link
               key={owner.id}
@@ -732,6 +876,7 @@ const OwnersRoster = () => {
                         Email
                       </button>
                       <button
+                        data-tour="contact-owner"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();

@@ -382,6 +382,7 @@ const UserManagement = () => {
                   )}
                 </Link>
                 <button
+                  data-tour="create-user-button"
                   onClick={() => setIsCreateModalOpen(true)}
                   className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-primary-700 bg-white hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-colors whitespace-nowrap"
                 >
@@ -395,7 +396,7 @@ const UserManagement = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+      <div data-tour="user-filters" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <button
           onClick={() => { setRoleFilter('all'); setStatusFilter('all'); setPage(1); }}
           className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 transition-all ${
@@ -518,6 +519,7 @@ const UserManagement = () => {
             <div className="flex-1 relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
+                data-tour="user-search"
                 type="text"
                 placeholder="Search by name or email..."
                 value={searchInput}
@@ -586,7 +588,7 @@ const UserManagement = () => {
 
         {/* Bulk Actions Bar */}
         {selectedUsers.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div data-tour="bulk-actions" className="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {selectedUsers.length} selected:
             </span>
@@ -700,7 +702,7 @@ const UserManagement = () => {
 
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <table data-tour="user-table" className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -778,6 +780,7 @@ const UserManagement = () => {
                       </td>
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
+                          data-tour="user-actions"
                           onClick={() => handleOpenUserDetails(user)}
                           className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium"
                         >

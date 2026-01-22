@@ -105,11 +105,12 @@ const Partners = () => {
 
   // Fetch partners with filters
   const { data: partnersData, isLoading: partnersLoading, error: partnersError } = useQuery({
-    queryKey: ['partners', selectedCategory, searchQuery, showFeaturedOnly, sortBy],
+    queryKey: ['partners', selectedCategory, searchQuery, showFeaturedOnly, showPreferredOnly, sortBy],
     queryFn: () => getPartners({
-      category: selectedCategory,
+      category: selectedCategory === 'All Partners' ? undefined : selectedCategory,
       search: searchQuery,
       featured: showFeaturedOnly || undefined,
+      preferred: showPreferredOnly,
       sort: sortBy as 'rating' | 'name' | 'name-desc' | 'newest' | 'oldest',
     }),
   });
@@ -122,17 +123,12 @@ const Partners = () => {
 
   // Fetch categories
   const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
-    queryKey: ['partnerCategories'],
-    queryFn: getPartnerCategories,
+    queryKey: ['partnerCategories', showPreferredOnly],
+    queryFn: () => getPartnerCategories(showPreferredOnly),
   });
 
-  // Filter partners - preferred partners are those without a vendor account
-  // By default, hide preferred partners (show only vendors with accounts)
-  // When "Preferred" filter is active, show only preferred partners
-  const allPartners = partnersData?.data || [];
-  const partners = showPreferredOnly
-    ? allPartners.filter(p => !p.vendorId)  // Show only preferred (no account)
-    : allPartners.filter(p => p.vendorId);   // Show only vendors (with account)
+  // Partners data from backend (already filtered by preferred state)
+  const partners = partnersData?.data || [];
   const stats: PartnerStats = statsData?.data || {
     totalPartners: 0,
     featuredPartners: 0,
@@ -443,6 +439,7 @@ const Partners = () => {
             <div className="flex-1 relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
+                data-tour="partner-search"
                 type="text"
                 placeholder="Search partners by name or service..."
                 value={searchInput}
@@ -577,7 +574,7 @@ const Partners = () => {
 
         {/* Categories Sidebar - Desktop Only */}
         <div className="hidden lg:block lg:col-span-1">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 sticky top-20">
+          <div data-tour="partner-categories" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 sticky top-20">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
             {categoriesLoading ? (
               <div className="space-y-2">
@@ -661,7 +658,7 @@ const Partners = () => {
 
           {/* Partners List */}
           {!partnersLoading && !partnersError && (
-            <div className="grid grid-cols-1 gap-6">
+            <div data-tour="partner-grid" className="grid grid-cols-1 gap-6">
               {partners.map((partner) => (
                 <div
                   key={partner._id}

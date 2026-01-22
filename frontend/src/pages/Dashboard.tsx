@@ -336,7 +336,7 @@ const Dashboard = () => {
 
       {/* Analytics Dashboard Widgets - Admin Only */}
       {isAdmin && (
-        <div className="space-y-6">
+        <div data-tour="dashboard-charts" className="space-y-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Analytics Dashboard</h2>
 
           {/* Row 1: Engagement Metrics + Trend Chart */}
@@ -357,7 +357,7 @@ const Dashboard = () => {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div data-tour="dashboard-stats-cards" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {isLoadingStats ? (
           // Loading skeleton
           [...Array(4)].map((_, i) => (
@@ -410,7 +410,7 @@ const Dashboard = () => {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Recent Activity */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div data-tour="dashboard-recent-activity" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
               <BellIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />

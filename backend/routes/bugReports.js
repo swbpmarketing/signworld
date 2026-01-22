@@ -291,13 +291,16 @@ router.put('/:id', protect, async (req, res) => {
       });
     }
 
-    const { title, description, type, priority, status, assignedTo, adminNotes } = req.body;
+    const { title, description, type, priority, stepsToReproduce, expectedBehavior, actualBehavior, status, assignedTo, adminNotes } = req.body;
 
     // Update allowed fields
     if (title) report.title = title;
     if (description) report.description = description;
     if (type) report.type = type;
     if (priority) report.priority = priority;
+    if (stepsToReproduce !== undefined) report.stepsToReproduce = stepsToReproduce;
+    if (expectedBehavior !== undefined) report.expectedBehavior = expectedBehavior;
+    if (actualBehavior !== undefined) report.actualBehavior = actualBehavior;
 
     // Only admins can update these fields
     if (req.user.role === 'admin') {

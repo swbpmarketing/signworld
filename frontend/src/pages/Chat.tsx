@@ -840,6 +840,7 @@ const Chat = () => {
             <div className="relative flex-1">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
+                data-tour="chat-search"
                 type="text"
                 placeholder="Search..."
                 value={searchInput}
@@ -918,7 +919,7 @@ const Chat = () => {
         </div>
 
         {/* Contacts List */}
-        <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div data-tour="chat-conversations" className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {showArchived ? (
             // Archived Contacts List
             loadingArchived ? (
@@ -1571,6 +1572,7 @@ const Chat = () => {
                   accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
                 />
                 <button
+                  data-tour="chat-attach"
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2 rounded-full text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -1580,6 +1582,7 @@ const Chat = () => {
                 </button>
                 <div className="flex-1 relative">
                   <input
+                    data-tour="chat-input"
                     type="text"
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}

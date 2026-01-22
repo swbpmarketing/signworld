@@ -1364,7 +1364,7 @@ const Convention = () => {
 
           {/* Schedule Tab */}
           {activeTab === 'schedule' && (
-            <div className="space-y-6">
+            <div data-tour="convention-schedule" className="space-y-6">
               {displayConvention?.schedule && displayConvention.schedule.length > 0 ? (
                 displayConvention.schedule.map((day: any, dayIdx: number) => (
                   <div key={dayIdx} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
@@ -1682,6 +1682,7 @@ const Convention = () => {
                   )}
 
                   <button
+                    data-tour="convention-register"
                     onClick={handleCompleteRegistration}
                     disabled={registrationLoading}
                     className="w-full py-3 px-6 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1712,6 +1713,7 @@ const Convention = () => {
                         </button>
                         {!hasAddedToCalendar && (
                           <button
+                            data-tour="convention-calendar"
                             onClick={handleAddToCalendar}
                             className="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
                           >

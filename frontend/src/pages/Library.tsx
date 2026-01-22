@@ -116,6 +116,7 @@ const Library = () => {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedFileType, setSelectedFileType] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('-createdAt');
 
   // Folder navigation state
@@ -183,6 +184,33 @@ const Library = () => {
       if (selectedCategory !== 'all') params.append('category', selectedCategory);
       if (currentFolderId) params.append('folderId', currentFolderId);
       if (searchQuery) params.append('search', searchQuery);
+
+      // Convert display file type to regex pattern for backend
+      if (selectedFileType) {
+        let fileTypePattern = '';
+        switch (selectedFileType) {
+          case 'PDFs':
+            fileTypePattern = 'pdf';
+            break;
+          case 'Images':
+            fileTypePattern = 'image';
+            break;
+          case 'Documents':
+            fileTypePattern = 'word|document';
+            break;
+          case 'Spreadsheets':
+            fileTypePattern = 'sheet|excel';
+            break;
+          case 'Other':
+            // Backend handles "Other" specially to exclude common types
+            fileTypePattern = 'Other';
+            break;
+          default:
+            fileTypePattern = selectedFileType;
+        }
+        params.append('fileType', fileTypePattern);
+      }
+
       params.append('sort', sortBy);
       params.append('page', page.toString());
       params.append('limit', ITEMS_PER_PAGE.toString());
@@ -206,7 +234,7 @@ const Library = () => {
       console.error('Error fetching files:', err);
       setError('Failed to connect to server');
     }
-  }, [selectedCategory, searchQuery, sortBy, currentFolderId]);
+  }, [selectedCategory, searchQuery, sortBy, currentFolderId, selectedFileType]);
 
   // Fetch stats
   const fetchStats = async () => {
@@ -1004,6 +1032,7 @@ const Library = () => {
                   New Folder
                 </button>
                 <button
+                  data-tour="upload-file-button"
                   onClick={() => setShowUploadModal(true)}
                   className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
                 >
@@ -1113,20 +1142,39 @@ const Library = () => {
 
       {/* File Type Stats */}
       {fileTypeStats.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {fileTypeStats.map((stat) => (
-            <div key={stat.type} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-shadow duration-200">
-              <div className="flex items-center">
-                <div className={`p-3 rounded-lg ${stat.bg}`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+        <div data-tour="file-type-cards" className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {fileTypeStats.map((stat) => {
+            const isSelected = selectedFileType === stat.type;
+            return (
+              <button
+                key={stat.type}
+                onClick={() => {
+                  if (selectedFileType === stat.type) {
+                    setSelectedFileType(null);
+                    setCurrentPage(1);
+                  } else {
+                    setSelectedFileType(stat.type);
+                    setCurrentPage(1);
+                  }
+                }}
+                className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-6 hover:shadow-md transition-all duration-200 cursor-pointer text-left w-full ${
+                  isSelected
+                    ? 'border-primary-500 ring-2 ring-primary-500 ring-opacity-50'
+                    : 'border-gray-100 dark:border-gray-700'
+                }`}
+              >
+                <div className="flex items-center">
+                  <div className={`p-3 rounded-lg ${stat.bg}`}>
+                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.count}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{stat.type}</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.count}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{stat.type}</p>
-                </div>
-              </div>
-            </div>
-          ))}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -1137,6 +1185,7 @@ const Library = () => {
             <div className="flex-1 min-w-0 relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
               <input
+                data-tour="search-files"
                 type="text"
                 placeholder="Search files..."
                 value={searchInput}
@@ -1259,7 +1308,7 @@ const Library = () => {
                 </div>
               ) : viewMode === 'grid' ? (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div data-tour="file-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {files.map((file) => (
                       <div
                         key={file._id}
@@ -1279,6 +1328,7 @@ const Library = () => {
                           {isAdmin && (
                             <div className="relative">
                               <button
+                                data-tour="file-actions"
                                 onClick={(e) => toggleMenu(e, file._id)}
                                 className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                               >
@@ -1606,7 +1656,7 @@ const Library = () => {
 
               {/* Breadcrumb Navigation */}
               {currentFolderId && breadcrumbs.length > 0 && (
-                <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                <div data-tour="folder-navigation" className="px-6 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
                   <div className="flex items-center gap-2 overflow-x-auto">
                     <button
                       onClick={() => setCurrentFolderId(null)}

@@ -55,7 +55,14 @@ router.get('/', protect, async (req, res) => {
 
     // Filter by file type
     if (fileType) {
-      query.fileType = { $regex: fileType, $options: 'i' };
+      if (fileType === 'Other') {
+        // "Other" means files that don't match common types
+        query.fileType = {
+          $not: { $regex: 'pdf|image|word|document|sheet|excel', $options: 'i' }
+        };
+      } else {
+        query.fileType = { $regex: fileType, $options: 'i' };
+      }
     }
 
     // Filter by tags

@@ -312,6 +312,7 @@ const MapSearch = () => {
                 <div className="flex-1 relative">
                   <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-gray-400 dark:text-gray-500" />
                   <input
+                    data-tour="map-search"
                     type="text"
                     placeholder="Search by city, state, or ZIP code..."
                     value={searchInput}
@@ -364,7 +365,7 @@ const MapSearch = () => {
           </form>
 
           {/* Service Filters */}
-          <div className="pt-6 sm:pt-8 border-t border-gray-200/50 dark:border-gray-700/50">
+          <div data-tour="map-filters" className="pt-6 sm:pt-8 border-t border-gray-200/50 dark:border-gray-700/50">
             <div className="flex items-center justify-center gap-2 mb-4 sm:mb-5">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent"></div>
               <div className="flex items-center justify-between gap-3 px-4 py-1.5 rounded-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
@@ -444,7 +445,7 @@ const MapSearch = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Map Container */}
           <div className={`${mapExpanded ? 'lg:col-span-3' : 'lg:col-span-2'} relative`}>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div data-tour="map-view" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
               <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Map View</h3>
                 <div className="flex items-center gap-2">
@@ -509,7 +510,7 @@ const MapSearch = () => {
                     {userLocation ? 'Nearby Locations' : 'All Locations'}
                   </h3>
                 </div>
-                <div className="max-h-[600px] overflow-y-auto">
+                <div data-tour="map-results" className="max-h-[600px] overflow-y-auto">
                   {searchedLocations.map((location) => (
                     <div
                       key={location.id}

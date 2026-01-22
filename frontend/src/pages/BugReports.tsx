@@ -19,6 +19,10 @@ import {
   ArrowPathIcon,
   ArrowUpTrayIcon,
   SparklesIcon,
+  PencilIcon,
+  TrashIcon,
+  EllipsisVerticalIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 
 interface BugReport {
@@ -134,16 +138,23 @@ const BugReports = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [showMyReportsOnly, setShowMyReportsOnly] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<BugReport | null>(null);
+  const [editingReport, setEditingReport] = useState<BugReport | null>(null);
   const [newReport, setNewReport] = useState<NewReportForm>(initialFormState);
+  const [editReport, setEditReport] = useState<NewReportForm>(initialFormState);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [lightboxAttachments, setLightboxAttachments] = useState<{ url: string; mimetype: string; filename: string }[]>([]);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
 
   // Fetch bug reports
   const { data: reportsData, isLoading } = useQuery({
@@ -171,6 +182,41 @@ const BugReports = () => {
     },
     onError: () => {
       toast.error('Failed to submit feedback');
+    },
+  });
+
+  // Update report mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<NewReportForm> }) => {
+      const response = await api.put(`/bug-reports/${id}`, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bugReports'] });
+      setShowEditModal(false);
+      setEditingReport(null);
+      setEditReport(initialFormState);
+      toast.success('Report updated successfully!');
+    },
+    onError: () => {
+      toast.error('Failed to update report');
+    },
+  });
+
+  // Delete report mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.delete(`/bug-reports/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bugReports'] });
+      setShowDetailModal(false);
+      setSelectedReport(null);
+      toast.success('Report deleted successfully!');
+    },
+    onError: () => {
+      toast.error('Failed to delete report');
     },
   });
 
@@ -246,8 +292,14 @@ const BugReports = () => {
     },
   });
 
-  // Filter reports by search query
+  // Filter reports by search query and user filter
   const filteredReports = reportsData?.filter(report => {
+    // Filter by current user if "My Reports" is enabled
+    if (showMyReportsOnly && user && report.author._id !== user._id) {
+      return false;
+    }
+
+    // Filter by search query
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -363,12 +415,63 @@ const BugReports = () => {
   const openDetailModal = (report: BugReport) => {
     setSelectedReport(report);
     setShowDetailModal(true);
+    setShowActionsMenu(false);
   };
 
   const closeCreateModal = () => {
     setShowCreateModal(false);
     setNewReport(initialFormState);
     setAttachments([]);
+  };
+
+  const openEditModal = (report: BugReport) => {
+    setEditingReport(report);
+    setEditReport({
+      title: report.title,
+      description: report.description,
+      stepsToReproduce: report.stepsToReproduce || '',
+      expectedBehavior: report.expectedBehavior || '',
+      actualBehavior: report.actualBehavior || '',
+      type: report.type,
+      priority: report.priority,
+    });
+    setShowEditModal(true);
+    setShowDetailModal(false);
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditingReport(null);
+    setEditReport(initialFormState);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingReport) return;
+    if (!editReport.title.trim() || !editReport.description.trim()) {
+      toast.error('Please fill in title and description');
+      return;
+    }
+
+    updateMutation.mutate({ id: editingReport._id, data: editReport });
+  };
+
+  const handleDelete = (reportId: string) => {
+    setReportToDelete(reportId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (reportToDelete) {
+      deleteMutation.mutate(reportToDelete);
+      setShowDeleteModal(false);
+      setReportToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setReportToDelete(null);
   };
 
   const formatDate = (dateString: string) => {
@@ -439,9 +542,44 @@ const BugReports = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lightboxOpen, navigateLightbox]);
 
+  // Close actions menu when clicking outside
+  useEffect(() => {
+    if (!showActionsMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.actions-menu')) {
+        setShowActionsMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showActionsMenu]);
+
+  // Keyboard navigation for delete modal
+  useEffect(() => {
+    if (!showDeleteModal || !reportToDelete) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowDeleteModal(false);
+        setReportToDelete(null);
+      } else if (e.key === 'Enter' && !deleteMutation.isPending) {
+        deleteMutation.mutate(reportToDelete);
+        setShowDeleteModal(false);
+        setReportToDelete(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showDeleteModal, reportToDelete, deleteMutation]);
+
   // Kanban Card Component
   const KanbanCard = ({ report }: { report: BugReport }) => (
     <div
+      data-tour="bug-card"
       className="bg-white dark:bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
       onClick={() => openDetailModal(report)}
     >
@@ -517,7 +655,7 @@ const BugReports = () => {
     const StatusIcon = config.icon;
 
     return (
-      <div className={`flex-1 min-w-[280px] bg-gray-100 dark:bg-gray-900/50 rounded-xl border-t-4 ${config.color}`}>
+      <div data-tour="bug-status-columns" className={`flex-1 min-w-[280px] bg-gray-100 dark:bg-gray-900/50 rounded-xl border-t-4 ${config.color}`}>
         {/* Column Header */}
         <div className={`px-4 py-3 ${config.headerBg} rounded-t-lg border-b border-gray-200 dark:border-gray-700`}>
           <div className="flex items-center justify-between">
@@ -538,7 +676,7 @@ const BugReports = () => {
         </div>
 
         {/* Column Content */}
-        <div className="p-3 space-y-3 max-h-[calc(100vh-320px)] overflow-y-auto">
+        <div className="p-3 space-y-3 max-h-[calc(100vh-320px)] overflow-y-auto scrollbar-hide">
           {reports.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p className="text-sm">No items</p>
@@ -572,6 +710,7 @@ const BugReports = () => {
         </div>
 
         <button
+          data-tour="report-bug-button"
           onClick={() => setShowCreateModal(true)}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium"
         >
@@ -580,16 +719,30 @@ const BugReports = () => {
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative max-w-md">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search by #, title, or description..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        />
+      {/* Search Bar and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div data-tour="bug-filters" className="relative flex-1 max-w-md">
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by #, title, or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+        <button
+          data-tour="my-reports"
+          onClick={() => setShowMyReportsOnly(!showMyReportsOnly)}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
+            showMyReportsOnly
+              ? 'bg-primary-600 text-white hover:bg-primary-700'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
+        >
+          <UserCircleIcon className="h-5 w-5" />
+          My Reports
+        </button>
       </div>
 
       {/* Kanban Board */}
@@ -598,7 +751,7 @@ const BugReports = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-primary-600"></div>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
           <KanbanColumn status="pending" reports={reportsByStatus.pending} />
           <KanbanColumn status="in_progress" reports={reportsByStatus.in_progress} />
           <KanbanColumn status="rejected" reports={reportsByStatus.rejected} />
@@ -848,6 +1001,234 @@ const BugReports = () => {
         </div>
       )}
 
+      {/* Edit Modal */}
+      {showEditModal && editingReport && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60" onClick={closeEditModal} />
+            <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700 z-10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Report</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Update your bug report or feature request
+                    </p>
+                  </div>
+                  <button
+                    onClick={closeEditModal}
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    <XMarkIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handleEditSubmit} className="p-6 space-y-5">
+                {/* Type Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Type
+                  </label>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditReport({ ...editReport, type: 'bug' })}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+                        editReport.type === 'bug'
+                          ? 'bg-red-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      <BugAntIcon className="h-5 w-5" />
+                      Bug Report
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditReport({ ...editReport, type: 'feature' })}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+                        editReport.type === 'feature'
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      <LightBulbIcon className="h-5 w-5" />
+                      Feature Request
+                    </button>
+                  </div>
+                </div>
+
+                {/* Priority Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Priority
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(['low', 'medium', 'high', 'critical'] as const).map((priority) => (
+                      <button
+                        key={priority}
+                        type="button"
+                        onClick={() => setEditReport({ ...editReport, priority })}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          editReport.priority === priority
+                            ? priorityConfig[priority].color
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {priorityConfig[priority].label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editReport.title}
+                    onChange={(e) => setEditReport({ ...editReport, title: e.target.value })}
+                    placeholder="Brief description of the bug"
+                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    required
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={editReport.description}
+                    onChange={(e) => setEditReport({ ...editReport, description: e.target.value })}
+                    placeholder="Describe what happened..."
+                    rows={3}
+                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                    required
+                  />
+                </div>
+
+                {/* Steps to Reproduce - only show for bugs */}
+                {editReport.type === 'bug' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Steps to Reproduce
+                    </label>
+                    <textarea
+                      value={editReport.stepsToReproduce}
+                      onChange={(e) => setEditReport({ ...editReport, stepsToReproduce: e.target.value })}
+                      placeholder="1. Go to... 2. Click on... 3. See error"
+                      rows={3}
+                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                    />
+                    <p className="text-xs text-gray-500 mt-1.5">Help us reproduce the issue</p>
+                  </div>
+                )}
+
+                {/* Expected & Actual Behavior - only show for bugs */}
+                {editReport.type === 'bug' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Expected Behavior
+                      </label>
+                      <input
+                        type="text"
+                        value={editReport.expectedBehavior}
+                        onChange={(e) => setEditReport({ ...editReport, expectedBehavior: e.target.value })}
+                        placeholder="What should happen?"
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Actual Behavior
+                      </label>
+                      <input
+                        type="text"
+                        value={editReport.actualBehavior}
+                        onChange={(e) => setEditReport({ ...editReport, actualBehavior: e.target.value })}
+                        placeholder="What actually happened?"
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={closeEditModal}
+                    className="px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updateMutation.isPending}
+                    className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                  >
+                    {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[60] overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/70" onClick={cancelDelete} />
+            <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full">
+              {/* Modal Content */}
+              <div className="p-6">
+                {/* Icon */}
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+
+                {/* Title and Message */}
+                <div className="mt-4 text-center">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Delete Report
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    Are you sure you want to delete this report? This action cannot be undone.
+                  </p>
+                </div>
+
+                {/* Buttons */}
+                <div className="mt-6 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={cancelDelete}
+                    className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmDelete}
+                    disabled={deleteMutation.isPending}
+                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Lightbox Modal */}
       {lightboxOpen && lightboxAttachments.length > 0 && (
         <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center">
@@ -956,7 +1337,10 @@ const BugReports = () => {
       {showDetailModal && selectedReport && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/60" onClick={() => setShowDetailModal(false)} />
+            <div className="fixed inset-0 bg-black/60" onClick={() => {
+              setShowDetailModal(false);
+              setShowActionsMenu(false);
+            }} />
             <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="sticky top-0 bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700 z-10">
@@ -974,12 +1358,52 @@ const BugReports = () => {
                       {statusConfig[selectedReport.status].label}
                     </span>
                   </div>
-                  <button
-                    onClick={() => setShowDetailModal(false)}
-                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  >
-                    <XMarkIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* Edit/Delete Menu - Only show to author or admin */}
+                    {(isAdmin || selectedReport.author._id === user?.id) && (
+                      <div className="relative actions-menu">
+                        <button
+                          onClick={() => setShowActionsMenu(!showActionsMenu)}
+                          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        >
+                          <EllipsisVerticalIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+                        </button>
+                        {showActionsMenu && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 py-1 z-20">
+                            <button
+                              onClick={() => {
+                                setShowActionsMenu(false);
+                                openEditModal(selectedReport);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                            >
+                              <PencilIcon className="h-4 w-4" />
+                              Edit Report
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowActionsMenu(false);
+                                handleDelete(selectedReport._id);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                              Delete Report
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => {
+                        setShowDetailModal(false);
+                        setShowActionsMenu(false);
+                      }}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    >
+                      <XMarkIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+                    </button>
+                  </div>
                 </div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mt-3">
                   {selectedReport.title}

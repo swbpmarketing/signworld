@@ -422,13 +422,14 @@ const Calendar = () => {
               className="order-last sm:order-first w-full sm:w-auto"
             />
             <button
+              data-tour="add-event-button"
               onClick={() => setShowAddModal(true)}
               className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 active:from-primary-800 active:to-primary-900 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg text-sm font-medium"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
               Add Event
             </button>
-            <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-sm">
+            <div data-tour="calendar-view-switcher" className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-sm">
               <button
                 onClick={() => setViewMode('month')}
                 className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-200 ${
@@ -516,7 +517,7 @@ const Calendar = () => {
             </div>
 
             {/* Calendar Grid */}
-            <div className={`grid gap-px bg-gray-200 dark:bg-gray-700 rounded-lg sm:rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 shadow-inner ${
+            <div data-tour="calendar-grid" className={`grid gap-px bg-gray-200 dark:bg-gray-700 rounded-lg sm:rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 shadow-inner ${
               viewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7'
             }`}>
               {/* Week days / Day header */}
@@ -677,7 +678,7 @@ const Calendar = () => {
           </div>
 
           {/* Event Types Filter */}
-          <div className="bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
+          <div data-tour="event-filters" className="bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-5">
               <FunnelIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Event Types</h3>
