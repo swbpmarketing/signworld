@@ -30,8 +30,19 @@ router.get('/stats', async (req, res) => {
 // @route   GET /api/partners/categories
 router.get('/categories', async (req, res) => {
   try {
+    const { preferred } = req.query;
+    let matchQuery = { isActive: true };
+
+    // Filter by vendorId existence based on preferred flag
+    if (preferred === 'true') {
+      matchQuery.vendorId = { $exists: false }; // Preferred partners (no account)
+    } else if (preferred === 'false') {
+      matchQuery.vendorId = { $exists: true }; // Vendors with accounts
+    }
+    // If preferred is not specified, show all partners
+
     const categories = await Partner.aggregate([
-      { $match: { isActive: true } },
+      { $match: matchQuery },
       { $group: { _id: '$category', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
@@ -46,11 +57,19 @@ router.get('/categories', async (req, res) => {
 // @route   GET /api/partners
 router.get('/', async (req, res) => {
   try {
-    const { category, country, featured, search, sort = 'featured', page = 1, limit = 20 } = req.query;
+    const { category, country, featured, preferred, search, sort = 'featured', page = 1, limit = 20 } = req.query;
     let query = { isActive: true };
     if (category && category !== 'All Partners') query.category = category;
     if (country && country !== 'all') query.country = country;
     if (featured === 'true') query.isFeatured = true;
+
+    // Filter by vendorId existence based on preferred flag
+    if (preferred === 'true') {
+      query.vendorId = { $exists: false }; // Preferred partners (no account)
+    } else if (preferred === 'false') {
+      query.vendorId = { $exists: true }; // Vendors with accounts
+    }
+
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },

@@ -468,6 +468,7 @@ const FAQs = () => {
                 </button>
               )}
               <button
+                data-tour="contact-support"
                 onClick={() => navigate('/chat?support=true')}
                 className="inline-flex items-center px-4 py-2 bg-white/20 text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200 border border-white/30"
               >
@@ -504,6 +505,7 @@ const FAQs = () => {
               <div className="relative flex-1">
                 <MagnifyingGlassIcon className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-gray-400 dark:text-gray-500 group-focus-within:text-primary-500 transition-colors duration-200 z-10" />
                 <input
+                  data-tour="faq-search"
                   ref={searchInputRef}
                   type="text"
                   placeholder="Search for answers..."
@@ -714,7 +716,7 @@ const FAQs = () => {
 
         {/* Categories Sidebar - Desktop Only */}
         <div className="hidden lg:block lg:col-span-1">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 sticky top-20">
+          <div data-tour="faq-categories" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 sticky top-20">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
               <nav className="space-y-2">
@@ -766,7 +768,7 @@ const FAQs = () => {
               ))}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div data-tour="faq-list" className="space-y-4">
               {faqs.map((faq: FAQ) => (
                 <div
                   key={faq._id}

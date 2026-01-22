@@ -1627,6 +1627,7 @@ const Equipment = () => {
             <div className="flex-1 relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
               <input
+                data-tour="equipment-search"
                 type="text"
                 placeholder="Search equipment by name, brand, or model..."
                 value={searchInput}
@@ -1839,7 +1840,7 @@ const Equipment = () => {
         </div>
 
         {/* Sidebar - Desktop Only */}
-        <div className="hidden lg:block lg:col-span-1 space-y-6">
+        <div data-tour="equipment-filters" className="hidden lg:block lg:col-span-1 space-y-6">
           {/* Categories */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="p-6">
@@ -2002,7 +2003,7 @@ const Equipment = () => {
 
           {/* Grid View */}
           {!equipmentLoading && equipmentList.length > 0 && viewMode === 'grid' && (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+            <div data-tour="equipment-grid" className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
               {equipmentList.map((item: EquipmentType) => (
                 <div
                   key={item._id}

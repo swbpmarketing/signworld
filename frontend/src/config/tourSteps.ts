@@ -1,44 +1,54 @@
 import type { Step } from 'react-joyride';
 
 /**
- * Comprehensive product tour steps covering all main features
- * Each category includes a sidebar step and a content area step
+ * Detailed product tour steps covering all main features
+ * Each page includes specific interactive elements and their functions
  */
 export const tourSteps: Step[] = [
   // Welcome
   {
     target: 'body',
-    content: 'Welcome to the Sign Company Dashboard! Let\'s take a quick tour of all the main features available to you.',
+    content: 'Welcome to the Sign Company Dashboard! Let\'s take a detailed tour of all features and how to use them.',
     placement: 'center',
     disableBeacon: true,
   },
 
-  // Top bar features (moved here so they're shown early)
+  // Top bar features (shown early for context)
   {
     target: '[data-tour="search-button"]',
-    content: 'Use the Search feature (or press Ctrl+K) to quickly find anything across the platform.',
+    content: 'Use the Global Search (Ctrl+K) to quickly find users, files, posts, or any content across the platform.',
     placement: 'bottom',
   },
   {
     target: '[data-tour="notifications-button"]',
-    content: 'Check your Notifications here for updates, messages, and important alerts.',
+    content: 'Get real-time Notifications for mentions, comments, messages, and system updates.',
     placement: 'bottom',
   },
   {
     target: '[data-tour="user-menu"]',
-    content: 'Access your Profile, Settings, and other account options from this menu.',
+    content: 'Access your Profile, Settings, Accessibility options, and sign out from here.',
     placement: 'bottom',
   },
 
-  // Dashboard
+  // ============ DASHBOARD ============
   {
     target: '[data-tour="nav-dashboard"]',
-    content: 'Start here at the Dashboard to see an overview of your key metrics and recent activity.',
+    content: 'The Dashboard is your home base - see key metrics and recent activity at a glance.',
     placement: 'right',
   },
   {
-    target: '[data-tour="dashboard-content"]',
-    content: 'The Dashboard displays important statistics, charts, and quick access to your most-used features.',
+    target: '[data-tour="dashboard-stats-cards"]',
+    content: 'These cards show important metrics like total users, active sessions, and system health.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="dashboard-charts"]',
+    content: 'Interactive charts help visualize trends in user activity, growth, and engagement over time.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="dashboard-recent-activity"]',
+    content: 'Stay updated with the latest activity - new users, posts, and system events appear here.',
     placement: 'bottom',
   },
 
@@ -57,205 +67,500 @@ export const tourSteps: Step[] = [
   // User Management (Admin only)
   {
     target: '[data-tour="nav-user-management"]',
-    content: 'Manage all users in the system, including owners and vendors.',
+    content: 'User Management lets you control who has access to the system and what they can do.',
     placement: 'right',
   },
   {
-    target: '[data-tour="user-management-content"]',
-    content: 'Add, edit, or remove users, assign roles, and manage permissions from here.',
+    target: '[data-tour="create-user-button"]',
+    content: 'Click here to add new users to your system. You can create owners, vendors, or other admins.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="user-search"]',
+    content: 'Search for users by name, email, or role to quickly find who you\'re looking for.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="user-filters"]',
+    content: 'Filter users by role (Owner, Vendor, Admin) or account status to organize your view.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="user-table"]',
+    content: 'This table shows all users with their details. Click on any user to view or edit their information.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="user-actions"]',
+    content: 'Use these action buttons to edit user details, change roles, suspend accounts, or delete users.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="bulk-actions"]',
+    content: 'Select multiple users to perform bulk operations like role changes or account status updates.',
     placement: 'bottom',
   },
 
   // Calendar
   {
     target: '[data-tour="nav-calendar"]',
-    content: 'Keep track of important dates, events, and deadlines in the Calendar.',
+    content: 'The Calendar helps you stay organized with events, deadlines, and important dates.',
     placement: 'right',
   },
   {
-    target: '[data-tour="calendar-content"]',
-    content: 'View all upcoming events, add new ones, and manage your schedule efficiently.',
+    target: '[data-tour="add-event-button"]',
+    content: 'Click here to create a new calendar event. Add details like date, time, and attendees.',
     placement: 'bottom',
+  },
+  {
+    target: '[data-tour="calendar-view-switcher"]',
+    content: 'Switch between Month, Week, Day, and Agenda views to see your schedule the way you prefer.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="calendar-grid"]',
+    content: 'Click on any date to quickly add an event, or click an existing event to view or edit its details.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="event-filters"]',
+    content: 'Filter events by category or attendees to focus on what matters most to you.',
+    placement: 'left',
   },
 
   // Convention
   {
     target: '[data-tour="nav-convention"]',
-    content: 'Find information about industry conventions and networking opportunities.',
+    content: 'Discover industry conventions, trade shows, and networking events.',
     placement: 'right',
   },
   {
-    target: '[data-tour="convention-content"]',
-    content: 'Browse upcoming conventions, register for events, and connect with other industry professionals.',
+    target: '[data-tour="convention-list"]',
+    content: 'Browse all upcoming conventions with dates, locations, and registration details.',
     placement: 'bottom',
+  },
+  {
+    target: '[data-tour="register-button"]',
+    content: 'Click here to register for a convention and secure your spot.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="convention-filters"]',
+    content: 'Filter conventions by date, location, or type to find events that interest you.',
+    placement: 'left',
   },
 
   // Success Stories (Brags)
   {
     target: '[data-tour="nav-brags"]',
-    content: 'Share and celebrate Success Stories from the community.',
+    content: 'Success Stories is where you share wins and celebrate achievements with the community.',
     placement: 'right',
   },
   {
-    target: '[data-tour="brags-content"]',
-    content: 'Post your achievements, view others\' success stories, and get inspired by the community.',
+    target: '[data-tour="create-brag-button"]',
+    content: 'Click here to share your success story. Add photos, details, and inspire others!',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="category-filters"]',
+    content: 'Filter stories by category like Sales, Growth, Marketing, or Innovation to find relevant content.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="brag-cards"]',
+    content: 'Each card shows a success story. Click to read the full details and engage with reactions.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="like-comment-actions"]',
+    content: 'Like stories you love and leave comments to congratulate or ask questions.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="share-brag"]',
+    content: 'Share inspiring stories with your network or save them for later reference.',
     placement: 'bottom',
   },
 
   // Forum
   {
     target: '[data-tour="nav-forum"]',
-    content: 'Engage with the community through discussions in the Forum.',
+    content: 'The Forum is where you ask questions, share knowledge, and discuss industry topics.',
     placement: 'right',
   },
   {
-    target: '[data-tour="forum-content"]',
-    content: 'Start new threads, participate in discussions, and get answers from experienced members.',
+    target: '[data-tour="create-thread-button"]',
+    content: 'Start a new discussion thread. Ask questions or share insights with the community.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="trending-tags"]',
+    content: 'See what topics are trending. Click a tag to filter discussions by that topic.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="thread-list"]',
+    content: 'Browse all discussion threads. Click any thread to read and join the conversation.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="reply-button"]',
+    content: 'Reply to threads to share your thoughts, answer questions, or provide helpful feedback.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="pin-lock-thread"]',
+    content: 'Moderators can pin important threads or lock discussions that are resolved or off-topic.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="search-threads"]',
+    content: 'Search for specific topics or keywords to find relevant discussions quickly.',
     placement: 'bottom',
   },
 
   // Chat
   {
     target: '[data-tour="nav-chat"]',
-    content: 'Connect instantly with other members through real-time Chat.',
+    content: 'Chat lets you message other members in real-time for quick collaboration.',
     placement: 'right',
   },
   {
-    target: '[data-tour="chat-content"]',
-    content: 'Send direct messages, create group chats, and collaborate with your network.',
+    target: '[data-tour="new-chat-button"]',
+    content: 'Start a new conversation. Search for members and send them a direct message.',
     placement: 'bottom',
+  },
+  {
+    target: '[data-tour="chat-list"]',
+    content: 'All your conversations appear here. Click one to view and continue the discussion.',
+    placement: 'right',
+  },
+  {
+    target: '[data-tour="message-input"]',
+    content: 'Type your message here. You can also attach files, images, or emoji reactions.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="chat-search"]',
+    content: 'Search within conversations to find specific messages or shared files.',
+    placement: 'left',
   },
 
   // Library
   {
     target: '[data-tour="nav-library"]',
-    content: 'Access the Library for valuable resources and documents.',
+    content: 'The Library stores all shared files, documents, templates, and resources.',
     placement: 'right',
   },
   {
-    target: '[data-tour="library-content"]',
-    content: 'Browse files, templates, guides, and other shared resources from the community.',
+    target: '[data-tour="upload-file-button"]',
+    content: 'Upload files to share with the community. Add descriptions and organize into folders.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="file-type-cards"]',
+    content: 'Filter files by type (PDFs, Images, Documents, Spreadsheets) for easier browsing.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="folder-navigation"]',
+    content: 'Navigate through folders to organize and find files more efficiently.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="file-grid"]',
+    content: 'All files are displayed here. Click any file to preview, download, or share it.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="file-actions"]',
+    content: 'Use these options to download, share, rename, move, or delete files.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="search-files"]',
+    content: 'Search for files by name, type, or uploader to quickly find what you need.',
     placement: 'bottom',
   },
 
   // Owners Roster
   {
     target: '[data-tour="nav-owners"]',
-    content: 'Browse the Owners Roster to connect with other sign company owners.',
+    content: 'The Owners Roster helps you connect with other sign company owners nationwide.',
     placement: 'right',
   },
   {
-    target: '[data-tour="owners-content"]',
-    content: 'Search for owners by location, view profiles, and expand your professional network.',
+    target: '[data-tour="owner-search"]',
+    content: 'Search for owners by name, company, location, or specialty to find the right connections.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="owner-filters"]',
+    content: 'Filter by state, city, or business size to narrow down your search results.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="owner-cards"]',
+    content: 'Each card shows an owner\'s profile. Click to view full details and contact information.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="contact-owner"]',
+    content: 'Send a message, view their location, or connect via phone or email.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="export-owners"]',
+    content: 'Export the roster to CSV for your records or offline reference.',
     placement: 'bottom',
   },
 
   // Map Search
   {
     target: '[data-tour="nav-map"]',
-    content: 'Use Map Search to find owners and vendors by geographic location.',
+    content: 'Map Search displays owners and vendors geographically for easy location-based discovery.',
     placement: 'right',
   },
   {
-    target: '[data-tour="map-content"]',
-    content: 'Explore the interactive map to discover nearby businesses and potential partners.',
+    target: '[data-tour="map-canvas"]',
+    content: 'The interactive map shows all members. Click any marker to view their details.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="map-search-input"]',
+    content: 'Search for a specific location or address to jump to that area on the map.',
     placement: 'bottom',
+  },
+  {
+    target: '[data-tour="map-filters"]',
+    content: 'Filter by member type (Owners, Vendors) or specialty to refine what you see on the map.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="map-markers"]',
+    content: 'Each marker represents a business. Click to see contact info and send messages.',
+    placement: 'top',
   },
 
   // Partners
   {
     target: '[data-tour="nav-partners"]',
-    content: 'View our trusted Partners who offer special benefits to members.',
+    content: 'Partners offers exclusive deals and discounts from trusted industry vendors.',
     placement: 'right',
   },
   {
-    target: '[data-tour="partners-content"]',
-    content: 'Discover partner offers, discounts, and exclusive deals available to you.',
+    target: '[data-tour="partner-categories"]',
+    content: 'Browse partners by category like Suppliers, Software, Insurance, or Marketing.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="partner-cards"]',
+    content: 'Each card shows a partner with their offers. Click to learn more about benefits.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="claim-offer"]',
+    content: 'Click here to claim a partner offer or get the discount code for members.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="partner-ratings"]',
+    content: 'See ratings and reviews from other members to make informed decisions.',
     placement: 'bottom',
   },
 
   // Videos
   {
     target: '[data-tour="nav-videos"]',
-    content: 'Access training Videos and educational content.',
+    content: 'Videos provides training content, webinars, and industry insights to help you learn.',
     placement: 'right',
   },
   {
-    target: '[data-tour="videos-content"]',
-    content: 'Watch tutorials, webinars, and industry insights to grow your business.',
+    target: '[data-tour="upload-video-button"]',
+    content: 'Upload your own training videos or tutorials to share knowledge with the community.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="video-categories"]',
+    content: 'Filter videos by category like Training, Marketing, Operations, or Technology.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="video-grid"]',
+    content: 'Browse all videos with thumbnails and descriptions. Click any video to watch.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="video-playlists"]',
+    content: 'Create playlists to organize videos by topic for easier access and learning paths.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="video-reactions"]',
+    content: 'Like videos and leave comments to engage with content creators.',
     placement: 'bottom',
   },
 
   // Equipment
   {
     target: '[data-tour="nav-equipment"]',
-    content: 'Browse Equipment listings to buy or sell sign-making tools and machinery.',
+    content: 'Equipment is a marketplace for buying and selling sign-making tools and machinery.',
     placement: 'right',
   },
   {
-    target: '[data-tour="equipment-content"]',
-    content: 'Search for equipment by category, compare prices, and connect with sellers.',
+    target: '[data-tour="equipment-search"]',
+    content: 'Search for specific equipment by name, type, brand, or condition.',
     placement: 'bottom',
+  },
+  {
+    target: '[data-tour="equipment-filters"]',
+    content: 'Filter by category, price range, location, or condition to find what you need.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="equipment-listings"]',
+    content: 'Browse all available equipment. Click any listing to view full details and photos.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="inquire-button"]',
+    content: 'Send an inquiry to the seller to ask questions or make an offer.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="save-listing"]',
+    content: 'Save listings to your favorites to review later or compare options.',
+    placement: 'left',
   },
 
   // Vendor-specific: My Listings
   {
     target: '[data-tour="nav-vendor-equipment"]',
-    content: 'Vendors: Manage your Equipment Listings here.',
+    content: 'Vendors: This is where you manage all your equipment listings.',
     placement: 'right',
   },
   {
-    target: '[data-tour="vendor-equipment-content"]',
-    content: 'Add new equipment for sale, edit existing listings, and track your inventory.',
+    target: '[data-tour="add-listing-button"]',
+    content: 'Add a new equipment listing with photos, description, price, and specifications.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="vendor-listings-table"]',
+    content: 'View all your active listings. Track views, inquiries, and listing performance.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="edit-listing"]',
+    content: 'Edit listing details, update pricing, or mark items as sold.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="listing-analytics"]',
+    content: 'See how many views and inquiries each listing has received.',
     placement: 'bottom',
   },
 
   // Vendor-specific: My Inquiries
   {
     target: '[data-tour="nav-vendor-inquiries"]',
-    content: 'Vendors: View and respond to customer Inquiries about your equipment.',
+    content: 'Vendors: Manage all customer inquiries about your equipment here.',
     placement: 'right',
   },
   {
-    target: '[data-tour="vendor-inquiries-content"]',
-    content: 'Manage all inquiries, respond to potential buyers, and close deals.',
+    target: '[data-tour="inquiry-list"]',
+    content: 'All inquiries from potential buyers are listed here with their contact details.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="reply-inquiry"]',
+    content: 'Reply to inquiries directly or mark them as contacted to stay organized.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="inquiry-filters"]',
+    content: 'Filter by status (New, Contacted, Closed) to manage your sales pipeline.',
     placement: 'bottom',
   },
 
   // Vendor-specific: Business Profile
   {
     target: '[data-tour="nav-vendor-profile"]',
-    content: 'Vendors: Update your Business Profile to showcase your company.',
+    content: 'Vendors: Your Business Profile showcases your company to potential buyers.',
     placement: 'right',
   },
   {
-    target: '[data-tour="vendor-profile-content"]',
-    content: 'Edit your company information, upload photos, and highlight what makes you unique.',
+    target: '[data-tour="edit-profile-button"]',
+    content: 'Update your company information, logo, and business description.',
     placement: 'bottom',
+  },
+  {
+    target: '[data-tour="profile-sections"]',
+    content: 'Add details like services offered, specialties, certifications, and contact info.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="profile-photos"]',
+    content: 'Upload photos of your products, facility, or team to build credibility.',
+    placement: 'left',
   },
 
   // FAQs
   {
     target: '[data-tour="nav-faqs"]',
-    content: 'Find answers to common questions in the FAQs section.',
+    content: 'FAQs provides answers to common questions and helpful resources.',
     placement: 'right',
   },
   {
-    target: '[data-tour="faqs-content"]',
-    content: 'Search the knowledge base for help with features, billing, and general questions.',
+    target: '[data-tour="faq-search"]',
+    content: 'Search the knowledge base for specific topics or keywords to find quick answers.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="faq-categories"]',
+    content: 'Browse FAQs by category like Account, Billing, Features, or Technical Support.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="faq-list"]',
+    content: 'Click any question to expand and read the full answer with helpful details.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="contact-support"]',
+    content: 'Can\'t find your answer? Contact support directly for personalized help.',
     placement: 'bottom',
   },
 
   // Bug Reports
   {
     target: '[data-tour="nav-bug-reports"]',
-    content: 'Report any issues or bugs you encounter here.',
+    content: 'Bug Reports lets you report issues and track fixes to improve the platform.',
     placement: 'right',
   },
   {
-    target: '[data-tour="bug-reports-content"]',
-    content: 'Submit bug reports, track their status, and help us improve the platform.',
+    target: '[data-tour="report-bug-button"]',
+    content: 'Click here to submit a new bug report. Include details, screenshots, and steps to reproduce.',
     placement: 'bottom',
+  },
+  {
+    target: '[data-tour="bug-status-columns"]',
+    content: 'Reports are organized by status: Pending, In Progress, Resolved, or Closed.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="bug-card"]',
+    content: 'Click any bug report to view details, add comments, or track progress.',
+    placement: 'left',
+  },
+  {
+    target: '[data-tour="bug-filters"]',
+    content: 'Filter by priority, category, or status to find specific reports.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="my-reports"]',
+    content: 'View all your submitted reports and their current status.',
+    placement: 'right',
   },
 
   // Final step

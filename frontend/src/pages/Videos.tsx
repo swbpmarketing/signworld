@@ -198,13 +198,27 @@ const Videos = () => {
   // Fetch videos
   const { data: videosData, isLoading: videosLoading } = useQuery({
     queryKey: ['videos', selectedCategory, searchQuery, sortBy, currentPage, itemsPerPage],
-    queryFn: () => getVideos({
-      category: categoryMapping[selectedCategory] || 'all',
-      search: searchQuery,
-      sort: sortBy,
-      page: currentPage,
-      limit: itemsPerPage,
-    }),
+    queryFn: () => {
+      // Find the backend key for the selected category
+      let categoryKey = 'all';
+      if (selectedCategory !== 'All Videos') {
+        // Check if it's in the old mapping first
+        if (categoryMapping[selectedCategory]) {
+          categoryKey = categoryMapping[selectedCategory];
+        } else {
+          // Otherwise, convert UI name to backend format (lowercase with hyphens)
+          categoryKey = selectedCategory.toLowerCase().replace(/\s+/g, '-');
+        }
+      }
+
+      return getVideos({
+        category: categoryKey,
+        search: searchQuery,
+        sort: sortBy,
+        page: currentPage,
+        limit: itemsPerPage,
+      });
+    },
   });
 
   // Fetch stats
@@ -607,6 +621,7 @@ const Videos = () => {
             <div className="flex-1 relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
               <input
+                data-tour="video-search"
                 type="text"
                 placeholder="Search videos by title, topic, or instructor..."
                 value={searchInput}
@@ -767,7 +782,7 @@ const Videos = () => {
         {/* Sidebar - Desktop Only */}
         <div className="hidden lg:block lg:col-span-1 space-y-6">
           {/* Categories */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div data-tour="video-categories" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
               <nav className="space-y-2">
@@ -968,7 +983,7 @@ const Videos = () => {
           {/* Video Grid */}
           {!videosLoading && videos.length > 0 && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div data-tour="video-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
                 {videos.map((video) => (
                   <div
                     key={video._id}

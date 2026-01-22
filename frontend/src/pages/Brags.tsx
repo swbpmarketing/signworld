@@ -835,6 +835,7 @@ const Brags = () => {
                 </button>
               )}
               <button
+                data-tour="create-brag-button"
                 className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
                 onClick={() => setShowCreateModal(true)}
               >
@@ -981,7 +982,7 @@ const Brags = () => {
 
         {/* Categories Sidebar - Desktop Only */}
         <div className="hidden lg:block lg:col-span-1">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 sticky top-20">
+          <div data-tour="category-filters" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 sticky top-20">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Categories</h3>
             <nav className="space-y-2">
               {categories.map((category) => (
@@ -1133,6 +1134,7 @@ const Brags = () => {
               {stories.map((story) => (
                 <article
                   key={story._id}
+                  data-tour="brag-cards"
                   className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
                   onClick={() => handleOpenStory(story)}
                 >
@@ -1251,7 +1253,7 @@ const Brags = () => {
                             </span>
                           ))}
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-0">
+                        <div data-tour="like-comment-actions" className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-0">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

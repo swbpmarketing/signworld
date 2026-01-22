@@ -29,9 +29,10 @@ router.get('/', async (req, res) => {
       query.category = category.toLowerCase();
     }
 
-    // Filter by tag
+    // Filter by tag (case-insensitive)
     if (tag) {
-      query.tags = tag;
+      // MongoDB regex syntax for case-insensitive exact match in array
+      query.tags = { $regex: `^${tag}$`, $options: 'i' };
     }
 
     // Search in title and content
