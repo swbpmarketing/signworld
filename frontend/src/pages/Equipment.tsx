@@ -1546,52 +1546,50 @@ const Equipment = () => {
       )}
 
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-4 py-6 sm:px-8 sm:py-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
-                <ShoppingBagIcon className="h-8 w-8 mr-3" />
-                Equipment Portal
-              </h1>
-              <p className="mt-3 text-lg text-primary-100">
-                Professional sign-making equipment at exclusive member prices
-              </p>
-            </div>
-            <div className="mt-4 sm:mt-0 flex items-center gap-3">
-              {/* Vendor-specific: Manage Listings button only */}
-              {(user?.role === 'vendor' || effectiveRole === 'vendor') ? (
+      <div className="bg-blue-50 dark:bg-blue-900 border-blue-100 dark:border-blue-900/30 rounded-lg border p-4 sm:p-6 w-full max-w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+              <ShoppingBagIcon className="h-6 w-6 sm:h-8 sm:w-8 mr-2 inline-block" />
+              Equipment Portal
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Professional sign-making equipment at exclusive member prices
+            </p>
+          </div>
+          <div className="flex-shrink-0 flex items-center gap-2">
+            {/* Vendor-specific: Manage Listings button only */}
+            {(user?.role === 'vendor' || effectiveRole === 'vendor') ? (
+              <button
+                onClick={() => navigate('/vendor-equipment')}
+                className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors font-medium inline-flex items-center"
+              >
+                <PlusIcon className="h-4 w-4 mr-2" />
+                Manage My Listings
+              </button>
+            ) : (
+              <>
                 <button
-                  onClick={() => navigate('/vendor-equipment')}
-                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+                  onClick={() => setShowCartDrawer(true)}
+                  className="relative px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium inline-flex items-center border border-gray-300 dark:border-gray-600"
                 >
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  Manage My Listings
+                  <ShoppingCartIcon className="h-5 w-5 mr-2" />
+                  Cart
+                  {cartItems.length > 0 && (
+                    <span className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                      {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+                    </span>
+                  )}
                 </button>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setShowCartDrawer(true)}
-                    className="relative inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur text-white font-medium rounded-lg hover:bg-white/30 transition-colors duration-200"
-                  >
-                    <ShoppingCartIcon className="h-5 w-5 mr-2" />
-                    Cart
-                    {cartItems.length > 0 && (
-                      <span className="absolute -top-2 -right-2 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                        {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setShowWishlistDrawer(true)}
-                    className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
-                  >
-                    <HeartIcon className="h-5 w-5 mr-2" />
-                    Wishlist ({favorites.size})
-                  </button>
-                </>
-              )}
-            </div>
+                <button
+                  onClick={() => setShowWishlistDrawer(true)}
+                  className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors font-medium inline-flex items-center"
+                >
+                  <HeartIcon className="h-5 w-5 mr-2" />
+                  Wishlist ({favorites.size})
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -1649,7 +1647,7 @@ const Equipment = () => {
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+              className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
             >
               <MagnifyingGlassIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Search</span>
@@ -1850,7 +1848,7 @@ const Equipment = () => {
                   <button
                     key={category.key}
                     onClick={() => handleCategoryChange(category.key)}
-                    className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
+                    className={`w-full text-left px-4 py-2 rounded-lg flex items-center justify-between transition-all duration-200 ${
                       selectedCategory === category.key
                         ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium'
                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'

@@ -407,61 +407,64 @@ const Calendar = () => {
       )}
 
       {/* Header */}
-      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
-        <div className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 dark:from-primary-400 dark:to-primary-600 bg-clip-text text-transparent">
+      <div className="bg-blue-50 dark:bg-blue-900 border-blue-100 dark:border-blue-900/30 rounded-lg border p-4 sm:p-6 w-full max-w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
               Calendar & Events
-            </h2>
-            <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">Manage your schedule and stay updated with Sign Company events</p>
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Manage your schedule and stay updated with Sign Company events
+            </p>
           </div>
-          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
-            <CalendarShareLinksCompact
-              events={events}
-              calendarName="Sign Company Calendar"
-              className="order-last sm:order-first w-full sm:w-auto"
-            />
-            <button
-              data-tour="add-event-button"
-              onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 active:from-primary-800 active:to-primary-900 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg text-sm font-medium"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              Add Event
-            </button>
-            <div data-tour="calendar-view-switcher" className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-sm">
-              <button
-                onClick={() => setViewMode('month')}
-                className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-200 ${
-                  viewMode === 'month'
-                    ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                Month
-              </button>
-              <button
-                onClick={() => setViewMode('week')}
-                className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-200 border-l border-gray-300 dark:border-gray-600 ${
-                  viewMode === 'week'
-                    ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                Week
-              </button>
-              <button
-                onClick={() => setViewMode('day')}
-                className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-200 border-l border-gray-300 dark:border-gray-600 ${
-                  viewMode === 'day'
-                    ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                Day
-              </button>
-            </div>
-          </div>
+        </div>
+      </div>
+
+      {/* Calendar Controls */}
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <CalendarShareLinksCompact
+          events={events}
+          calendarName="Sign Company Calendar"
+        />
+        <button
+          data-tour="add-event-button"
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors font-medium"
+        >
+          <PlusIcon className="h-4 w-4 mr-2" />
+          Add Event
+        </button>
+        <div data-tour="calendar-view-switcher" className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden shadow-sm">
+          <button
+            onClick={() => setViewMode('month')}
+            className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-200 ${
+              viewMode === 'month'
+                ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            Month
+          </button>
+          <button
+            onClick={() => setViewMode('week')}
+            className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-200 border-l border-gray-300 dark:border-gray-600 ${
+              viewMode === 'week'
+                ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            Week
+          </button>
+          <button
+            onClick={() => setViewMode('day')}
+            className={`flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-200 border-l border-gray-300 dark:border-gray-600 ${
+              viewMode === 'day'
+                ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            Day
+          </button>
         </div>
       </div>
 

@@ -350,3 +350,25 @@ export const formatAddress = (address?: Owner['address']): string => {
   ].filter(Boolean);
   return parts.join(', ');
 };
+
+// Get owner territories with counts
+export const getOwnerTerritories = async (): Promise<{ name: string; count: number }[]> => {
+  try {
+    const response = await api.get('/owners/territories');
+    return response.data.data || [];
+  } catch (error: any) {
+    console.error('Error fetching owner territories:', error);
+    return [{ name: 'All Territories', count: 0 }];
+  }
+};
+
+// Get owner specialties with counts
+export const getOwnerSpecialties = async (): Promise<{ name: string; count: number }[]> => {
+  try {
+    const response = await api.get('/owners/specialties');
+    return response.data.data || [];
+  } catch (error: any) {
+    console.error('Error fetching owner specialties:', error);
+    return [];
+  }
+};

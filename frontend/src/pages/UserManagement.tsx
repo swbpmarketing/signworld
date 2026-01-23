@@ -355,42 +355,37 @@ const UserManagement = () => {
   return (
     <div className="space-y-6" data-tour="user-management-content">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center flex-wrap gap-2">
-                  <UsersIcon className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0" />
-                  <span>User Management</span>
-                </h1>
-                <p className="mt-2 text-sm sm:text-base md:text-lg text-primary-100">
-                  Manage all users and their access permissions
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Link
-                  to="/new-users"
-                  className="relative inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 active:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors whitespace-nowrap"
-                >
-                  <ClipboardDocumentCheckIcon className="h-5 w-5 sm:mr-2" />
-                  <span className="hidden sm:inline">View Pending Requests</span>
-                  {Number(statsData?.inactive || 0) > 0 && (
-                    <span className="absolute -top-2 -right-2 flex items-center justify-center h-5 w-5 text-xs font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-primary-600">
-                      {Number(statsData.inactive) > 9 ? '9+' : statsData.inactive}
-                    </span>
-                  )}
-                </Link>
-                <button
-                  data-tour="create-user-button"
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-primary-700 bg-white hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-colors whitespace-nowrap"
-                >
-                  <PlusIcon className="h-5 w-5 sm:mr-2" />
-                  <span className="hidden sm:inline">Create User</span>
-                </button>
-              </div>
-            </div>
+      <div className="bg-blue-50 dark:bg-blue-900 border-blue-100 dark:border-blue-900/30 rounded-lg border p-4 sm:p-6 w-full max-w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+              User Management
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Manage all users and their access permissions
+            </p>
+          </div>
+          <div className="flex-shrink-0 flex items-center gap-2">
+            <Link
+              to="/new-users"
+              className="relative inline-flex items-center justify-center px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium whitespace-nowrap text-sm"
+            >
+              <ClipboardDocumentCheckIcon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">View Pending</span>
+              {Number(statsData?.inactive || 0) > 0 && (
+                <span className="absolute -top-2 -right-2 flex items-center justify-center h-5 w-5 text-xs font-bold text-white bg-red-500 rounded-full ring-2 ring-white">
+                  {Number(statsData.inactive) > 9 ? '9+' : statsData.inactive}
+                </span>
+              )}
+            </Link>
+            <button
+              data-tour="create-user-button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center justify-center px-2.5 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium whitespace-nowrap text-sm"
+            >
+              <PlusIcon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Create User</span>
+            </button>
           </div>
         </div>
       </div>
@@ -541,7 +536,7 @@ const UserManagement = () => {
             </div>
             <button
               type="submit"
-              className="px-4 py-2.5 sm:py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+              className="px-4 py-2 sm:py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
             >
               <MagnifyingGlassIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Search</span>
@@ -799,7 +794,7 @@ const UserManagement = () => {
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="relative inline-flex items-center px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Previous
                 </button>
@@ -809,7 +804,7 @@ const UserManagement = () => {
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="relative inline-flex items-center px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Next
                 </button>
@@ -950,14 +945,14 @@ const UserManagement = () => {
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="w-full sm:w-auto px-4 py-2.5 sm:py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 sm:py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={createUserMutation.isPending}
-                  className="w-full sm:w-auto px-4 py-2.5 sm:py-3 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  className="w-full sm:w-auto px-4 py-2 sm:py-3 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
                 >
                   {createUserMutation.isPending ? 'Creating...' : 'Create User'}
                 </button>
@@ -1055,14 +1050,14 @@ const UserManagement = () => {
                   <button
                     type="button"
                     onClick={() => setIsEditMode(false)}
-                    className="w-full sm:w-auto px-4 py-2.5 sm:py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                    className="w-full sm:w-auto px-4 py-2 sm:py-3 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={updateUserMutation.isPending}
-                    className="w-full sm:w-auto px-4 py-2.5 sm:py-3 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                    className="w-full sm:w-auto px-4 py-2 sm:py-3 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
                   >
                     {updateUserMutation.isPending ? 'Saving...' : 'Save Changes'}
                   </button>
@@ -1141,14 +1136,14 @@ const UserManagement = () => {
                   <button
                     onClick={handleDeleteUser}
                     disabled={deleteUserMutation.isPending}
-                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 sm:py-3 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 active:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 sm:py-3 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 active:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
                   >
                     <TrashIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                     {deleteUserMutation.isPending ? 'Deleting...' : 'Delete User'}
                   </button>
                   <button
                     onClick={handleEditUser}
-                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 sm:py-3 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors shadow-sm"
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 sm:py-3 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors shadow-sm"
                   >
                     <PencilIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                     Edit User
@@ -1195,14 +1190,14 @@ const UserManagement = () => {
             <div className="flex justify-end gap-3 p-4 sm:p-5 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => setShowRoleModal(false)}
-                className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleBulkChangeRole}
                 disabled={bulkUpdateRoleMutation.isPending}
-                className="px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
               >
                 {bulkUpdateRoleMutation.isPending ? 'Updating...' : 'Update Role'}
               </button>

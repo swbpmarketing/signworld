@@ -581,37 +581,35 @@ const OwnersRoster = () => {
   return (
     <div className="space-y-8" data-tour="owners-content">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-4 py-6 sm:px-8 sm:py-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
-                <UserGroupIcon className="h-8 w-8 mr-3" />
-                Owners Roster
-              </h1>
-              <p className="mt-3 text-lg text-primary-100">
-                Connect with Sign Company franchise owners across the country
-              </p>
-            </div>
-            <div className="flex gap-2 mt-4 sm:mt-0">
-              {isAdmin && !isPreviewMode && (
-                <button
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
-                >
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  Add Owner
-                </button>
-              )}
+      <div className="bg-blue-50 dark:bg-blue-900 border-blue-100 dark:border-blue-900/30 rounded-lg border p-4 sm:p-6 w-full max-w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+              <UserGroupIcon className="h-6 w-6 sm:h-8 sm:w-8 mr-2 inline-block" />
+              Owners Roster
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Connect with Sign Company franchise owners across the country
+            </p>
+          </div>
+          <div className="flex-shrink-0 flex gap-2">
+            {isAdmin && !isPreviewMode && (
               <button
-                  data-tour="export-owners"
-                  onClick={handleExportDirectory}
-                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
+                onClick={() => setIsAddModalOpen(true)}
+                className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors font-medium inline-flex items-center"
+              >
+                <PlusIcon className="h-4 w-4 mr-2" />
+                Add Owner
+              </button>
+            )}
+            <button
+                data-tour="export-owners"
+                onClick={handleExportDirectory}
+                className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors font-medium inline-flex items-center"
                 >
-                  <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-                  Export Directory
-                </button>
-            </div>
+              <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+              Export Directory
+            </button>
           </div>
         </div>
       </div>
@@ -679,7 +677,7 @@ const OwnersRoster = () => {
               </div>
               <button
                 type="submit"
-                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+                className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
               >
                 <MagnifyingGlassIcon className="h-5 w-5" />
                 <span className="hidden sm:inline">Search</span>
@@ -776,7 +774,7 @@ const OwnersRoster = () => {
                 setSelectedSpecialties([]);
                 setSelectedTerritory('All Territories');
               }}
-              className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200"
+              className="inline-flex items-center px-2.5 py-1.5 bg-primary-600 text-sm text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200"
             >
               Clear Filters
             </button>
@@ -1146,7 +1144,7 @@ const OwnersRoster = () => {
                 <button
                   onClick={handleSaveEdit}
                   disabled={updateOwnerMutation.isPending}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-2.5 py-1.5 bg-primary-600 text-sm text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {updateOwnerMutation.isPending ? (
                     <>

@@ -58,6 +58,14 @@ const Convention = () => {
   const [exportingAttendees, setExportingAttendees] = useState(false);
   const [displayConvention, setDisplayConvention] = useState<any>(null);
 
+  // Dynamic stats state
+  const [dynamicStats, setDynamicStats] = useState({
+    registrations: 0,
+    speakers: 0,
+    exhibitors: 0,
+    loading: true
+  });
+
   // Admin state
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadType, setUploadType] = useState<'gallery' | 'documents'>('gallery');
@@ -171,6 +179,14 @@ const Convention = () => {
   // Load conventions for gallery (all users) and admin management
   useEffect(() => {
     fetchConventions();
+    fetchDynamicStats();
+
+    // Refresh stats every 2 minutes
+    const interval = setInterval(() => {
+      fetchDynamicStats();
+    }, 2 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Sync registration data when convention changes
@@ -224,6 +240,65 @@ const Convention = () => {
       }
     } catch (error) {
       console.error('Error fetching conventions:', error);
+    }
+  };
+
+  const fetchDynamicStats = async () => {
+    try {
+      setDynamicStats(prev => ({ ...prev, loading: true }));
+
+      const [registrationsRes, speakersRes, partnersRes] = await Promise.allSettled([
+        fetch(`${API_URL}/conventions/registrations`),
+        fetch(`${API_URL}/conventions/speakers`),
+        fetch(`${API_URL}/partners`)
+      ]);
+
+      // Parse registrations
+      let registrationsCount = 0;
+      if (registrationsRes.status === 'fulfilled') {
+        try {
+          const regData = await registrationsRes.value.json();
+          const registrations = Array.isArray(regData) ? regData : regData?.data || [];
+          registrationsCount = registrations.length;
+        } catch (e) {
+          console.error('Error parsing registrations:', e);
+        }
+      }
+
+      // Parse speakers
+      let speakersCount = 0;
+      if (speakersRes.status === 'fulfilled') {
+        try {
+          const speakersData = await speakersRes.value.json();
+          const speakers = Array.isArray(speakersData) ? speakersData : speakersData?.data || [];
+          speakersCount = speakers.length;
+        } catch (e) {
+          console.error('Error parsing speakers:', e);
+        }
+      }
+
+      // Parse partners/exhibitors
+      let exhibitorsCount = 0;
+      if (partnersRes.status === 'fulfilled') {
+        try {
+          const partnersData = await partnersRes.value.json();
+          const partners = Array.isArray(partnersData) ? partnersData : partnersData?.data || [];
+          // Count only active partners
+          exhibitorsCount = partners.filter((p: any) => p.status === 'approved' || p.isActive !== false).length;
+        } catch (e) {
+          console.error('Error parsing partners:', e);
+        }
+      }
+
+      setDynamicStats({
+        registrations: registrationsCount,
+        speakers: speakersCount,
+        exhibitors: exhibitorsCount,
+        loading: false
+      });
+    } catch (error) {
+      console.error('Error fetching dynamic stats:', error);
+      setDynamicStats(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -1210,19 +1285,21 @@ const Convention = () => {
     <>
       <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
       <div className="space-y-6" data-tour="convention-content">
-      {/* Hero Section with Countdown */}
+      {/* Header Section */}
       {displayConvention ? (
-      <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl shadow-lg p-3 sm:p-4 md:p-6 lg:p-8 text-white overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 items-center">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-baseline gap-2 mb-1 sm:mb-2">
-              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold">{displayConvention.title}</h1>
+      <div className="bg-blue-50 dark:bg-blue-900 border-blue-100 dark:border-blue-900/30 rounded-lg border p-4 sm:p-6 w-full max-w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-baseline gap-2 mb-1">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                {displayConvention.title}
+              </h1>
               {displayConvention.status && (
                 <span className={`
                   inline-block px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap
-                  ${displayConvention.status === 'upcoming' ? 'bg-blue-400/20 text-blue-100' : ''}
-                  ${displayConvention.status === 'ongoing' ? 'bg-green-400/20 text-green-100' : ''}
-                  ${displayConvention.status === 'past' ? 'bg-gray-400/20 text-gray-100' : ''}
+                  ${displayConvention.status === 'upcoming' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400' : ''}
+                  ${displayConvention.status === 'ongoing' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' : ''}
+                  ${displayConvention.status === 'past' ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-400' : ''}
                 `}>
                   {displayConvention.status === 'upcoming' && '🔜 Upcoming'}
                   {displayConvention.status === 'ongoing' && '🔴 Live Now'}
@@ -1230,48 +1307,50 @@ const Convention = () => {
                 </span>
               )}
             </div>
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-3 sm:mb-4 text-primary-100">Innovate. Connect. Grow.</p>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 md:space-x-6 space-y-1.5 sm:space-y-0 text-xs sm:text-sm">
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Innovate. Connect. Grow.
+            </p>
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               <div className="flex items-center">
-                <CalendarDaysIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1.5 sm:mr-2 flex-shrink-0" />
-                <span className="text-xs sm:text-sm">
+                <CalendarDaysIcon className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                <span>
                   {new Date(displayConvention.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - {new Date(displayConvention.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </span>
               </div>
               <div className="flex items-center">
-                <MapPinIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1.5 sm:mr-2 flex-shrink-0" />
-                <span className="text-xs sm:text-sm">{displayConvention.location?.venue || 'Location TBA'}</span>
+                <MapPinIcon className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                <span>{displayConvention.location?.venue || 'Location TBA'}</span>
               </div>
             </div>
           </div>
 
           {/* Countdown Timer */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 sm:p-4 md:p-6 min-w-0">
-            <h3 className="text-sm sm:text-base md:text-lg font-semibold mb-2 sm:mb-3 md:mb-4 text-center">Event Starts In</h3>
-            <div className="grid grid-cols-4 gap-1 sm:gap-2 md:gap-3 lg:gap-4 text-center">
+          <div className="flex-shrink-0 bg-white dark:bg-gray-800 rounded-lg p-5 sm:p-6 border border-gray-200 dark:border-gray-700 min-w-0">
+            <h3 className="text-sm sm:text-base font-semibold mb-3 text-center text-gray-900 dark:text-white">Event Starts In</h3>
+            <div className="grid grid-cols-4 gap-3 sm:gap-4 text-center">
               <div className="min-w-0">
-                <div className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold tabular-nums">{countdown.days}</div>
-                <div className="text-[9px] sm:text-[10px] md:text-xs uppercase tracking-tight sm:tracking-wide mt-0.5 sm:mt-1">Days</div>
+                <div className="text-2xl sm:text-3xl font-bold tabular-nums text-gray-900 dark:text-white">{countdown.days}</div>
+                <div className="text-xs sm:text-sm uppercase tracking-tight text-gray-600 dark:text-gray-400 mt-1">Days</div>
               </div>
               <div className="min-w-0">
-                <div className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold tabular-nums">{countdown.hours}</div>
-                <div className="text-[9px] sm:text-[10px] md:text-xs uppercase tracking-tight sm:tracking-wide mt-0.5 sm:mt-1">Hours</div>
+                <div className="text-2xl sm:text-3xl font-bold tabular-nums text-gray-900 dark:text-white">{countdown.hours}</div>
+                <div className="text-xs sm:text-sm uppercase tracking-tight text-gray-600 dark:text-gray-400 mt-1">Hours</div>
               </div>
               <div className="min-w-0">
-                <div className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold tabular-nums">{countdown.minutes}</div>
-                <div className="text-[9px] sm:text-[10px] md:text-xs uppercase tracking-tight sm:tracking-wide mt-0.5 sm:mt-1">Min</div>
+                <div className="text-2xl sm:text-3xl font-bold tabular-nums text-gray-900 dark:text-white">{countdown.minutes}</div>
+                <div className="text-xs sm:text-sm uppercase tracking-tight text-gray-600 dark:text-gray-400 mt-1">Min</div>
               </div>
               <div className="min-w-0">
-                <div className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold tabular-nums">{countdown.seconds}</div>
-                <div className="text-[9px] sm:text-[10px] md:text-xs uppercase tracking-tight sm:tracking-wide mt-0.5 sm:mt-1">Sec</div>
+                <div className="text-2xl sm:text-3xl font-bold tabular-nums text-gray-900 dark:text-white">{countdown.seconds}</div>
+                <div className="text-xs sm:text-sm uppercase tracking-tight text-gray-600 dark:text-gray-400 mt-1">Sec</div>
               </div>
             </div>
           </div>
         </div>
       </div>
       ) : (
-        <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl shadow-lg p-6 text-white text-center">
-          <p className="text-lg">Loading convention details...</p>
+        <div className="bg-blue-50 dark:bg-blue-900 border-blue-100 dark:border-blue-900/30 rounded-lg border p-6 w-full max-w-full">
+          <p className="text-lg text-gray-900 dark:text-white text-center">Loading convention details...</p>
         </div>
       )}
 
@@ -1314,17 +1393,29 @@ const Convention = () => {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 rounded-lg p-5 sm:p-6">
                   <UserGroupIcon className="h-10 w-10 sm:h-12 sm:w-12 text-blue-600 dark:text-blue-400 mb-3 sm:mb-4" />
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{displayConvention?.expectedAttendees || 0}+</h3>
+                  {dynamicStats.loading ? (
+                    <div className="h-8 w-16 bg-blue-200 dark:bg-blue-700/30 rounded animate-shimmer mb-2"></div>
+                  ) : (
+                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{dynamicStats.registrations}+</h3>
+                  )}
                   <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">Expected Attendees</p>
                 </div>
                 <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30 rounded-lg p-5 sm:p-6">
                   <AcademicCapIcon className="h-10 w-10 sm:h-12 sm:w-12 text-green-600 dark:text-green-400 mb-3 sm:mb-4" />
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{displayConvention?.educationalSessions || 0}+</h3>
+                  {dynamicStats.loading ? (
+                    <div className="h-8 w-16 bg-green-200 dark:bg-green-700/30 rounded animate-shimmer mb-2"></div>
+                  ) : (
+                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{dynamicStats.speakers}+</h3>
+                  )}
                   <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">Educational Sessions</p>
                 </div>
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/30 rounded-lg p-5 sm:p-6">
                   <GlobeAmericasIcon className="h-10 w-10 sm:h-12 sm:w-12 text-purple-600 dark:text-purple-400 mb-3 sm:mb-4" />
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{displayConvention?.exhibitors || 0}+</h3>
+                  {dynamicStats.loading ? (
+                    <div className="h-8 w-16 bg-purple-200 dark:bg-purple-700/30 rounded animate-shimmer mb-2"></div>
+                  ) : (
+                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{dynamicStats.exhibitors}+</h3>
+                  )}
                   <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">Industry Exhibitors</p>
                 </div>
               </div>
@@ -1446,7 +1537,7 @@ const Convention = () => {
                     onClick={() => setShowSpeakerModal(true)}
                     className="py-2 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm flex items-center flex-shrink-0 ml-4"
                   >
-                    <PlusIcon className="h-5 w-5 mr-2" />
+                    <PlusIcon className="h-4 w-4 mr-2" />
                     Add Speaker
                   </button>
                 )}
@@ -1757,7 +1848,7 @@ const Convention = () => {
                     onClick={() => setShowCreateModal(true)}
                     className="py-2 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm flex items-center"
                   >
-                    <PlusIcon className="h-5 w-5 mr-2" />
+                    <PlusIcon className="h-4 w-4 mr-2" />
                     Create Convention
                   </button>
                 </div>
@@ -1790,7 +1881,7 @@ const Convention = () => {
                     onClick={() => setShowCreateModal(true)}
                     className="py-2 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm inline-flex items-center"
                   >
-                    <PlusIcon className="h-5 w-5 mr-2" />
+                    <PlusIcon className="h-4 w-4 mr-2" />
                     Create First Convention
                   </button>
                 </div>
@@ -1861,7 +1952,7 @@ const Convention = () => {
                     }}
                     className="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm flex items-center justify-center"
                   >
-                    <PlusIcon className="h-5 w-5 mr-2" />
+                    <PlusIcon className="h-4 w-4 mr-2" />
                     Upload Images
                   </button>
                 </div>
@@ -1882,7 +1973,7 @@ const Convention = () => {
                     }}
                     className="w-full py-3 px-4 bg-secondary-600 text-white font-medium rounded-lg hover:bg-secondary-700 active:bg-secondary-800 transition-colors shadow-sm flex items-center justify-center"
                   >
-                    <PlusIcon className="h-5 w-5 mr-2" />
+                    <PlusIcon className="h-4 w-4 mr-2" />
                     Upload Documents
                   </button>
                 </div>
@@ -1900,7 +1991,7 @@ const Convention = () => {
                     onClick={() => setShowScheduleModal(true)}
                     className="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors shadow-sm flex items-center justify-center"
                   >
-                    <PlusIcon className="h-5 w-5 mr-2" />
+                    <PlusIcon className="h-4 w-4 mr-2" />
                     Add Schedule Day
                   </button>
                 </div>
