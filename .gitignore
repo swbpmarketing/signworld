@@ -59,4 +59,4 @@ backend/dist/
 .env
 
 # Deployment checklists with credentials
-RENDER_DEPLOYMENT_CHECKLIST.md
+RENDER_DEPLOYMENT_CHECKLIST.mdnul
