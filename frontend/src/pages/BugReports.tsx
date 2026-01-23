@@ -655,7 +655,7 @@ const BugReports = () => {
     const StatusIcon = config.icon;
 
     return (
-      <div data-tour="bug-status-columns" className={`flex-1 min-w-[280px] bg-gray-100 dark:bg-gray-900/50 rounded-xl border-t-4 ${config.color}`}>
+      <div data-tour="bug-status-columns" className={`flex-1 min-w-[240px] bg-gray-100 dark:bg-gray-900/50 rounded-xl border-t-4 ${config.color}`}>
         {/* Column Header */}
         <div className={`px-4 py-3 ${config.headerBg} rounded-t-lg border-b border-gray-200 dark:border-gray-700`}>
           <div className="flex items-center justify-between">
@@ -734,7 +734,7 @@ const BugReports = () => {
         <button
           data-tour="my-reports"
           onClick={() => setShowMyReportsOnly(!showMyReportsOnly)}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
             showMyReportsOnly
               ? 'bg-primary-600 text-white hover:bg-primary-700'
               : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -751,7 +751,7 @@ const BugReports = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-primary-600"></div>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
           <KanbanColumn status="pending" reports={reportsByStatus.pending} />
           <KanbanColumn status="in_progress" reports={reportsByStatus.in_progress} />
           <KanbanColumn status="rejected" reports={reportsByStatus.rejected} />
@@ -827,7 +827,7 @@ const BugReports = () => {
                     value={newReport.title}
                     onChange={(e) => setNewReport({ ...newReport, title: e.target.value })}
                     placeholder="Brief description of the bug"
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                   />
                 </div>
@@ -842,7 +842,7 @@ const BugReports = () => {
                     onChange={(e) => setNewReport({ ...newReport, description: e.target.value })}
                     placeholder="Describe what happened..."
                     rows={3}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                     required
                   />
                 </div>
@@ -858,7 +858,7 @@ const BugReports = () => {
                       onChange={(e) => setNewReport({ ...newReport, stepsToReproduce: e.target.value })}
                       placeholder="1. Go to... 2. Click on... 3. See error"
                       rows={3}
-                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                      className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                     />
                     <p className="text-xs text-gray-500 mt-1.5">Help us reproduce the issue</p>
                   </div>
@@ -876,7 +876,7 @@ const BugReports = () => {
                         value={newReport.expectedBehavior}
                         onChange={(e) => setNewReport({ ...newReport, expectedBehavior: e.target.value })}
                         placeholder="What should happen?"
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                     <div>
@@ -888,7 +888,7 @@ const BugReports = () => {
                         value={newReport.actualBehavior}
                         onChange={(e) => setNewReport({ ...newReport, actualBehavior: e.target.value })}
                         placeholder="What actually happened?"
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                   </div>
@@ -910,7 +910,7 @@ const BugReports = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   >
                     <ArrowUpTrayIcon className="h-5 w-5" />
                     Upload Screenshot/Video
@@ -1092,7 +1092,7 @@ const BugReports = () => {
                     value={editReport.title}
                     onChange={(e) => setEditReport({ ...editReport, title: e.target.value })}
                     placeholder="Brief description of the bug"
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                   />
                 </div>
@@ -1107,7 +1107,7 @@ const BugReports = () => {
                     onChange={(e) => setEditReport({ ...editReport, description: e.target.value })}
                     placeholder="Describe what happened..."
                     rows={3}
-                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                     required
                   />
                 </div>
@@ -1123,7 +1123,7 @@ const BugReports = () => {
                       onChange={(e) => setEditReport({ ...editReport, stepsToReproduce: e.target.value })}
                       placeholder="1. Go to... 2. Click on... 3. See error"
                       rows={3}
-                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                      className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                     />
                     <p className="text-xs text-gray-500 mt-1.5">Help us reproduce the issue</p>
                   </div>
@@ -1141,7 +1141,7 @@ const BugReports = () => {
                         value={editReport.expectedBehavior}
                         onChange={(e) => setEditReport({ ...editReport, expectedBehavior: e.target.value })}
                         placeholder="What should happen?"
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                     <div>
@@ -1153,7 +1153,7 @@ const BugReports = () => {
                         value={editReport.actualBehavior}
                         onChange={(e) => setEditReport({ ...editReport, actualBehavior: e.target.value })}
                         placeholder="What actually happened?"
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                   </div>
@@ -1210,7 +1210,7 @@ const BugReports = () => {
                   <button
                     type="button"
                     onClick={cancelDelete}
-                    className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors"
+                    className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors"
                   >
                     Cancel
                   </button>
@@ -1218,7 +1218,7 @@ const BugReports = () => {
                     type="button"
                     onClick={confirmDelete}
                     disabled={deleteMutation.isPending}
-                    className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
                   </button>
@@ -1289,7 +1289,7 @@ const BugReports = () => {
                   href={lightboxAttachments[lightboxIndex].url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
+                  className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 rounded-lg transition-colors"
                 >
                   Download File
                 </a>
@@ -1611,7 +1611,7 @@ const BugReports = () => {
                     <button
                       onClick={() => handleAddComment(selectedReport._id)}
                       disabled={!newComment.trim() || addCommentMutation.isPending}
-                      className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                      className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50"
                     >
                       Send
                     </button>

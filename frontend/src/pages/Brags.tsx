@@ -786,42 +786,41 @@ const Brags = () => {
   return (
     <div className="space-y-8" data-tour="brags-content">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-4 py-6 sm:px-8 sm:py-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
-                <TrophyIcon className="h-8 w-8 mr-3" />
-                Success Stories
-              </h1>
-              <p className="mt-3 text-lg text-primary-100">
-                Celebrating achievements and milestones from our Sign Company community
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
-              {canManage('successStories') && (
-                <button
-                  className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors duration-200"
-                  onClick={() => {
-                    setShowModerationPanel(true);
-                    fetchPendingStories();
-                  }}
-                >
-                  <ClipboardDocumentListIcon className="h-5 w-5 mr-2" />
-                  Review Pending
-                  {pendingStories.length > 0 && (
-                    <span className="ml-2 bg-white text-yellow-600 text-xs font-bold px-2 py-0.5 rounded-full">
-                      {pendingStories.length}
-                    </span>
-                  )}
-                </button>
-              )}
-              {user && (
-                <button
-                  className={`inline-flex items-center px-4 py-2 font-medium rounded-lg transition-colors duration-200 ${
-                    showMyStories
-                      ? 'bg-primary-600 text-white hover:bg-primary-700'
-                      : 'bg-white/20 text-white hover:bg-white/30'
+      <div className="bg-blue-50 dark:bg-blue-900 border-blue-100 dark:border-blue-900/30 rounded-lg border p-4 sm:p-6 w-full max-w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+              <TrophyIcon className="h-6 w-6 sm:h-8 sm:w-8 mr-2 inline-block" />
+              Success Stories
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Celebrating achievements and milestones from our Sign Company community
+            </p>
+          </div>
+          <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2">
+            {canManage('successStories') && (
+              <button
+                className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors font-medium inline-flex items-center"
+                onClick={() => {
+                  setShowModerationPanel(true);
+                  fetchPendingStories();
+                }}
+              >
+                <ClipboardDocumentListIcon className="h-5 w-5 mr-2" />
+                Review Pending
+                {pendingStories.length > 0 && (
+                  <span className="ml-2 bg-white text-primary-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                    {pendingStories.length}
+                  </span>
+                )}
+              </button>
+            )}
+            {user && (
+              <button
+                className={`px-4 py-2 rounded-lg transition-colors font-medium inline-flex items-center ${
+                  showMyStories
+                    ? 'bg-primary-600 text-white hover:bg-primary-700'
+                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
                   }`}
                   onClick={() => {
                     setShowMyStories(!showMyStories);
@@ -834,15 +833,14 @@ const Brags = () => {
                   My Stories
                 </button>
               )}
-              <button
-                data-tour="create-brag-button"
-                className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
-                onClick={() => setShowCreateModal(true)}
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                Share Your Story
-              </button>
-            </div>
+            <button
+              data-tour="create-brag-button"
+              className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors font-medium inline-flex items-center"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Share Your Story
+            </button>
           </div>
         </div>
       </div>
@@ -915,7 +913,7 @@ const Brags = () => {
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+              className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
             >
               <MagnifyingGlassIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Search</span>
@@ -989,7 +987,7 @@ const Brags = () => {
                 <button
                   key={category.name}
                   onClick={() => handleCategoryClick(category.name)}
-                  className={`w-full text-left px-4 py-2.5 rounded-lg flex items-center justify-between transition-all duration-200 ${
+                  className={`w-full text-left px-4 py-2 rounded-lg flex items-center justify-between transition-all duration-200 ${
                     selectedCategory === category.name
                       ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium border-l-4 border-primary-600 dark:border-primary-500'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
@@ -1027,9 +1025,9 @@ const Brags = () => {
                     <p className="text-gray-500 dark:text-gray-400">You haven't shared any stories yet.</p>
                     <button
                       onClick={() => setShowCreateModal(true)}
-                      className="mt-4 inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700"
+                      className="mt-4 inline-flex items-center px-2.5 py-1.5 bg-primary-600 text-sm text-white font-medium rounded-lg hover:bg-primary-700"
                     >
-                      <PlusIcon className="h-5 w-5 mr-2" />
+                      <PlusIcon className="h-4 w-4 mr-2" />
                       Share Your First Story
                     </button>
                   </div>
@@ -1680,7 +1678,7 @@ const Brags = () => {
                       <button
                         onClick={handleAddComment}
                         disabled={submittingComment || !newComment.trim() || !user}
-                        className="px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="px-2.5 py-1.5 bg-primary-600 text-sm text-white font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                         {submittingComment ? (
                           <>

@@ -1002,46 +1002,44 @@ const Library = () => {
   return (
     <div className="space-y-8 min-w-0 max-w-full overflow-x-hidden" data-tour="library-content">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-4 py-6 sm:px-8 sm:py-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                File Library
-              </h1>
-              <p className="mt-3 text-lg text-primary-100">
-                Access and manage all your Sign Company resources in one place
-              </p>
-            </div>
-            {canUpload && (
-              <div className="mt-4 sm:mt-0 flex gap-3">
-                <button
-                  onClick={() => {
-                    // Initialize category based on current context
-                    if (selectedCategory !== 'all') {
-                      setFolderModalCategory(selectedCategory);
-                    } else if (categories.length > 0) {
-                      // If viewing all categories, default to first available category
-                      setFolderModalCategory(categories[0].id);
-                    }
-                    setShowNewFolderModal(true);
-                  }}
-                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
-                >
-                  <FolderIcon className="h-5 w-5 mr-2" />
-                  New Folder
-                </button>
-                <button
-                  data-tour="upload-file-button"
-                  onClick={() => setShowUploadModal(true)}
-                  className="inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200"
-                >
-                  <PlusIcon className="h-5 w-5 mr-2" />
-                  Upload Files
-                </button>
-              </div>
-            )}
+      <div className="bg-blue-50 dark:bg-blue-900 border-blue-100 dark:border-blue-900/30 rounded-lg border p-4 sm:p-6 w-full max-w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+              File Library
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Access and manage all your Sign Company resources in one place
+            </p>
           </div>
+          {canUpload && (
+            <div className="flex-shrink-0 flex gap-2">
+              <button
+                onClick={() => {
+                  // Initialize category based on current context
+                  if (selectedCategory !== 'all') {
+                    setFolderModalCategory(selectedCategory);
+                  } else if (categories.length > 0) {
+                    // If viewing all categories, default to first available category
+                    setFolderModalCategory(categories[0].id);
+                  }
+                  setShowNewFolderModal(true);
+                }}
+                className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors font-medium inline-flex items-center"
+              >
+                <FolderIcon className="h-5 w-5 mr-2" />
+                New Folder
+              </button>
+              <button
+                data-tour="upload-file-button"
+                onClick={() => setShowUploadModal(true)}
+                className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors font-medium inline-flex items-center"
+              >
+                <PlusIcon className="h-4 w-4 mr-2" />
+                Upload Files
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1205,7 +1203,7 @@ const Library = () => {
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+              className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
             >
               <MagnifyingGlassIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Search</span>
@@ -1271,7 +1269,7 @@ const Library = () => {
                   <p className="text-red-500">{error}</p>
                   <button
                     onClick={() => fetchFiles()}
-                    className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                    className="mt-4 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
                   >
                     Retry
                   </button>
@@ -1284,7 +1282,7 @@ const Library = () => {
                     <div className="mt-4 flex gap-3 justify-center">
                       <button
                         onClick={() => setShowUploadModal(true)}
-                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                        className="px-2.5 py-1.5 bg-primary-600 text-sm text-white rounded-lg hover:bg-primary-700 transition-colors"
                       >
                         Upload your first file
                       </button>
@@ -1444,9 +1442,9 @@ const Library = () => {
                       </button>
                       <button
                         onClick={() => setShowUploadModal(true)}
-                        className="inline-flex items-center justify-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200"
+                        className="inline-flex items-center justify-center px-4 py-2.5 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200"
                       >
-                        <PlusIcon className="h-5 w-5 mr-2" />
+                        <PlusIcon className="h-4 w-4 mr-2" />
                         Upload Files
                       </button>
                     </div>
@@ -1591,9 +1589,9 @@ const Library = () => {
                       </button>
                       <button
                         onClick={() => setShowUploadModal(true)}
-                        className="inline-flex items-center justify-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200"
+                        className="inline-flex items-center justify-center px-4 py-2.5 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200"
                       >
-                        <PlusIcon className="h-5 w-5 mr-2" />
+                        <PlusIcon className="h-4 w-4 mr-2" />
                         Upload Files
                       </button>
                     </div>
@@ -2062,7 +2060,7 @@ const Library = () => {
                 <button
                   type="submit"
                   disabled={uploading || uploadFiles.length === 0}
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {uploading ? 'Uploading...' : 'Upload'}
                 </button>
@@ -2148,7 +2146,7 @@ const Library = () => {
                 <button
                   type="submit"
                   disabled={creatingFolder || !newFolderName.trim()}
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {creatingFolder ? 'Creating...' : 'Create'}
                 </button>
@@ -2249,7 +2247,7 @@ const Library = () => {
                     }
                   }
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors cursor-pointer"
               >
                 <ArrowDownTrayIcon className="h-5 w-5" />
                 <span className="hidden sm:inline">Download</span>

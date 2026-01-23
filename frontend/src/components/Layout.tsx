@@ -405,9 +405,9 @@ const Layout = () => {
       {/* Main content */}
       <div className={`flex-1 flex flex-col min-h-screen md:ml-64 min-w-0 overflow-hidden ${isPreviewMode ? 'pt-10' : ''}`}>
         {/* Top bar */}
-        <header className={`sticky ${isPreviewMode ? 'top-10' : 'top-0'} z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md`}>
+        <header className={`sticky ${isPreviewMode ? 'top-10' : 'top-0'} z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md pt-3`}>
           <div className="px-4 sm:px-6">
-            <div className="flex items-center justify-between h-16">
+            <div className="flex items-center justify-between h-12">
               {/* Left side - Mobile menu + Breadcrumbs */}
               <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
                 {/* Mobile menu button */}
@@ -619,7 +619,7 @@ const Layout = () => {
 
           {/* User dropdown */}
           {userMenuOpen && (
-            <div className="absolute right-3 sm:right-4 md:right-6 top-12 sm:top-14 mt-2 w-56 rounded-lg bg-white dark:bg-gray-800 py-1 shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 z-50">
+            <div className="absolute right-3 sm:right-4 md:right-6 top-10 sm:top-10 mt-2 w-56 rounded-lg bg-white dark:bg-gray-800 py-1 shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 z-50">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {user?.name || "Guest User"}

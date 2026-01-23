@@ -21,6 +21,11 @@ import {
   Cog6ToothIcon,
   BuildingStorefrontIcon,
   DocumentCheckIcon,
+  ChatBubbleLeftRightIcon,
+  ShoppingBagIcon,
+  NewspaperIcon,
+  BugAntIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import EngagementMetricsWidget from '../components/analytics/EngagementMetricsWidget';
 import EngagementTrendChart from '../components/analytics/EngagementTrendChart';
@@ -61,32 +66,125 @@ const Dashboard = () => {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  // Admin-specific: Fetch user statistics
-  const { data: adminStats } = useQuery({
-    queryKey: ['admin-stats'],
+  // Admin-specific: Fetch platform-wide statistics
+  const { data: adminStats, isLoading: isLoadingAdminStats } = useQuery({
+    queryKey: ['admin-platform-stats'],
     queryFn: async () => {
-      const [usersRes, pendingRes] = await Promise.all([
-        api.get('/users', { params: { limit: 1000 } }),
-        api.get('/library/pending', { params: { limit: 1 } }).catch(() => ({ data: { total: 0 } })),
-      ]);
-
-      const users = usersRes.data?.data || [];
       const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-      return {
-        totalUsers: users.length,
-        admins: users.filter((u: any) => u.role === 'admin').length,
-        owners: users.filter((u: any) => u.role === 'owner').length,
-        vendors: users.filter((u: any) => u.role === 'vendor').length,
-        activeUsers: users.filter((u: any) => u.isActive).length,
-        inactiveUsers: users.filter((u: any) => !u.isActive).length,
-        newUsersThisWeek: users.filter((u: any) => new Date(u.createdAt) >= weekAgo).length,
-        pendingApprovals: pendingRes.data?.total || 0,
-      };
+      try {
+        const [
+          eventsRes,
+          forumRes,
+          libraryRes,
+          equipmentRes,
+          bragsRes,
+          pendingLibraryRes,
+          bugReportsRes,
+          activityRes
+        ] = await Promise.allSettled([
+          api.get('/events'),
+          api.get('/forum/threads'),
+          api.get('/library', { params: { status: 'approved', limit: 1000 } }),
+          api.get('/equipment'),
+          api.get('/brags'),
+          api.get('/library/pending', { params: { limit: 1 } }),
+          api.get('/bug-reports'),
+          api.get('/activity', { params: { limit: 1000 } }),
+        ]);
+
+        // Safely extract data from each response
+        const events = eventsRes.status === 'fulfilled'
+          ? (Array.isArray(eventsRes.value.data) ? eventsRes.value.data : eventsRes.value.data?.data || [])
+          : [];
+
+        const threads = forumRes.status === 'fulfilled'
+          ? (Array.isArray(forumRes.value.data) ? forumRes.value.data : forumRes.value.data?.threads || forumRes.value.data?.data || [])
+          : [];
+
+        const library = libraryRes.status === 'fulfilled'
+          ? (libraryRes.value.data?.data || libraryRes.value.data?.files || (Array.isArray(libraryRes.value.data) ? libraryRes.value.data : []))
+          : [];
+
+        const equipment = equipmentRes.status === 'fulfilled'
+          ? (equipmentRes.value.data?.data || (Array.isArray(equipmentRes.value.data) ? equipmentRes.value.data : []))
+          : [];
+
+        const brags = bragsRes.status === 'fulfilled'
+          ? (Array.isArray(bragsRes.value.data) ? bragsRes.value.data : bragsRes.value.data?.data || bragsRes.value.data?.brags || [])
+          : [];
+
+        const bugReports = bugReportsRes.status === 'fulfilled'
+          ? (Array.isArray(bugReportsRes.value.data) ? bugReportsRes.value.data : bugReportsRes.value.data?.data || [])
+          : [];
+
+        const activity = activityRes.status === 'fulfilled'
+          ? (Array.isArray(activityRes.value.data) ? activityRes.value.data : activityRes.value.data?.data || activityRes.value.data?.activities || [])
+          : [];
+
+        const pendingCount = pendingLibraryRes.status === 'fulfilled'
+          ? (pendingLibraryRes.value.data?.total || pendingLibraryRes.value.data?.count || (Array.isArray(pendingLibraryRes.value.data) ? pendingLibraryRes.value.data.length : 0))
+          : 0;
+
+        // Calculate statistics
+        const totalEvents = events.filter((e: any) => {
+          const eventDate = new Date(e.startDate || e.date || e.start);
+          return eventDate >= now;
+        }).length;
+
+        const forumThreads = threads.filter((t: any) => {
+          const threadDate = new Date(t.createdAt);
+          return threadDate >= monthAgo;
+        }).length;
+
+        const equipmentListings = equipment.filter((e: any) =>
+          e.availability !== 'discontinued' && e.isActive !== false
+        ).length;
+
+        const recentActivity = activity.filter((a: any) => {
+          const activityDate = new Date(a.createdAt || a.timestamp);
+          return activityDate >= dayAgo;
+        }).length;
+
+        const successStories = brags.filter((b: any) =>
+          b.isPublished !== false && b.status !== 'draft'
+        ).length;
+
+        const systemAlerts = bugReports.filter((b: any) =>
+          b.status === 'pending' || b.status === 'bug/feature'
+        ).length;
+
+        return {
+          totalEvents,
+          forumThreads,
+          libraryResources: Array.isArray(library) ? library.length : 0,
+          equipmentListings,
+          recentActivity,
+          successStories,
+          pendingReviews: pendingCount,
+          systemAlerts,
+        };
+      } catch (error) {
+        console.error('Error fetching platform stats:', error);
+        // Return zeros if there's an error
+        return {
+          totalEvents: 0,
+          forumThreads: 0,
+          libraryResources: 0,
+          equipmentListings: 0,
+          recentActivity: 0,
+          successStories: 0,
+          pendingReviews: 0,
+          systemAlerts: 0,
+        };
+      }
     },
     enabled: isAdmin,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
   // Map stats data to display format
@@ -186,148 +284,180 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8" data-tour="dashboard-content">
-      {/* Welcome Section */}
-      <div className={`bg-gradient-to-r ${isAdmin && !isPreviewMode ? 'from-purple-600 to-purple-700' : 'from-primary-600 to-primary-700'} rounded-xl shadow-lg overflow-hidden`}>
-        <div className="px-4 py-6 sm:px-8 sm:py-10">
-          <div className="flex items-center gap-3">
-            {isAdmin && !isPreviewMode && <ShieldCheckIcon className="h-8 w-8 text-white/80" />}
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                {isAdmin && !isPreviewMode
-                  ? 'Admin Dashboard'
-                  : isPreviewMode
-                  ? `Welcome, ${previewedUser?.name || 'User'}!`
-                  : `Welcome back, ${user?.name}!`}
-              </h1>
-              <p className="mt-2 text-lg text-white/80">
-                {isAdmin && !isPreviewMode
-                  ? `Hello ${user?.name}! Here's your system overview.`
-                  : isPreviewMode && previewedUser
-                  ? `Previewing as: ${previewedUser.role === 'owner' ? 'Owner' : 'Vendor'} • ${previewedUser.email}`
-                  : "Here's what's happening in your Sign Company network today."
-                }
-              </p>
-            </div>
+      {/* Header */}
+      <div className="bg-blue-50 dark:bg-blue-900 border-blue-100 dark:border-blue-900/30 rounded-lg border p-4 sm:p-6 w-full max-w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+              {isAdmin && !isPreviewMode
+                ? 'Admin Dashboard'
+                : isPreviewMode
+                ? `Welcome, ${previewedUser?.name || 'User'}!`
+                : `Welcome back, ${user?.name}!`}
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              {isAdmin && !isPreviewMode
+                ? `Hello ${user?.name}! Here's your system overview.`
+                : isPreviewMode && previewedUser
+                ? `Previewing as: ${previewedUser.role === 'owner' ? 'Owner' : 'Vendor'} • ${previewedUser.email}`
+                : "Here's what's happening in your Sign Company network today."
+              }
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Admin System Stats */}
-      {isAdmin && adminStats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
+      {/* Platform Overview Stats */}
+      {isAdmin && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           <div
-            onClick={() => navigate('/users')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <UsersIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.totalUsers}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Total Users</p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => navigate('/users?role=admin')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <ShieldCheckIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.admins}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Admins</p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => navigate('/owners')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
+            onClick={() => !isLoadingAdminStats && navigate('/calendar')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <UserGroupIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <CalendarIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.owners}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Owners</p>
+                {isLoadingAdminStats ? (
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.totalEvents || 0}</p>
+                )}
+                <p className="text-xs text-gray-500 dark:text-gray-400">Upcoming Events</p>
               </div>
             </div>
           </div>
 
           <div
-            onClick={() => navigate('/users?role=vendor')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
+            onClick={() => !isLoadingAdminStats && navigate('/forum')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                <ChatBubbleLeftRightIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                {isLoadingAdminStats ? (
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.forumThreads || 0}</p>
+                )}
+                <p className="text-xs text-gray-500 dark:text-gray-400">Forum Threads (30d)</p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => !isLoadingAdminStats && navigate('/library')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <FolderIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                {isLoadingAdminStats ? (
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.libraryResources || 0}</p>
+                )}
+                <p className="text-xs text-gray-500 dark:text-gray-400">Library Resources</p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => !isLoadingAdminStats && navigate('/equipment')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <BuildingStorefrontIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <ShoppingBagIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.vendors}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Vendors</p>
+                {isLoadingAdminStats ? (
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.equipmentListings || 0}</p>
+                )}
+                <p className="text-xs text-gray-500 dark:text-gray-400">Equipment Listings</p>
               </div>
             </div>
           </div>
 
-          <div
-            onClick={() => navigate('/users?status=active')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                <CheckCircleIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.activeUsers}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => navigate('/users?status=inactive')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                <ExclamationTriangleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.inactiveUsers}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Inactive</p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => navigate('/new-users')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                <ClockIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                <SparklesIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.newUsersThisWeek}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">New (7d)</p>
+                {isLoadingAdminStats ? (
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.recentActivity || 0}</p>
+                )}
+                <p className="text-xs text-gray-500 dark:text-gray-400">Recent Activity (24h)</p>
               </div>
             </div>
           </div>
 
           <div
-            onClick={() => navigate('/pending-approval')}
-            className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 shadow-sm cursor-pointer transition-all hover:shadow-md ${
-              adminStats.pendingApprovals > 0
+            onClick={() => !isLoadingAdminStats && navigate('/brags')}
+            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <NewspaperIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                {isLoadingAdminStats ? (
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.successStories || 0}</p>
+                )}
+                <p className="text-xs text-gray-500 dark:text-gray-400">Success Stories</p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => !isLoadingAdminStats && navigate('/pending-approval')}
+            className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 shadow-sm cursor-pointer hover-lift ${
+              !isLoadingAdminStats && (adminStats?.pendingReviews || 0) > 0
                 ? 'border-amber-400 dark:border-amber-500'
                 : 'border-gray-200 dark:border-gray-700'
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${adminStats.pendingApprovals > 0 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                <DocumentCheckIcon className={`h-5 w-5 ${adminStats.pendingApprovals > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-400'}`} />
+              <div className={`p-2 rounded-lg ${!isLoadingAdminStats && (adminStats?.pendingReviews || 0) > 0 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                <DocumentCheckIcon className={`h-5 w-5 ${!isLoadingAdminStats && (adminStats?.pendingReviews || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-400'}`} />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats.pendingApprovals}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Pending</p>
+                {isLoadingAdminStats ? (
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.pendingReviews || 0}</p>
+                )}
+                <p className="text-xs text-gray-500 dark:text-gray-400">Pending Reviews</p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => !isLoadingAdminStats && navigate('/bug-reports')}
+            className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 shadow-sm cursor-pointer hover-lift ${
+              !isLoadingAdminStats && (adminStats?.systemAlerts || 0) > 0
+                ? 'border-red-400 dark:border-red-500'
+                : 'border-gray-200 dark:border-gray-700'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${!isLoadingAdminStats && (adminStats?.systemAlerts || 0) > 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                <BugAntIcon className={`h-5 w-5 ${!isLoadingAdminStats && (adminStats?.systemAlerts || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`} />
+              </div>
+              <div>
+                {isLoadingAdminStats ? (
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.systemAlerts || 0}</p>
+                )}
+                <p className="text-xs text-gray-500 dark:text-gray-400">System Alerts</p>
               </div>
             </div>
           </div>
@@ -359,23 +489,23 @@ const Dashboard = () => {
       {/* Stats Grid */}
       <div data-tour="dashboard-stats-cards" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {isLoadingStats ? (
-          // Loading skeleton
+          // Loading skeleton with shimmer
           [...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
               <div className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 space-y-3">
-                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    <div className="h-4 w-24 rounded animate-shimmer" />
+                    <div className="h-8 w-16 rounded animate-shimmer" />
                   </div>
-                  <div className="h-12 w-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                  <div className="h-12 w-12 rounded-lg animate-shimmer" />
                 </div>
               </div>
             </div>
           ))
         ) : (
           stats.map((stat) => (
-            <div key={stat.name} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow duration-200">
+            <div key={stat.name} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover-lift">
               <div className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -419,14 +549,14 @@ const Dashboard = () => {
           </div>
           <div className="p-6">
             {isLoadingActivity ? (
-              // Loading skeleton
+              // Loading skeleton with shimmer
               <div className="space-y-4">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="flex items-start space-x-3">
-                    <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                    <div className="h-10 w-10 rounded-full animate-shimmer" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                      <div className="h-3 w-1/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                      <div className="h-4 w-3/4 rounded animate-shimmer" />
+                      <div className="h-3 w-1/4 rounded animate-shimmer" />
                     </div>
                   </div>
                 ))}
@@ -482,7 +612,7 @@ const Dashboard = () => {
                 <button
                   key={action.path}
                   onClick={() => navigate(action.path)}
-                  className={`w-full flex items-center justify-between px-4 py-3 ${action.bg || 'bg-gray-50 dark:bg-gray-700/50'} hover:opacity-80 rounded-lg transition-all duration-200 group`}
+                  className={`w-full flex items-center justify-between px-4 py-3 ${action.bg || 'bg-gray-50 dark:bg-gray-700/50'} rounded-lg transition-all duration-200 group hover-scale`}
                 >
                   <span className="flex items-center">
                     <action.icon className={`h-5 w-5 mr-3 ${action.color || 'text-primary-600 dark:text-primary-400'}`} />

@@ -75,6 +75,7 @@ export type GetPartnersParams = {
   category?: string;
   country?: string;
   featured?: boolean;
+  preferred?: boolean;
   search?: string;
   sort?: 'rating' | 'name' | 'name-desc' | 'newest' | 'oldest';
   page?: number;
@@ -96,6 +97,7 @@ export const getPartners = async (params: GetPartnersParams = {}): Promise<GetPa
   if (params.category && params.category !== 'All Partners') queryParams.append('category', params.category);
   if (params.country) queryParams.append('country', params.country);
   if (params.featured) queryParams.append('featured', 'true');
+  if (params.preferred !== undefined) queryParams.append('preferred', params.preferred.toString());
   if (params.search) queryParams.append('search', params.search);
   if (params.sort) queryParams.append('sort', params.sort);
   if (params.page) queryParams.append('page', params.page.toString());
@@ -111,8 +113,10 @@ export const getPartnerStats = async (): Promise<{ success: boolean; data: Partn
 };
 
 // Get partner categories with counts
-export const getPartnerCategories = async (): Promise<{ success: boolean; data: PartnerCategory[] }> => {
-  const response = await api.get('/partners/categories');
+export const getPartnerCategories = async (preferred?: boolean): Promise<{ success: boolean; data: PartnerCategory[] }> => {
+  const queryParams = new URLSearchParams();
+  if (preferred !== undefined) queryParams.append('preferred', preferred.toString());
+  const response = await api.get(`/partners/categories?${queryParams.toString()}`);
   return response.data;
 };
 

@@ -243,26 +243,32 @@ const MapSearch = () => {
   return (
     <div className="space-y-8" data-tour="map-content">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-4 py-6 sm:px-8 sm:py-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
-                <MapIcon className="h-8 w-8 mr-3" />
-                Location Finder
-              </h1>
-              <p className="mt-3 text-lg text-primary-100">
-                Find Sign Company locations and franchise owners near you
-              </p>
-            </div>
+      <div className="bg-blue-50 dark:bg-blue-900 border-blue-100 dark:border-blue-900/30 rounded-lg border p-4 sm:p-6 w-full max-w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+              <MapIcon className="h-6 w-6 sm:h-8 sm:w-8 mr-2 inline-block" />
+              Location Finder
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              Find Sign Company locations and franchise owners near you
+            </p>
+            {userLocation && (
+              <div className="mt-2 flex items-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                <MapPinIcon className="h-4 w-4 mr-1.5" />
+                Showing locations within {radius} miles of your location
+              </div>
+            )}
+          </div>
+          <div className="flex-shrink-0">
             <button
               onClick={getUserLocation}
               disabled={isGettingLocation}
-              className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-white text-primary-600 font-medium rounded-lg hover:bg-primary-50 transition-colors duration-200 disabled:opacity-50"
+              className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors font-medium inline-flex items-center disabled:opacity-50"
             >
               {isGettingLocation ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600 mr-2"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                   Getting Location...
                 </>
               ) : (
@@ -273,19 +279,13 @@ const MapSearch = () => {
               )}
             </button>
           </div>
-          {locationError && (
-            <div className="mt-4 flex items-center text-red-200 bg-red-500/20 rounded-lg px-4 py-2">
-              <ExclamationCircleIcon className="h-5 w-5 mr-2" />
-              {locationError}
-            </div>
-          )}
-          {userLocation && (
-            <div className="mt-4 flex items-center text-primary-100">
-              <MapPinIcon className="h-5 w-5 mr-2" />
-              Showing locations within {radius} miles of your location
-            </div>
-          )}
         </div>
+        {locationError && (
+          <div className="mt-4 flex items-center text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/20 rounded-lg px-4 py-2 border border-red-200 dark:border-red-900/30">
+            <ExclamationCircleIcon className="h-5 w-5 mr-2" />
+            {locationError}
+          </div>
+        )}
       </div>
 
       {/* Search Bar */}
@@ -431,7 +431,7 @@ const MapSearch = () => {
           {!userLocation && (
             <button
               onClick={getUserLocation}
-              className="mt-4 inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+              className="mt-4 inline-flex items-center px-2.5 py-1.5 bg-primary-600 text-sm text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
             >
               <MapPinIcon className="h-5 w-5 mr-2" />
               Use My Location
@@ -657,7 +657,7 @@ const MapSearch = () => {
                   {selectedLocation.phone && (
                     <a
                       href={`tel:${selectedLocation.phone}`}
-                      className="w-full flex items-center justify-center px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base"
+                      className="w-full flex items-center justify-center px-4 py-2.5 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base"
                     >
                       <PhoneIcon className="h-5 w-5 mr-2" />
                       {selectedLocation.phone}
