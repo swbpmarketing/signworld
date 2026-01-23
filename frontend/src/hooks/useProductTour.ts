@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const TOUR_STORAGE_KEY = 'productTourCompleted';
 const TOUR_VERSION = '1.0'; // Increment this to show tour again after major updates
@@ -13,6 +13,9 @@ export const useProductTour = (userId?: string) => {
     run: false,
     stepIndex: 0,
   });
+
+  // Track if we've already checked tour on mount to prevent multiple checks
+  const hasInitialized = useRef(false);
 
   /**
    * Check if user has completed the tour
@@ -104,21 +107,32 @@ export const useProductTour = (userId?: string) => {
   }, [userId]);
 
   /**
-   * Check on mount if this is the user's first login
-   * Show tour automatically if they haven't completed it
+   * Smart auto-start behavior:
+   * - NEW users (first login): Tour starts automatically after 1 second
+   * - RETURNING users (completed tour): Tour does NOT auto-start
+   * - Only runs ONCE per session to prevent re-triggering
    */
   useEffect(() => {
-    if (!userId) return;
+    // Don't run if no userId or already initialized
+    if (!userId || hasInitialized.current) return;
+
+    // Mark as initialized to prevent duplicate runs
+    hasInitialized.current = true;
 
     // Small delay to ensure the page is fully loaded
     const timer = setTimeout(() => {
-      if (!hasCompletedTour()) {
+      const completed = hasCompletedTour();
+
+      // Only auto-start for new users who haven't completed the tour
+      if (!completed) {
         startTour();
       }
     }, 1000); // 1 second delay after login
 
     return () => clearTimeout(timer);
-  }, [userId, hasCompletedTour, startTour]);
+    // Only depend on userId - functions are stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   /**
    * Listen for tour trigger from other components (e.g., Settings page)
