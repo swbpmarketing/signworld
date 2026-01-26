@@ -77,6 +77,7 @@ const Sidebar = memo(({
   actualUserRole,
   currentPath,
   onClose,
+  onHoverChange,
   hasPermission,
   isPreviewMode: _isPreviewMode,
   permissions: _permissions
@@ -86,10 +87,23 @@ const Sidebar = memo(({
   actualUserRole?: string;
   currentPath: string;
   onClose: () => void;
+  onHoverChange: (isHovering: boolean) => void;
   hasPermission: (permission: keyof Permissions) => boolean;
   isPreviewMode: boolean;
   permissions: Permissions | null;
 }) => {
+  const [isHovering, setIsHovering] = useState(false);
+
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+    onHoverChange(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovering(false);
+    onHoverChange(false);
+  };
+
   const filteredNavigation = navigation.filter(item => {
     // Always use actualUserRole for role checks (the role from JWT token)
     // Preview mode permissions are handled separately via hasPermission()
@@ -106,64 +120,110 @@ const Sidebar = memo(({
     return true;
   });
 
+  // Separate Bug Reports to pin at bottom
+  const mainNavigation = filteredNavigation.filter(item => item.name !== 'Bug Reports');
+  const bugReportsItem = filteredNavigation.find(item => item.name === 'Bug Reports');
+
+  // Determine if sidebar should be visually expanded
+  // Sidebar is collapsed by default, expands on hover
+  const isExpanded = isHovering;
+
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform md:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-50 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform md:translate-x-0 transition-all duration-300 ${
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      }`}
+      } ${isExpanded ? "w-64" : "w-16"}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="flex h-full flex-col bg-white dark:bg-gray-800">
         {/* Logo - with explicit dimensions to prevent layout shift */}
-        <div className="flex h-16 items-center justify-center px-2 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <img
-            src="/logo.png"
-            alt="Sign Company Logo"
-            className="w-full max-w-[200px] h-auto object-contain brightness-[0.2] dark:brightness-0 dark:invert"
-          />
+        <div className="flex h-16 items-center justify-center px-2 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 relative">
+          {isExpanded ? (
+            <img
+              src="/logo.png"
+              alt="Sign Company Logo"
+              className="w-full max-w-[200px] h-auto object-contain brightness-[0.2] dark:brightness-0 dark:invert"
+            />
+          ) : (
+            <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">SC</span>
+            </div>
+          )}
         </div>
 
         {/* Portal Title */}
-        <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            {(() => {
-              console.log('Sidebar - actualUserRole:', actualUserRole, 'userRole:', userRole);
-              if (actualUserRole === 'admin' || userRole === 'admin') return 'Admin Portal';
-              if (actualUserRole === 'vendor' || userRole === 'vendor') return 'Partner Portal';
-              return 'Owner Portal';
-            })()}
-          </p>
-        </div>
+        {isExpanded && (
+          <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">
+              {(() => {
+                console.log('Sidebar - actualUserRole:', actualUserRole, 'userRole:', userRole);
+                if (actualUserRole === 'admin' || userRole === 'admin') return 'Admin Portal';
+                if (actualUserRole === 'vendor' || userRole === 'vendor') return 'Partner Portal';
+                return 'Owner Portal';
+              })()}
+            </p>
+          </div>
+        )}
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <div className="space-y-0.5">
-            {filteredNavigation.map((item) => {
+        <nav className="flex-1 px-3 py-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex flex-col">
+          <div className="space-y-0.5 flex-1">
+            {mainNavigation.map((item) => {
               const isActive = currentPath === item.href;
               return (
                 <Link
                   key={item.name}
                   to={item.href}
                   data-tour={item.tourId}
-                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  className={`group flex items-center ${!isExpanded ? 'justify-center px-3' : 'px-3'} py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
                       ? "bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
                       : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   }`}
                   onClick={onClose}
+                  title={!isExpanded ? item.name : undefined}
                 >
                   <item.icon
-                    className={`mr-3 h-5 w-5 flex-shrink-0 sidebar-icon ${
+                    className={`${!isExpanded ? '' : 'mr-3'} h-5 w-5 flex-shrink-0 sidebar-icon ${
                       isActive
                         ? "text-primary-600 dark:text-primary-400"
                         : "text-gray-400 dark:text-gray-500"
                     }`}
                   />
-                  <span>{item.name}</span>
+                  {isExpanded && <span>{item.name}</span>}
                 </Link>
               );
             })}
           </div>
+
+          {/* Bug Reports pinned at bottom */}
+          {bugReportsItem && (
+            <div className="mt-auto pt-3 border-t border-gray-200 dark:border-gray-700">
+              <Link
+                to={bugReportsItem.href}
+                data-tour={bugReportsItem.tourId}
+                className={`group flex items-center ${!isExpanded ? 'justify-center px-3' : 'px-3'} py-2 text-sm font-medium rounded-md transition-colors ${
+                  currentPath === bugReportsItem.href
+                    ? "bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                }`}
+                onClick={onClose}
+                title={!isExpanded ? bugReportsItem.name : undefined}
+              >
+                <bugReportsItem.icon
+                  className={`${!isExpanded ? '' : 'mr-3'} h-5 w-5 flex-shrink-0 sidebar-icon ${
+                    currentPath === bugReportsItem.href
+                      ? "text-primary-600 dark:text-primary-400"
+                      : "text-gray-400 dark:text-gray-500"
+                  }`}
+                />
+                {isExpanded && <span>{bugReportsItem.name}</span>}
+              </Link>
+            </div>
+          )}
         </nav>
+
       </div>
     </aside>
   );
@@ -280,6 +340,7 @@ const Layout = () => {
   const { hasPermission, permissions } = usePermissions();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarHovering, setSidebarHovering] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
@@ -397,13 +458,14 @@ const Layout = () => {
         actualUserRole={user?.role}
         currentPath={location.pathname}
         onClose={handleSidebarClose}
+        onHoverChange={setSidebarHovering}
         hasPermission={hasPermission}
         isPreviewMode={isPreviewMode}
         permissions={permissions}
       />
 
       {/* Main content */}
-      <div className={`flex-1 flex flex-col min-h-screen md:ml-64 min-w-0 overflow-hidden ${isPreviewMode ? 'pt-10' : ''}`}>
+      <div className={`flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden transition-all duration-300 ${sidebarHovering ? 'md:ml-64' : 'md:ml-16'} ${isPreviewMode ? 'pt-10' : ''}`}>
         {/* Top bar */}
         <header className={`sticky ${isPreviewMode ? 'top-10' : 'top-0'} z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md pt-3`}>
           <div className="px-4 sm:px-6">

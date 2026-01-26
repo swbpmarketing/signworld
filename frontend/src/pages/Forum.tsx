@@ -27,6 +27,7 @@ import {
   CheckCircleIcon,
   UserIcon,
   ChevronDownIcon,
+  ArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import {
   HeartIcon as HeartSolidIcon,
@@ -34,6 +35,8 @@ import {
 } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import CustomSelect from '../components/CustomSelect';
+import EmptyState from '../components/EmptyState';
+import SearchHighlight from '../components/SearchHighlight';
 
 // Helper function to get headers with auth token and preview mode
 const getHeaders = () => {
@@ -115,6 +118,42 @@ const forumCategories = [
   { name: 'Announcements', value: 'announcements' },
 ];
 
+// Date separator utility functions
+const getDateSeparator = (dateString: string): string => {
+  const date = new Date(dateString);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Reset time for date comparison
+  today.setHours(0, 0, 0, 0);
+  yesterday.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+
+  if (date.getTime() === today.getTime()) {
+    return 'Today';
+  } else if (date.getTime() === yesterday.getTime()) {
+    return 'Yesterday';
+  } else {
+    // Check if within this week (last 7 days)
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    if (date >= sevenDaysAgo) {
+      return 'This Week';
+    }
+  }
+  return 'Earlier';
+};
+
+const shouldShowDateSeparator = (currentThread: ForumThread, previousThread: ForumThread | null): string | null => {
+  const currentSeparator = getDateSeparator(currentThread.createdAt);
+  if (!previousThread) {
+    return currentSeparator;
+  }
+  const previousSeparator = getDateSeparator(previousThread.createdAt);
+  return currentSeparator !== previousSeparator ? currentSeparator : null;
+};
+
 const Forum = () => {
   const { user } = useAuth();
   const { getEffectiveRole } = usePreviewMode();
@@ -175,6 +214,7 @@ const Forum = () => {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const [sortBy, setSortBy] = useState<'latest' | 'hot' | 'top' | 'unanswered'>('latest');
   const [stats, setStats] = useState({
     totalThreads: 0,
@@ -227,7 +267,7 @@ const Forum = () => {
 
       const queryParams = new URLSearchParams({
         page: pageNum.toString(),
-        limit: '10',
+        limit: '15',
         sort: sortMap[sortBy],
         ...(categoryValue && categoryValue !== 'all' && { category: categoryValue }),
         ...(searchQuery && { search: searchQuery }),
@@ -468,10 +508,30 @@ const Forum = () => {
       return;
     }
     const timer = setTimeout(() => {
+      setPage(1);
       fetchThreads(1, false);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Scroll listener for back to top button
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      setShowBackToTop(scrollTop > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Handle scroll to top
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
 
   // Socket.io real-time updates
   useEffect(() => {
@@ -1440,17 +1500,16 @@ const Forum = () => {
 
           {/* Empty State */}
           {!loading && !error && threads.length === 0 && !showMyThreads && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
-              <ChatBubbleLeftRightIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No threads found</h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">Be the first to start a discussion!</p>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center px-2.5 py-1.5 bg-primary-600 text-sm text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Create First Thread
-              </button>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+              <EmptyState
+                icon={<ChatBubbleLeftRightIcon className="h-16 w-16" />}
+                title="No threads found"
+                description={searchQuery || selectedTag || selectedCategory !== 'All Categories' ? "No threads match your search or filters. Try adjusting your criteria." : "Be the first to start a discussion!"}
+                action={!searchQuery && !selectedTag && selectedCategory === 'All Categories' ? {
+                  label: "Create First Thread",
+                  onClick: () => setShowCreateModal(true)
+                } : undefined}
+              />
             </div>
           )}
 
@@ -1460,9 +1519,21 @@ const Forum = () => {
               {showMyThreads && (
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mt-6">All Forum Threads</h3>
               )}
-              {threads.map((thread) => (
+              {threads.map((thread, index) => {
+                const separator = shouldShowDateSeparator(thread, index > 0 ? threads[index - 1] : null);
+                return (
+                  <div key={thread._id}>
+                    {/* Date Separator */}
+                    {separator && (
+                      <div className="flex items-center gap-3 my-6">
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent"></div>
+                        <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider px-3">
+                          {separator}
+                        </h3>
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent"></div>
+                      </div>
+                    )}
                 <article
-                  key={thread._id}
                   data-tour="thread-list"
                   className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
                   onClick={() => handleOpenThread(thread)}
@@ -1531,10 +1602,10 @@ const Forum = () => {
 
                     {/* Thread Content */}
                     <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 hover:text-primary-600 dark:hover:text-primary-400 transition-colors line-clamp-2">
-                      {thread.title}
+                      <SearchHighlight text={thread.title} searchTerm={searchQuery} />
                     </h3>
                     <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-                      {thread.content}
+                      <SearchHighlight text={thread.content} searchTerm={searchQuery} />
                     </p>
 
                     {/* Tags */}
@@ -1682,27 +1753,27 @@ const Forum = () => {
                     </div>
                   </div>
                 </article>
-              ))}
+                  </div>
+                );
+              })}
 
               {/* Load More */}
               {page < totalPages && (
-                <div className="text-center">
+                <div className="text-center mt-8">
                   <button
                     onClick={handleLoadMore}
                     disabled={loadingMore}
-                    className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
                   >
                     {loadingMore ? (
                       <>
                         <ArrowPathIcon className="h-5 w-5 mr-2 animate-spin" />
-                        Loading...
+                        Loading more threads...
                       </>
                     ) : (
                       <>
                         Load More Threads
-                        <span className="ml-2 text-sm">
-                          ({threads.length} of {stats.totalThreads})
-                        </span>
+                        <ChevronDownIcon className="h-5 w-5 ml-2" />
                       </>
                     )}
                   </button>
@@ -2519,6 +2590,18 @@ const Forum = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Back to Top Button */}
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 p-4 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110"
+          style={{ zIndex: 9999 }}
+          aria-label="Back to top"
+        >
+          <ArrowUpIcon className="h-6 w-6" />
+        </button>
       )}
     </div>
   );

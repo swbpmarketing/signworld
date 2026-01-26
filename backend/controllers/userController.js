@@ -44,6 +44,7 @@ exports.getUsers = async (req, res) => {
 
     const users = await User.find(query)
       .select('-password')
+      .populate('createdBy', 'name email')
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 });
@@ -73,7 +74,9 @@ exports.getUsers = async (req, res) => {
 // @access  Private
 exports.getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .populate('createdBy', 'name email');
 
     if (!user) {
       return res.status(404).json({
@@ -102,6 +105,9 @@ exports.createUser = async (req, res) => {
     // Store the plain text password before it gets hashed
     const plainPassword = req.body.password;
 
+    // Debug logging
+    console.log('CREATE USER - req.user:', req.user ? { id: req.user._id, name: req.user.name, email: req.user.email } : 'undefined');
+
     // Get system settings to check auto-approve
     const settings = await SystemSettings.getSettings();
     const userRole = req.body.role || 'owner';
@@ -113,7 +119,16 @@ exports.createUser = async (req, res) => {
       isActive = false; // Requires admin approval unless explicitly set
     }
 
-    const user = await User.create({ ...req.body, isActive });
+    console.log('Creating user with createdBy:', req.user?._id);
+
+    const user = await User.create({
+      ...req.body,
+      isActive,
+      createdBy: req.user?._id
+    });
+
+    // Populate createdBy field before returning
+    await user.populate('createdBy', 'name email');
 
     // Send welcome email with credentials
     try {

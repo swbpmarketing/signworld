@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 const TOUR_STORAGE_KEY = 'productTourCompleted';
+const TOUR_SESSION_KEY = 'productTourSessionInit';
 const TOUR_VERSION = '1.0'; // Increment this to show tour again after major updates
 
 interface TourState {
@@ -15,6 +16,7 @@ export const useProductTour = (userId?: string) => {
   });
 
   // Track if we've already checked tour on mount to prevent multiple checks
+  // Using both ref AND sessionStorage to handle component remounts
   const hasInitialized = useRef(false);
 
   /**
@@ -113,11 +115,20 @@ export const useProductTour = (userId?: string) => {
    * - Only runs ONCE per session to prevent re-triggering
    */
   useEffect(() => {
-    // Don't run if no userId or already initialized
-    if (!userId || hasInitialized.current) return;
+    // Don't run if no userId
+    if (!userId) return;
 
-    // Mark as initialized to prevent duplicate runs
+    // Check both ref AND sessionStorage to handle component remounts
+    const sessionInitKey = `${TOUR_SESSION_KEY}_${userId}`;
+    const alreadyInitializedInSession = sessionStorage.getItem(sessionInitKey) === 'true';
+
+    if (hasInitialized.current || alreadyInitializedInSession) {
+      return;
+    }
+
+    // Mark as initialized in both ref and sessionStorage
     hasInitialized.current = true;
+    sessionStorage.setItem(sessionInitKey, 'true');
 
     // Small delay to ensure the page is fully loaded
     const timer = setTimeout(() => {
@@ -125,7 +136,10 @@ export const useProductTour = (userId?: string) => {
 
       // Only auto-start for new users who haven't completed the tour
       if (!completed) {
+        console.log('Product tour: Auto-starting for new user');
         startTour();
+      } else {
+        console.log('Product tour: Skipping auto-start - user has completed tour');
       }
     }, 1000); // 1 second delay after login
 

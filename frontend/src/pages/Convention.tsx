@@ -7,6 +7,7 @@ import { usePreviewMode } from '../context/PreviewModeContext';
 import { useToast } from '../hooks/useToast';
 import ToastContainer from '../components/ToastContainer';
 import CustomSelect from '../components/CustomSelect';
+import ProgressiveImage from '../components/ProgressiveImage';
 
 const API_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV
@@ -1679,15 +1680,15 @@ const Convention = () => {
                             {conv.gallery.map((image: any, index: number) => (
                               <div
                                 key={index}
-                                onClick={() => setLightboxImage({ url: image.imageUrl, caption: image.caption, conventionTitle: conv.title })}
                                 className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group"
                               >
-                                <img
+                                <ProgressiveImage
                                   src={image.imageUrl}
                                   alt={image.caption || `${conv.title} - Photo ${index + 1}`}
-                                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                  className="transition-transform duration-300 group-hover:scale-110"
+                                  onClick={() => setLightboxImage({ url: image.imageUrl, caption: image.caption, conventionTitle: conv.title })}
                                 />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center pointer-events-none">
                                   <PhotoIcon className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                                 </div>
                                 {image.caption && (

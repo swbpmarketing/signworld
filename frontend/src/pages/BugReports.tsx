@@ -155,6 +155,8 @@ const BugReports = () => {
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
+  const [draggedReport, setDraggedReport] = useState<BugReport | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<keyof typeof statusConfig | null>(null);
 
   // Fetch bug reports
   const { data: reportsData, isLoading } = useQuery({
@@ -403,6 +405,42 @@ const BugReports = () => {
     updateStatusMutation.mutate({ id: reportId, status: newStatus });
   };
 
+  // Drag and Drop handlers
+  const handleDragStart = (e: React.DragEvent, report: BugReport) => {
+    if (!isAdmin) return;
+    setDraggedReport(report);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setDraggedReport(null);
+    setDragOverColumn(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, status: keyof typeof statusConfig) => {
+    e.preventDefault();
+    if (!isAdmin || !draggedReport) return;
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColumn(status);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverColumn(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, newStatus: keyof typeof statusConfig) => {
+    e.preventDefault();
+    if (!isAdmin || !draggedReport || draggedReport.status === newStatus) {
+      setDraggedReport(null);
+      setDragOverColumn(null);
+      return;
+    }
+
+    updateStatusMutation.mutate({ id: draggedReport._id, status: newStatus });
+    setDraggedReport(null);
+    setDragOverColumn(null);
+  };
+
   const handleVote = (reportId: string) => {
     voteMutation.mutate(reportId);
   };
@@ -580,7 +618,12 @@ const BugReports = () => {
   const KanbanCard = ({ report }: { report: BugReport }) => (
     <div
       data-tour="bug-card"
-      className="bg-white dark:bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+      draggable={isAdmin}
+      onDragStart={(e) => handleDragStart(e, report)}
+      onDragEnd={handleDragEnd}
+      className={`bg-white dark:bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm ${
+        isAdmin ? 'hover:cursor-move' : ''
+      } ${draggedReport?._id === report._id ? 'opacity-50' : ''}`}
       onClick={() => openDetailModal(report)}
     >
       {/* Header with type badge */}
@@ -655,7 +698,15 @@ const BugReports = () => {
     const StatusIcon = config.icon;
 
     return (
-      <div data-tour="bug-status-columns" className={`flex-1 min-w-[240px] bg-gray-100 dark:bg-gray-900/50 rounded-xl border-t-4 ${config.color}`}>
+      <div
+        data-tour="bug-status-columns"
+        className={`flex-1 min-w-[240px] bg-gray-100 dark:bg-gray-900/50 rounded-xl border-t-4 transition-all ${config.color} ${
+          dragOverColumn === status ? 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900' : ''
+        }`}
+        onDragOver={(e) => handleDragOver(e, status)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, status)}
+      >
         {/* Column Header */}
         <div className={`px-4 py-3 ${config.headerBg} rounded-t-lg border-b border-gray-200 dark:border-gray-700`}>
           <div className="flex items-center justify-between">
@@ -679,7 +730,7 @@ const BugReports = () => {
         <div className="p-3 space-y-3 max-h-[calc(100vh-320px)] overflow-y-auto scrollbar-hide">
           {reports.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <p className="text-sm">No items</p>
+              <p className="text-sm">{dragOverColumn === status && isAdmin ? 'Drop here' : 'No items'}</p>
             </div>
           ) : (
             reports.map(report => (
