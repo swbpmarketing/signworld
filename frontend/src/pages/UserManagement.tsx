@@ -20,6 +20,9 @@ import {
 } from '@heroicons/react/24/outline';
 import api from '../config/axios';
 import CustomSelect from '../components/CustomSelect';
+import EmptyState from '../components/EmptyState';
+import SearchHighlight from '../components/SearchHighlight';
+import FilterChip from '../components/FilterChip';
 
 interface User {
   _id: string;
@@ -30,6 +33,11 @@ interface User {
   company?: string;
   isActive: boolean;
   createdAt: string;
+  createdBy?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
 }
 
 const UserManagement = () => {
@@ -628,38 +636,78 @@ const UserManagement = () => {
         )}
       </div>
 
+      {/* Active Filters */}
+      {(hasActiveFilters || searchQuery) && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active filters:</span>
+          {searchQuery && (
+            <FilterChip
+              label="Search"
+              value={searchQuery}
+              onRemove={handleClearSearch}
+            />
+          )}
+          {roleFilter !== 'all' && (
+            <FilterChip
+              label="Role"
+              value={roleFilter}
+              onRemove={() => setRoleFilter('all')}
+            />
+          )}
+          {statusFilter !== 'active' && (
+            <FilterChip
+              label="Status"
+              value={statusFilter}
+              onRemove={() => setStatusFilter('active')}
+            />
+          )}
+          <button
+            onClick={() => {
+              handleClearSearch();
+              handleClearFilters();
+            }}
+            className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 underline"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-primary-600 dark:border-gray-700 dark:border-t-primary-400"></div>
           </div>
-        ) : users.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <UsersIcon className="h-16 w-16 text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">No Users Found</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              {searchQuery ? 'No users match your search criteria.' : 'No users have been added yet.'}
-            </p>
-          </div>
         ) : (
           <>
             {/* Mobile Card View */}
             <div className="md:hidden space-y-3 p-4">
-              {users.map((user) => (
-                <div
-                  key={user._id}
-                  className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 p-4 transition-all"
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                        {user.name}
-                      </h3>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 truncate mt-0.5">
-                        {user.email}
-                      </p>
-                    </div>
+              {users.length === 0 ? (
+                <EmptyState
+                  icon={<UserGroupIcon className="h-16 w-16" />}
+                  title="No users found"
+                  description={searchQuery ? `No users match "${searchQuery}". Try adjusting your search or filters.` : "Get started by creating your first user account."}
+                  action={!searchQuery && !hasActiveFilters ? {
+                    label: "Create User",
+                    onClick: () => setIsCreateModalOpen(true)
+                  } : undefined}
+                />
+              ) : (
+                users.map((user) => (
+                  <div
+                    key={user._id}
+                    className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 p-4 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                          <SearchHighlight text={user.name} searchTerm={searchQuery} />
+                        </h3>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 truncate mt-0.5">
+                          <SearchHighlight text={user.email} searchTerm={searchQuery} />
+                        </p>
+                      </div>
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${getRoleBadgeColor(user.role)}`}>
                       {user.role}
                     </span>
@@ -692,12 +740,25 @@ const UserManagement = () => {
                     </button>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
 
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
-              <table data-tour="user-table" className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              {users.length === 0 ? (
+                <EmptyState
+                  icon={<UserGroupIcon className="h-16 w-16" />}
+                  title="No users found"
+                  description={searchQuery ? `No users match "${searchQuery}". Try adjusting your search or filters.` : "Get started by creating your first user account."}
+                  action={!searchQuery && !hasActiveFilters ? {
+                    label: "Create User",
+                    onClick: () => setIsCreateModalOpen(true)
+                  } : undefined}
+                  className="my-8"
+                />
+              ) : (
+                <table data-tour="user-table" className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -715,6 +776,9 @@ const UserManagement = () => {
                     <th scope="col" className="hidden lg:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
+                    <th scope="col" className="hidden xl:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Created By
+                    </th>
                     <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Actions
                     </th>
@@ -728,7 +792,7 @@ const UserManagement = () => {
                     >
                       <td className="px-3 sm:px-6 py-4">
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {user.name}
+                          <SearchHighlight text={user.name} searchTerm={searchQuery} />
                         </div>
                         <div className="md:hidden text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
@@ -738,7 +802,7 @@ const UserManagement = () => {
                       </td>
                       <td className="px-3 sm:px-6 py-4">
                         <div className="text-sm text-blue-600 dark:text-blue-400">
-                          {user.email}
+                          <SearchHighlight text={user.email} searchTerm={searchQuery} />
                         </div>
                         <div className="lg:hidden text-xs text-gray-500 dark:text-gray-400 mt-1">
                           {user.isActive ? (
@@ -773,6 +837,22 @@ const UserManagement = () => {
                           {user.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
+                      <td className="hidden xl:table-cell px-3 sm:px-6 py-4 whitespace-nowrap">
+                        {user.createdBy ? (
+                          <>
+                            <div className="text-sm text-gray-900 dark:text-gray-100">
+                              {user.createdBy.name}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {user.createdBy.email}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            —
+                          </div>
+                        )}
+                      </td>
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           data-tour="user-actions"
@@ -786,6 +866,7 @@ const UserManagement = () => {
                   ))}
                 </tbody>
               </table>
+              )}
             </div>
 
             {/* Pagination */}
@@ -1117,7 +1198,7 @@ const UserManagement = () => {
                     </span>
                   </div>
 
-                  <div className="md:col-span-2">
+                  <div>
                     <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                       Created At
                     </label>
@@ -1128,6 +1209,26 @@ const UserManagement = () => {
                         day: 'numeric',
                       })}
                     </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      Created By
+                    </label>
+                    {selectedUser.createdBy ? (
+                      <div>
+                        <p className="text-base text-gray-900 dark:text-gray-100">
+                          {selectedUser.createdBy.name}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {selectedUser.createdBy.email}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-base text-gray-500 dark:text-gray-400 italic">
+                        Self-registered
+                      </p>
+                    )}
                   </div>
                   </div>
                 </div>

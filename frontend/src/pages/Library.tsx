@@ -22,6 +22,7 @@ import {
   ArchiveBoxIcon,
   TrashIcon,
   ClipboardDocumentListIcon,
+  PencilIcon,
 } from '@heroicons/react/24/outline';
 import { FolderIcon as FolderSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
@@ -163,6 +164,12 @@ const Library = () => {
   const [fileToDelete, setFileToDelete] = useState<LibraryFile | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
+
+  // Rename modal state
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [itemToRename, setItemToRename] = useState<{ type: 'file' | 'folder'; id: string; currentName: string } | null>(null);
+  const [renameName, setRenameName] = useState('');
+  const [renaming, setRenaming] = useState(false);
 
   // Derive current category label and count for header, to match category chips
   const selectedCategoryMeta = selectedCategory === 'all' ? null : categoryMeta[selectedCategory];
@@ -538,6 +545,69 @@ const Library = () => {
     }
   };
 
+  // Open rename modal
+  const openRenameModal = (type: 'file' | 'folder', id: string, currentName: string) => {
+    setItemToRename({ type, id, currentName });
+    setRenameName(currentName);
+    setShowRenameModal(true);
+    setOpenMenuId(null);
+  };
+
+  // Handle rename
+  const handleRename = async () => {
+    if (!itemToRename || !renameName.trim()) {
+      toast.error('Please enter a name');
+      return;
+    }
+
+    setRenaming(true);
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      };
+
+      if (itemToRename.type === 'folder') {
+        const response = await fetch(`${API_URL}/folders/${itemToRename.id}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ name: renameName.trim() }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          toast.success('Folder renamed successfully');
+          fetchFolders(selectedCategory);
+        } else {
+          toast.error(data.error || 'Failed to rename folder');
+        }
+      } else {
+        const response = await fetch(`${API_URL}/library/${itemToRename.id}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ title: renameName.trim() }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          toast.success('File renamed successfully');
+          fetchFiles(currentPage);
+        } else {
+          toast.error(data.error || 'Failed to rename file');
+        }
+      }
+
+      setShowRenameModal(false);
+      setItemToRename(null);
+      setRenameName('');
+    } catch (err) {
+      console.error('Error renaming:', err);
+      toast.error('Failed to rename');
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   // Find folder by ID in hierarchy
   const findFolderInHierarchy = (id: string, folders: Folder[]): Folder | null => {
     for (const folder of folders) {
@@ -582,16 +652,20 @@ const Library = () => {
           style={{ marginLeft: `${level * 20}px` }}
           title={folder.name}
         >
-          <button
-            onClick={() => toggleFolderExpansion(folder._id)}
-            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded flex-shrink-0"
-          >
-            <ChevronLeftIcon
-              className={`h-4 w-4 transition-transform ${
-                expandedFolders.has(folder._id) ? 'rotate-90' : ''
-              }`}
-            />
-          </button>
+          {folder.children && folder.children.length > 0 ? (
+            <button
+              onClick={() => toggleFolderExpansion(folder._id)}
+              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded flex-shrink-0"
+            >
+              <ChevronLeftIcon
+                className={`h-4 w-4 transition-transform ${
+                  expandedFolders.has(folder._id) ? 'rotate-90' : ''
+                }`}
+              />
+            </button>
+          ) : (
+            <div className="w-6 flex-shrink-0" />
+          )}
           <button
             onClick={() => handleFolderClick(folder._id)}
             className="flex items-center gap-2 flex-1 min-w-0 text-left"
@@ -603,12 +677,25 @@ const Library = () => {
             </span>
           </button>
           {isAdmin && (
-            <button
-              onClick={(e) => handleDeleteFolder(e, folder._id)}
-              className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400 rounded flex-shrink-0"
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openRenameModal('folder', folder._id, folder.name);
+                }}
+                className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 dark:text-blue-400 rounded flex-shrink-0"
+                title="Rename folder"
+              >
+                <PencilIcon className="h-4 w-4" />
+              </button>
+              <button
+                onClick={(e) => handleDeleteFolder(e, folder._id)}
+                className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400 rounded flex-shrink-0"
+                title="Delete folder"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            </>
           )}
         </div>
         {expandedFolders.has(folder._id) && folder.children && folder.children.length > 0 && (
@@ -1335,6 +1422,16 @@ const Library = () => {
                               {openMenuId === file._id && (
                                 <div className="absolute right-0 top-8 z-20 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
                                   <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openRenameModal('file', file._id, file.title);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                  >
+                                    <PencilIcon className="h-4 w-4" />
+                                    Rename
+                                  </button>
+                                  <button
                                     onClick={(e) => handleArchive(e, file)}
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                                   >
@@ -1487,6 +1584,16 @@ const Library = () => {
                               </button>
                               {openMenuId === file._id && (
                                 <div className="absolute right-0 top-8 z-20 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openRenameModal('file', file._id, file.title);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                  >
+                                    <PencilIcon className="h-4 w-4" />
+                                    Rename
+                                  </button>
                                   <button
                                     onClick={(e) => handleArchive(e, file)}
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -2187,6 +2294,69 @@ const Library = () => {
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Modal */}
+      {showRenameModal && itemToRename && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                  <PencilIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Rename {itemToRename.type === 'folder' ? 'Folder' : 'File'}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowRenameModal(false);
+                  setItemToRename(null);
+                  setRenameName('');
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleRename(); }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  New Name
+                </label>
+                <input
+                  type="text"
+                  value={renameName}
+                  onChange={(e) => setRenameName(e.target.value)}
+                  placeholder={`Enter ${itemToRename.type} name`}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRenameModal(false);
+                    setItemToRename(null);
+                    setRenameName('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={renaming || !renameName.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {renaming ? 'Renaming...' : 'Rename'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
