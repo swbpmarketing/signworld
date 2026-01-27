@@ -209,7 +209,7 @@ router.get('/role-permissions', protect, authorize('admin'), async (req, res) =>
         canPostBrags: false,
         canAccessVideos: true,
         canAccessDirectory: true,
-        canAccessPartners: false,
+        canAccessPartners: true,  // Vendors can access Partners page (but cannot see ratings)
       },
     };
 
@@ -345,7 +345,7 @@ router.get('/my-permissions', protect, async (req, res) => {
         canPostBrags: false,
         canAccessVideos: true,
         canAccessDirectory: true,
-        canAccessPartners: false,
+        canAccessPartners: true,  // Vendors can access Partners page (but cannot see ratings)
       },
     };
 

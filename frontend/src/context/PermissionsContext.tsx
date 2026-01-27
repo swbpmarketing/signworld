@@ -90,7 +90,7 @@ const defaultVendorPermissions: Permissions = {
   canPostBrags: false,
   canAccessVideos: true,
   canAccessDirectory: true,
-  canAccessPartners: false,
+  canAccessPartners: true,  // Vendors can access Partners page (but cannot see ratings)
   canManageUsers: false,
   canManageSettings: false,
   canApprovePending: false,
