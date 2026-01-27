@@ -156,7 +156,7 @@ const staticOwners: OwnerDisplay[] = [
 ];
 
 const OwnersRoster = () => {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, isVendor, isOwner, user } = useAuth();
   const { isPreviewMode } = usePreviewMode();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -201,17 +201,17 @@ const OwnersRoster = () => {
   // Check if user can see ratings (admin, vendor, or the owner themselves)
   const canSeeRatings = (ownerId: string) => {
     if (!user) return false;
-    if (user.role === 'admin') return true;
-    if (user.role === 'vendor') return true;
-    if (currentUserId === ownerId) return true;
+    if (isAdmin) return true;
+    if (isVendor) return true;
+    // Owners can only see their own ratings
+    if (isOwner && currentUserId === ownerId) return true;
     return false;
   };
 
-  // Check if user can submit ratings (vendors only, not for themselves)
-  const canRateOwner = (ownerId: string) => {
+  // Check if user can submit ratings (vendors only)
+  const canRateOwner = () => {
     if (!user) return false;
-    if (user.role === 'vendor' && currentUserId !== ownerId) return true;
-    return false;
+    return isVendor;
   };
 
   // Calculate years in business from year established
@@ -963,7 +963,7 @@ const OwnersRoster = () => {
                   {currentUserId !== owner.id && (
                     <>
                       {/* Rate Owner button - only for vendors */}
-                      {canRateOwner(owner.id) && (
+                      {canRateOwner() && (
                         <button
                           onClick={(e) => handleOpenReviewModal(owner, e)}
                           className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-yellow-300 dark:border-yellow-600 text-xs sm:text-sm font-medium rounded-lg text-yellow-700 dark:text-yellow-400 bg-white dark:bg-gray-800 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
@@ -1117,7 +1117,7 @@ const OwnersRoster = () => {
                           </button>
                         ) : (
                           <>
-                            {canRateOwner(owner.id) && (
+                            {canRateOwner() && (
                               <button
                                 onClick={(e) => handleOpenReviewModal(owner, e)}
                                 className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300 text-xs sm:text-sm font-medium"

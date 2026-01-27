@@ -57,9 +57,9 @@ const navigation: {
   { name: "Forum", href: "/forum", icon: ChatBubbleLeftRightIcon, roles: ['admin', 'owner'], permission: 'canAccessForum', tourId: 'nav-forum' },
   { name: "Chat", href: "/chat", icon: ChatBubbleLeftIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessChat', tourId: 'nav-chat' },
   { name: "Library", href: "/library", icon: FolderIcon, roles: ['admin', 'owner'], permission: 'canAccessLibrary', tourId: 'nav-library' },
-  { name: "Owners Roster", href: "/owners", icon: UserGroupIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDirectory', tourId: 'nav-owners' },
+  { name: "Owners Roster", href: "/owners", icon: UserGroupIcon, roles: ['admin', 'vendor'], permission: 'canAccessDirectory', tourId: 'nav-owners' },
   { name: "Map Search", href: "/map", icon: MapIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDirectory', tourId: 'nav-map' },
-  { name: "Partners", href: "/partners", icon: UserGroupIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessPartners', tourId: 'nav-partners' },
+  { name: "Partners", href: "/partners", icon: UserGroupIcon, roles: ['admin', 'owner'], permission: 'canAccessPartners', tourId: 'nav-partners' },
   { name: "Videos", href: "/videos", icon: VideoCameraIcon, roles: ['admin', 'owner'], permission: 'canAccessVideos', tourId: 'nav-videos' },
   { name: "Equipment", href: "/equipment", icon: ShoppingBagIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessEquipment', tourId: 'nav-equipment' },
   { name: "My Listings", href: "/vendor-equipment", icon: ClipboardDocumentListIcon, roles: ['vendor'], permission: 'canListEquipment', tourId: 'nav-vendor-equipment' },
@@ -73,36 +73,42 @@ const navigation: {
 // Note: isPreviewMode and permissions are passed to trigger re-renders when they change
 const Sidebar = memo(({
   sidebarOpen,
+  sidebarCollapsed,
   userRole,
   actualUserRole,
   currentPath,
   onClose,
-  onHoverChange,
+  onToggleCollapse,
   hasPermission,
   isPreviewMode: _isPreviewMode,
   permissions: _permissions
 }: {
   sidebarOpen: boolean;
+  sidebarCollapsed: boolean;
   userRole?: string;
   actualUserRole?: string;
   currentPath: string;
   onClose: () => void;
-  onHoverChange: (isHovering: boolean) => void;
+  onToggleCollapse: () => void;
   hasPermission: (permission: keyof Permissions) => boolean;
   isPreviewMode: boolean;
   permissions: Permissions | null;
 }) => {
+  // Sidebar is expanded when not collapsed, or when hovering while collapsed
   const [isHovering, setIsHovering] = useState(false);
 
   const handleMouseEnter = () => {
-    setIsHovering(true);
-    onHoverChange(true);
+    if (sidebarCollapsed) {
+      setIsHovering(true);
+    }
   };
 
   const handleMouseLeave = () => {
     setIsHovering(false);
-    onHoverChange(false);
   };
+
+  // Expanded when: not collapsed OR (collapsed but hovering)
+  const isExpanded = !sidebarCollapsed || isHovering;
 
   const filteredNavigation = navigation.filter(item => {
     // Always use actualUserRole for role checks (the role from JWT token)
@@ -124,43 +130,40 @@ const Sidebar = memo(({
   const mainNavigation = filteredNavigation.filter(item => item.name !== 'Bug Reports');
   const bugReportsItem = filteredNavigation.find(item => item.name === 'Bug Reports');
 
-  // Determine if sidebar should be visually expanded
-  // Sidebar is collapsed by default, expands on hover
-  const isExpanded = isHovering;
-
   return (
-    <aside
-      className={`fixed inset-y-0 left-0 z-50 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform md:translate-x-0 transition-all duration-300 ${
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      } ${isExpanded ? "w-64" : "w-16"}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <div className="flex h-full flex-col bg-white dark:bg-gray-800">
-        {/* Logo - with explicit dimensions to prevent layout shift */}
-        <div className="flex h-16 items-center justify-center px-2 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 relative">
-          {isExpanded ? (
-            <img
-              src="/logo.png"
-              alt="Sign Company Logo"
-              className="w-full max-w-[200px] h-auto object-contain brightness-[0.2] dark:brightness-0 dark:invert"
-            />
-          ) : (
-            <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">SC</span>
+    <>
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform md:translate-x-0 transition-all duration-300 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } ${isExpanded ? "w-64" : "w-16"}`}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <div className="flex h-full flex-col bg-white dark:bg-gray-800">
+          {/* Logo - with explicit dimensions to prevent layout shift */}
+          <div className="flex h-16 items-center justify-center px-2 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 relative">
+            {isExpanded ? (
+              <img
+                src="/logo.png"
+                alt="Sign Company Logo"
+                className="w-full max-w-[200px] h-auto object-contain brightness-[0.2] dark:brightness-0 dark:invert"
+              />
+            ) : (
+              <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">SC</span>
+              </div>
+            )}
+          </div>
+
+          {/* Portal Title */}
+          {isExpanded && (
+            <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">
+                {actualUserRole === 'admin' || userRole === 'admin' ? 'Admin Portal' :
+                 actualUserRole === 'vendor' || userRole === 'vendor' ? 'Partner Portal' : 'Owner Portal'}
+              </p>
             </div>
           )}
-        </div>
-
-        {/* Portal Title */}
-        {isExpanded && (
-          <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">
-              {actualUserRole === 'admin' || userRole === 'admin' ? 'Admin Portal' :
-               actualUserRole === 'vendor' || userRole === 'vendor' ? 'Partner Portal' : 'Owner Portal'}
-            </p>
-          </div>
-        )}
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex flex-col">
@@ -218,10 +221,45 @@ const Sidebar = memo(({
               </Link>
             </div>
           )}
+
         </nav>
 
-      </div>
-    </aside>
+        </div>
+      </aside>
+
+      {/* Sidebar Toggle Button - Floating at sidebar edge, Desktop only */}
+      <button
+        onClick={onToggleCollapse}
+        className={`hidden md:flex fixed top-4 z-50 items-center justify-center w-8 h-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 ${
+          isExpanded ? 'left-[252px]' : 'left-[52px]'
+        }`}
+        title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {sidebarCollapsed ? (
+          /* Expand icon - chevron right */
+          <svg
+            className="w-4 h-4 text-gray-500 dark:text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        ) : (
+          /* Collapse icon - chevron left */
+          <svg
+            className="w-4 h-4 text-gray-500 dark:text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        )}
+      </button>
+    </>
   );
 });
 
@@ -336,7 +374,11 @@ const Layout = () => {
   const { hasPermission, permissions } = usePermissions();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarHovering, setSidebarHovering] = useState(false);
+  // Initialize collapsed state from localStorage, default to true (collapsed)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
@@ -368,6 +410,14 @@ const Layout = () => {
 
   const handleSidebarClose = useCallback(() => {
     setSidebarOpen(false);
+  }, []);
+
+  const handleToggleSidebarCollapse = useCallback(() => {
+    setSidebarCollapsed(prev => {
+      const newValue = !prev;
+      localStorage.setItem('sidebarCollapsed', JSON.stringify(newValue));
+      return newValue;
+    });
   }, []);
 
   const handleUserMenuToggle = useCallback(() => {
@@ -450,18 +500,19 @@ const Layout = () => {
       {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
+        sidebarCollapsed={sidebarCollapsed}
         userRole={effectiveRole}
         actualUserRole={user?.role}
         currentPath={location.pathname}
         onClose={handleSidebarClose}
-        onHoverChange={setSidebarHovering}
+        onToggleCollapse={handleToggleSidebarCollapse}
         hasPermission={hasPermission}
         isPreviewMode={isPreviewMode}
         permissions={permissions}
       />
 
       {/* Main content */}
-      <div className={`flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden transition-all duration-300 ${sidebarHovering ? 'md:ml-64' : 'md:ml-16'} ${isPreviewMode ? 'pt-10' : ''}`}>
+      <div className={`flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'} ${isPreviewMode ? 'pt-10' : ''}`}>
         {/* Top bar */}
         <header className={`sticky ${isPreviewMode ? 'top-10' : 'top-0'} z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md pt-3`}>
           <div className="px-4 sm:px-6">
