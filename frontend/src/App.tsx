@@ -174,12 +174,12 @@ function AppContent() {
                     </ProtectedRoute>
                   } />
                   <Route path="owners" element={
-                    <ProtectedRoute requiredPermission="canAccessDirectory">
+                    <ProtectedRoute allowedRoles={['admin', 'vendor']} requiredPermission="canAccessDirectory">
                       <OwnersRoster />
                     </ProtectedRoute>
                   } />
                   <Route path="owners/:id" element={
-                    <ProtectedRoute requiredPermission="canAccessDirectory">
+                    <ProtectedRoute allowedRoles={['admin', 'vendor']} requiredPermission="canAccessDirectory">
                       <OwnerProfileEnhanced />
                     </ProtectedRoute>
                   } />
@@ -189,7 +189,7 @@ function AppContent() {
                     </ProtectedRoute>
                   } />
                   <Route path="partners" element={
-                    <ProtectedRoute requiredPermission="canAccessPartners">
+                    <ProtectedRoute allowedRoles={['admin', 'owner']} requiredPermission="canAccessPartners">
                       <Partners />
                     </ProtectedRoute>
                   } />
