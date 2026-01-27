@@ -174,12 +174,12 @@ function AppContent() {
                     </ProtectedRoute>
                   } />
                   <Route path="owners" element={
-                    <ProtectedRoute requiredPermission="canAccessDirectory">
+                    <ProtectedRoute allowedRoles={['admin', 'owner']} requiredPermission="canAccessDirectory">
                       <OwnersRoster />
                     </ProtectedRoute>
                   } />
                   <Route path="owners/:id" element={
-                    <ProtectedRoute requiredPermission="canAccessDirectory">
+                    <ProtectedRoute allowedRoles={['admin', 'owner']} requiredPermission="canAccessDirectory">
                       <OwnerProfileEnhanced />
                     </ProtectedRoute>
                   } />

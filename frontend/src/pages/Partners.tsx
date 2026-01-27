@@ -135,6 +135,10 @@ const Partners = () => {
     queryFn: () => getPartnerCategories(showPreferredOnly),
   });
 
+  // Helper to check if user can see ratings on Partners page
+  // Owners and admins can see vendor ratings, vendors cannot
+  const canSeeVendorRatings = user?.role === 'owner' || user?.role === 'admin';
+
   // Partners data from backend (already filtered by preferred state)
   const partners = partnersData?.data || [];
   const stats: PartnerStats = statsData?.data || {
@@ -727,21 +731,24 @@ const Partners = () => {
                             {partner.category}
                             {partner.yearEstablished && ` - Est. ${partner.yearEstablished}`}
                           </p>
-                          <div className="flex items-center mt-1">
-                            <div className="flex items-center">
-                              {[...Array(5)].map((_, i) => (
-                                <StarSolidIcon
-                                  key={i}
-                                  className={`h-4 w-4 ${
-                                    i < Math.floor(partner.rating) ? 'text-yellow-400' : 'text-gray-300'
-                                  }`}
-                                />
-                              ))}
+                          {/* Ratings only visible to owners and admins, not vendors */}
+                          {canSeeVendorRatings && (
+                            <div className="flex items-center mt-1">
+                              <div className="flex items-center">
+                                {[...Array(5)].map((_, i) => (
+                                  <StarSolidIcon
+                                    key={i}
+                                    className={`h-4 w-4 ${
+                                      i < Math.floor(partner.rating) ? 'text-yellow-400' : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="ml-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                                {partner.rating.toFixed(1)} ({partner.reviewCount} reviews)
+                              </span>
                             </div>
-                            <span className="ml-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                              {partner.rating.toFixed(1)} ({partner.reviewCount} reviews)
-                            </span>
-                          </div>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
@@ -866,23 +873,27 @@ const Partners = () => {
 
               {/* Content */}
               <div className="px-6 py-6 max-h-[60vh] overflow-y-auto">
-                {/* Rating and Discount */}
+                {/* Rating and Discount - Rating only visible to owners and admins */}
                 <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center">
+                  {canSeeVendorRatings ? (
                     <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <StarSolidIcon
-                          key={i}
-                          className={`h-5 w-5 ${
-                            i < Math.floor(selectedPartner.rating) ? 'text-yellow-400' : 'text-gray-300'
-                          }`}
-                        />
-                      ))}
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <StarSolidIcon
+                            key={i}
+                            className={`h-5 w-5 ${
+                              i < Math.floor(selectedPartner.rating) ? 'text-yellow-400' : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">
+                        {selectedPartner.rating.toFixed(1)} ({selectedPartner.reviewCount} reviews)
+                      </span>
                     </div>
-                    <span className="ml-2 text-gray-600 dark:text-gray-400">
-                      {selectedPartner.rating.toFixed(1)} ({selectedPartner.reviewCount} reviews)
-                    </span>
-                  </div>
+                  ) : (
+                    <div></div>
+                  )}
                   <div className="inline-flex items-center px-4 py-2 rounded-full text-lg font-bold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
                     {selectedPartner.discount}
                   </div>
@@ -1024,8 +1035,8 @@ const Partners = () => {
                   </div>
                 </div>
 
-                {/* Reviews Section */}
-                {selectedPartner.reviews && selectedPartner.reviews.length > 0 && (
+                {/* Reviews Section - Only visible to owners and admins */}
+                {canSeeVendorRatings && selectedPartner.reviews && selectedPartner.reviews.length > 0 && (
                   <div className="mb-6">
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
                       Recent Reviews ({selectedPartner.reviews.length})
