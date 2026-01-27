@@ -89,6 +89,79 @@ router.get('/', async (req, res) => {
 });
 
 /**
+ * @route   GET /api/conventions/registrations
+ * @desc    Get total registrations count across all conventions
+ * @access  Public
+ */
+router.get('/registrations', async (req, res) => {
+  try {
+    const conventions = await Convention.find({ isActive: true }).select('attendees');
+
+    let totalRegistrations = 0;
+    conventions.forEach(convention => {
+      if (convention.attendees) {
+        totalRegistrations += convention.attendees.length;
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        total: totalRegistrations,
+        conventionsCount: conventions.length
+      }
+    });
+  } catch (error) {
+    console.error('Get registrations count error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while fetching registrations count'
+    });
+  }
+});
+
+/**
+ * @route   GET /api/conventions/speakers
+ * @desc    Get total speakers count across all conventions
+ * @access  Public
+ */
+router.get('/speakers', async (req, res) => {
+  try {
+    const conventions = await Convention.find({ isActive: true }).select('speakers');
+
+    let totalSpeakers = 0;
+    const uniqueSpeakers = new Set();
+
+    conventions.forEach(convention => {
+      if (convention.speakers) {
+        convention.speakers.forEach(speaker => {
+          // Use speaker name as unique identifier
+          if (speaker.name) {
+            uniqueSpeakers.add(speaker.name.toLowerCase());
+          }
+          totalSpeakers++;
+        });
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        total: totalSpeakers,
+        unique: uniqueSpeakers.size,
+        conventionsCount: conventions.length
+      }
+    });
+  } catch (error) {
+    console.error('Get speakers count error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error while fetching speakers count'
+    });
+  }
+});
+
+/**
  * @route   GET /api/conventions/:id
  * @desc    Get single convention
  * @access  Public
@@ -221,10 +294,6 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
  */
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
   try {
-    console.log('PUT /conventions/:id called');
-    console.log('Convention ID:', req.params.id);
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-
     let convention = await Convention.findById(req.params.id);
 
     if (!convention) {
@@ -250,21 +319,9 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
       }
     );
 
-    console.log('Updated convention from DB:');
-    console.log('Convention ID:', convention._id);
-    console.log('Convention title:', convention.title);
-    console.log('Registration options:', convention.registrationOptions);
-    console.log('Early bird discount:', convention.earlyBirdDiscount);
-    console.log('Early bird message:', convention.earlyBirdMessage);
-    console.log('Full convention object keys:', Object.keys(convention.toObject ? convention.toObject() : convention));
-
     // If dates changed and there are attendees, send notifications
     if (datesChanged && convention.attendees && convention.attendees.length > 0) {
       const io = req.app.get('io');
-      const oldDateStr = new Date(oldStartDate).toLocaleDateString();
-      const newDateStr = convention.startDate.toLocaleDateString();
-
-      console.log(`Dates changed from ${oldDateStr} to ${newDateStr}, notifying ${convention.attendees.length} attendees`);
 
       try {
         // Send notifications and emails to all attendees
@@ -322,7 +379,6 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
     // Convert to JSON and add status
     const conventionObj = convention.toJSON();
     conventionObj.status = getConventionStatus(convention.startDate, convention.endDate);
-    console.log('Final response data registrationOptions:', conventionObj.registrationOptions);
 
     res.json({
       success: true,

@@ -88,6 +88,56 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @desc    Get forum statistics
+// @route   GET /api/forum/stats/overview
+// @access  Public
+router.get('/stats/overview', async (req, res) => {
+  try {
+    const totalThreads = await ForumThread.countDocuments({ status: 'active' });
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayThreads = await ForumThread.countDocuments({
+      status: 'active',
+      createdAt: { $gte: todayStart }
+    });
+
+    // Get total replies - use .lean() for better performance
+    const threadsWithReplies = await ForumThread.find({ status: 'active' }).select('replies').lean();
+    const totalReplies = threadsWithReplies.reduce((sum, thread) => sum + thread.replies.length, 0);
+
+    // Get trending tags - use .lean() for better performance
+    const allThreads = await ForumThread.find({ status: 'active' }).select('tags').lean();
+    const tagCounts = {};
+    allThreads.forEach(thread => {
+      thread.tags.forEach(tag => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      });
+    });
+
+    const trendingTags = Object.entries(tagCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalThreads,
+        todayThreads,
+        totalReplies,
+        trendingTags
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching forum stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch forum statistics'
+    });
+  }
+});
+
 // @desc    Get user's own forum threads
 // @route   GET /api/forum/my-threads
 // @access  Private
@@ -851,56 +901,6 @@ router.post('/:id/lock', protect, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to toggle lock'
-    });
-  }
-});
-
-// @desc    Get forum statistics
-// @route   GET /api/forum/stats/overview
-// @access  Public
-router.get('/stats/overview', async (req, res) => {
-  try {
-    const totalThreads = await ForumThread.countDocuments({ status: 'active' });
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const todayThreads = await ForumThread.countDocuments({
-      status: 'active',
-      createdAt: { $gte: todayStart }
-    });
-
-    // Get total replies - use .lean() for better performance
-    const threadsWithReplies = await ForumThread.find({ status: 'active' }).select('replies').lean();
-    const totalReplies = threadsWithReplies.reduce((sum, thread) => sum + thread.replies.length, 0);
-
-    // Get trending tags - use .lean() for better performance
-    const allThreads = await ForumThread.find({ status: 'active' }).select('tags').lean();
-    const tagCounts = {};
-    allThreads.forEach(thread => {
-      thread.tags.forEach(tag => {
-        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-      });
-    });
-
-    const trendingTags = Object.entries(tagCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-
-    res.status(200).json({
-      success: true,
-      data: {
-        totalThreads,
-        todayThreads,
-        totalReplies,
-        trendingTags
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching forum stats:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch forum statistics'
     });
   }
 });

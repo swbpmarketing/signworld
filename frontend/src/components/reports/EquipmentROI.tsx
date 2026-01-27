@@ -35,7 +35,7 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
   if (error || !data) {
     return (
       <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
-        Failed to load resource analytics data. Please try again later.
+        Failed to load equipment analytics data. Please try again later.
       </div>
     );
   }
@@ -65,16 +65,16 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
         ))}
       </div>
 
-      {/* Resource Utilization */}
+      {/* Equipment Utilization */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Resource Performance</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Equipment Performance</h3>
         <div className="space-y-4">
           {data.equipmentUtilization.map((equipment, index) => (
             <div key={index} className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-0">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">{equipment.name}</h4>
                 <span className="text-sm font-semibold text-green-600 dark:text-green-400">
-                  {equipment.revenue > 0 ? `${equipment.revenue} views/downloads` : 'No activity'}
+                  {equipment.revenue > 0 ? `$${equipment.revenue.toLocaleString()} revenue` : 'No revenue'}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-4 text-sm">
@@ -91,25 +91,25 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
                   </div>
                 </div>
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">Engagement</p>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{equipment.revenue}</p>
+                  <p className="text-gray-500 dark:text-gray-400">Revenue</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">${equipment.revenue.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">Items</p>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{equipment.maintenance}</p>
+                  <p className="text-gray-500 dark:text-gray-400">Maintenance Cost</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">${equipment.maintenance.toLocaleString()}</p>
                 </div>
               </div>
             </div>
           ))}
           {data.equipmentUtilization.length === 0 && (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-4">No resource data available</p>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-4">No equipment data available</p>
           )}
         </div>
       </div>
 
       {/* ROI Trend */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Content Growth & Utilization Trend</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Equipment ROI & Utilization Trend</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data.roiTrendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -132,7 +132,7 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
                 dataKey="roi"
                 stroke="#3b82f6"
                 strokeWidth={3}
-                name="Growth Score"
+                name="ROI %"
                 dot={{ fill: '#3b82f6' }}
               />
               <Line
@@ -149,21 +149,21 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
         </div>
       </div>
 
-      {/* Recent Content */}
+      {/* Maintenance Schedule */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Recent Content</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Maintenance Schedule</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead>
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Resource
+                  Equipment
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Created
+                  Last Service
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Review Date
+                  Next Service
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
@@ -197,7 +197,7 @@ const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFilte
               {data.maintenanceSchedule.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                    No recent content available
+                    No maintenance data available
                   </td>
                 </tr>
               )}

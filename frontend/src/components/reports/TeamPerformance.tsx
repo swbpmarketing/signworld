@@ -35,7 +35,7 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange }) => {
   if (error || !data) {
     return (
       <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
-        Failed to load community performance data. Please try again later.
+        Failed to load team performance data. Please try again later.
       </div>
     );
   }
@@ -65,9 +65,9 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange }) => {
         ))}
       </div>
 
-      {/* Community Leaderboard */}
+      {/* Team Leaderboard */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Top Community Contributors</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Top Team Members</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead>
@@ -76,16 +76,16 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange }) => {
                   Member
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Discussions
+                  Projects
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Engagement
+                  Revenue
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Activity
+                  Efficiency
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Rating
+                  Satisfaction
                 </th>
               </tr>
             </thead>
@@ -108,7 +108,7 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange }) => {
                     {member.projects}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                    {member.revenue} pts
+                    ${member.revenue.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -134,7 +134,7 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange }) => {
               {data.teamProductivity.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                    No contributor data available
+                    No team member data available
                   </td>
                 </tr>
               )}
@@ -145,7 +145,7 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange }) => {
 
       {/* Performance Trend */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Weekly Activity Trend</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Weekly Performance Trend</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data.performanceTrend} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -162,14 +162,14 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange }) => {
                 }}
               />
               <Legend />
-              <Bar yAxisId="left" dataKey="completed" fill="#3b82f6" name="Discussions Started" />
+              <Bar yAxisId="left" dataKey="completed" fill="#3b82f6" name="Tasks Completed" />
               <Line
                 yAxisId="right"
                 type="monotone"
                 dataKey="efficiency"
                 stroke="#10b981"
                 strokeWidth={3}
-                name="Engagement %"
+                name="Efficiency %"
                 dot={{ fill: '#10b981' }}
               />
             </LineChart>
@@ -177,16 +177,16 @@ const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange }) => {
         </div>
       </div>
 
-      {/* Category Distribution */}
+      {/* Skills Distribution */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Discussion Categories</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Team Skills Distribution</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={data.skillsData}>
               <PolarGrid className="stroke-gray-300 dark:stroke-gray-600" />
               <PolarAngleAxis dataKey="skill" className="text-gray-600 dark:text-gray-400" />
               <PolarRadiusAxis angle={90} domain={[0, 100]} className="text-gray-600 dark:text-gray-400" />
-              <Radar name="Community Average" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+              <Radar name="Team Average" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
               <Radar name="Top Performers" dataKey="B" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
               <Legend />
               <Tooltip

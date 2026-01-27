@@ -38,7 +38,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
   if (error || !data) {
     return (
       <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
-        Failed to load engagement analytics data. Please try again later.
+        Failed to load financial analytics data. Please try again later.
       </div>
     );
   }
@@ -56,7 +56,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
 
     // Title
     doc.setFontSize(20);
-    doc.text('Engagement Analytics Report', 14, 22);
+    doc.text('Financial Analytics Report', 14, 22);
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
 
@@ -71,14 +71,14 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
       body: statsData,
     });
 
-    // Engagement Breakdown
+    // Expense Breakdown
     const breakdownY = (doc as any).lastAutoTable.finalY + 15;
     doc.setFontSize(14);
-    doc.text('Engagement Breakdown', 14, breakdownY);
+    doc.text('Expense Breakdown', 14, breakdownY);
 
     const breakdownData = data.expenseBreakdown.map(item => [
       item.category,
-      item.amount.toLocaleString(),
+      `$${item.amount.toLocaleString()}`,
       `${item.percentage}%`
     ]);
     autoTable(doc, {
@@ -93,12 +93,12 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
     doc.text('Financial Summary', 14, summaryY);
 
     const summaryData = [
-      ['Total Engagement', data.financialSummary.totalRevenue.toLocaleString()],
-      ['Baseline Activity', data.financialSummary.totalExpenses.toLocaleString()],
-      ['Net Growth', data.financialSummary.grossProfit.toLocaleString()],
-      ['Active Engagement', data.financialSummary.netIncome.toLocaleString()],
-      ['Total Score', data.financialSummary.ebitda.toLocaleString()],
-      ['Member Ratio', data.financialSummary.currentRatio.toString()],
+      ['Total Revenue', `$${data.financialSummary.totalRevenue.toLocaleString()}`],
+      ['Total Expenses', `$${data.financialSummary.totalExpenses.toLocaleString()}`],
+      ['Gross Profit', `$${data.financialSummary.grossProfit.toLocaleString()}`],
+      ['Net Income', `$${data.financialSummary.netIncome.toLocaleString()}`],
+      ['EBITDA', `$${data.financialSummary.ebitda.toLocaleString()}`],
+      ['Current Ratio', data.financialSummary.currentRatio.toString()],
     ];
     autoTable(doc, {
       startY: summaryY + 5,
@@ -106,7 +106,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
       body: summaryData,
     });
 
-    doc.save('engagement-analytics-report.pdf');
+    doc.save('financial-analytics-report.pdf');
   };
 
   const exportToExcel = () => {
@@ -138,29 +138,29 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
       Amount: item.amount,
       Percentage: item.percentage
     })));
-    XLSX.utils.book_append_sheet(wb, expenseSheet, 'Breakdown');
+    XLSX.utils.book_append_sheet(wb, expenseSheet, 'Expense Breakdown');
 
     // Profit Margins Sheet
     const marginsSheet = XLSX.utils.json_to_sheet(data.profitMargins.map(item => ({
       Month: item.month,
-      'Gross %': item.gross,
-      'Operating %': item.operating,
-      'Net %': item.net
+      'Gross Margin %': item.gross,
+      'Operating Margin %': item.operating,
+      'Net Margin %': item.net
     })));
-    XLSX.utils.book_append_sheet(wb, marginsSheet, 'Growth Margins');
+    XLSX.utils.book_append_sheet(wb, marginsSheet, 'Profit Margins');
 
     // Summary Sheet
     const summarySheet = XLSX.utils.json_to_sheet([{
-      'Total Engagement': data.financialSummary.totalRevenue,
-      'Baseline Activity': data.financialSummary.totalExpenses,
-      'Net Growth': data.financialSummary.grossProfit,
-      'Active Engagement': data.financialSummary.netIncome,
-      'Total Score': data.financialSummary.ebitda,
-      'Member Ratio': data.financialSummary.currentRatio
+      'Total Revenue': data.financialSummary.totalRevenue,
+      'Total Expenses': data.financialSummary.totalExpenses,
+      'Gross Profit': data.financialSummary.grossProfit,
+      'Net Income': data.financialSummary.netIncome,
+      'EBITDA': data.financialSummary.ebitda,
+      'Current Ratio': data.financialSummary.currentRatio
     }]);
     XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
 
-    XLSX.writeFile(wb, 'engagement-analytics-report.xlsx');
+    XLSX.writeFile(wb, 'financial-analytics-report.xlsx');
   };
 
   return (
@@ -181,9 +181,9 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
         ))}
       </div>
 
-      {/* Engagement Flow Analysis */}
+      {/* Cash Flow Analysis */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Engagement Flow Analysis</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Cash Flow Analysis</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data.cashFlowData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -199,25 +199,25 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
                 }}
               />
               <Legend />
-              <Area type="monotone" dataKey="income" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="New Activity" />
-              <Area type="monotone" dataKey="expenses" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Baseline" />
-              <Line type="monotone" dataKey="netCash" stroke="#3b82f6" strokeWidth={3} name="Net Growth" />
+              <Area type="monotone" dataKey="income" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Income" />
+              <Area type="monotone" dataKey="expenses" stackId="2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Expenses" />
+              <Line type="monotone" dataKey="netCash" stroke="#3b82f6" strokeWidth={3} name="Net Cash Flow" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Engagement Breakdown */}
+        {/* Expense Breakdown */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Engagement Breakdown</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Expense Breakdown</h3>
           <div className="space-y-4">
             {data.expenseBreakdown.map((item, index) => (
               <div key={index}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.category}</span>
                   <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    {item.amount.toLocaleString()} ({item.percentage}%)
+                    ${item.amount.toLocaleString()} ({item.percentage}%)
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -230,18 +230,18 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
             ))}
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Engagement</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Expenses</span>
                 <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                  {data.expenseBreakdown.reduce((sum, exp) => sum + exp.amount, 0).toLocaleString()}
+                  ${data.expenseBreakdown.reduce((sum, exp) => sum + exp.amount, 0).toLocaleString()}
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Growth Margins Trend */}
+        {/* Profit Margins Trend */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Growth Margins Trend</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Profit Margins Trend</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.profitMargins} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -257,37 +257,37 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
                   }}
                 />
                 <Legend />
-                <Line type="monotone" dataKey="gross" stroke="#10b981" strokeWidth={2} name="Gross Growth %" />
-                <Line type="monotone" dataKey="operating" stroke="#3b82f6" strokeWidth={2} name="Operating Growth %" />
-                <Line type="monotone" dataKey="net" stroke="#8b5cf6" strokeWidth={2} name="Net Growth %" />
+                <Line type="monotone" dataKey="gross" stroke="#10b981" strokeWidth={2} name="Gross Margin %" />
+                <Line type="monotone" dataKey="operating" stroke="#3b82f6" strokeWidth={2} name="Operating Margin %" />
+                <Line type="monotone" dataKey="net" stroke="#8b5cf6" strokeWidth={2} name="Net Margin %" />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Financial Summary */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Engagement Summary</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Financial Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Activity Summary</h4>
+            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Income Statement</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Total Engagement</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.financialSummary.totalRevenue.toLocaleString()}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Total Revenue</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">${data.financialSummary.totalRevenue.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Baseline Activity</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">-{data.financialSummary.totalExpenses.toLocaleString()}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Total Expenses</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">-${data.financialSummary.totalExpenses.toLocaleString()}</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Net Growth</span>
-                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{data.financialSummary.grossProfit.toLocaleString()}</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Gross Profit</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">${data.financialSummary.grossProfit.toLocaleString()}</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Engagement</span>
-                <span className="text-sm font-bold text-green-600 dark:text-green-400">{data.financialSummary.netIncome.toLocaleString()}</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Net Income</span>
+                <span className="text-sm font-bold text-green-600 dark:text-green-400">${data.financialSummary.netIncome.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -296,15 +296,15 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
             <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Key Metrics</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Total Score</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.financialSummary.ebitda.toLocaleString()}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">EBITDA</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">${data.financialSummary.ebitda.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Member Ratio</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Current Ratio</span>
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{data.financialSummary.currentRatio}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Growth Rate</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Profit Margin</span>
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {data.financialSummary.totalRevenue > 0
                     ? `${((data.financialSummary.netIncome / data.financialSummary.totalRevenue) * 100).toFixed(1)}%`
@@ -312,7 +312,7 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Efficiency</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Gross Margin</span>
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {data.financialSummary.totalRevenue > 0
                     ? `${((data.financialSummary.grossProfit / data.financialSummary.totalRevenue) * 100).toFixed(1)}%`
@@ -330,28 +330,28 @@ const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
                 className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors flex items-center"
               >
                 <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                Download Engagement Report
+                Download PDF Report
               </button>
               <button
                 onClick={exportToExcel}
                 className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors flex items-center"
               >
                 <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                Export Activity Summary
+                Export to Excel
               </button>
               <button
                 onClick={exportToPDF}
                 className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors flex items-center"
               >
                 <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                Generate Growth Report
+                Generate Cash Flow Report
               </button>
               <button
                 onClick={exportToExcel}
                 className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg transition-colors flex items-center"
               >
                 <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                View Activity History
+                View Expense Details
               </button>
             </div>
           </div>

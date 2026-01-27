@@ -424,7 +424,6 @@ const Chat = () => {
   const fetchMessagesQuietly = async (conversationId: string) => {
     try {
       const { messages: data } = await getMessages(conversationId);
-      console.log('Fetched messages from server:', data.map(m => ({ id: m._id, isDeleted: m.isDeleted, content: m.content })));
       setMessages(data);
     } catch (error) {
       // Silent fail for background refresh
@@ -689,20 +688,11 @@ const Chat = () => {
     try {
       // Call API to delete on backend
       await deleteMessage(messageId);
-      console.log('Message deleted on backend, messageId:', messageId);
 
       // Update local state to mark message as deleted
-      setMessages(prev => {
-        const updated = prev.map(msg => {
-          if (msg._id === messageId) {
-            console.log('Marking message as deleted locally:', messageId);
-            return { ...msg, isDeleted: true, content: '' };
-          }
-          return msg;
-        });
-        console.log('Updated messages array (after delete):', updated.map(m => ({ id: m._id, isDeleted: m.isDeleted, content: m.content })));
-        return updated;
-      });
+      setMessages(prev => prev.map(msg =>
+        msg._id === messageId ? { ...msg, isDeleted: true, content: '' } : msg
+      ));
       toast.success('Message unsent');
     } catch (error) {
       console.error('Failed to delete message:', error);

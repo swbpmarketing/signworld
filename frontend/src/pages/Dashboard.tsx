@@ -86,7 +86,7 @@ const Dashboard = () => {
           activityRes
         ] = await Promise.allSettled([
           api.get('/events'),
-          api.get('/forum/threads'),
+          api.get('/forum'),
           api.get('/library', { params: { status: 'approved', limit: 1000 } }),
           api.get('/equipment'),
           api.get('/brags'),

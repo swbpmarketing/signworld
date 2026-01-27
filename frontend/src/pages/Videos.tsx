@@ -92,11 +92,6 @@ const VideoOptionsMenu = ({
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('VideoOptionsMenu - canRemoveVideo:', canRemoveVideo);
-  }, [canRemoveVideo]);
-
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

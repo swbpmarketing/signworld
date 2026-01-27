@@ -974,13 +974,9 @@ router.delete('/messages/:id', protect, handlePreviewMode, blockPreviewWrites, a
     message.deletedAt = new Date();
     await message.save();
 
-    console.log(`Message ${req.params.id} marked as deleted`);
-
     // Fetch the message again with populated sender for consistent response format
     const updatedMessage = await Message.findById(req.params.id)
       .populate('sender', 'name email role avatar');
-
-    console.log(`Retrieved deleted message: isDeleted=${updatedMessage.isDeleted}, sender=${updatedMessage.sender?.name}`);
 
     res.status(200).json({
       success: true,

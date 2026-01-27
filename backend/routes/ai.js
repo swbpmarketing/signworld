@@ -508,8 +508,6 @@ router.post('/chat', protect, async (req, res) => {
     const apiKey = USE_OPENAI ? OPENAI_API_KEY : OPENROUTER_API_KEY;
     const model = USE_OPENAI ? 'gpt-4o-mini' : 'anthropic/claude-3-haiku';
 
-    console.log(`Using ${USE_OPENAI ? 'OpenAI' : 'OpenRouter'} API with model: ${model}`);
-
     // Prepare headers
     const headers = {
       'Content-Type': 'application/json',

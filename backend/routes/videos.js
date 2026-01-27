@@ -83,11 +83,6 @@ router.get('/stats', async (req, res) => {
     // Round to 1 decimal place
     avgRating = Math.round(avgRating * 10) / 10;
 
-    console.log('=== Video Stats Response ===');
-    console.log('Category counts:', JSON.stringify(categoryCountsObj, null, 2));
-    console.log('Total duration:', totalDuration, `(${totalMinutes} minutes)`);
-    console.log('Avg rating:', avgRating);
-
     res.json({
       success: true,
       data: {
@@ -239,9 +234,6 @@ router.post('/:id/view', async (req, res) => {
 // @access  Private/Admin
 router.post('/', protect, authorize('admin'), async (req, res) => {
   try {
-    console.log('=== Received video creation request ===');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-
     const videoData = {
       ...req.body,
       uploadedBy: req.user.id
@@ -276,11 +268,9 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
 
     // Auto-download and upload YouTube thumbnail to S3
     if (youtubeId && !videoData.thumbnail && !videoData.thumbnailUrl) {
-      console.log(`Downloading thumbnail for YouTube ID: ${youtubeId}`);
       const s3ThumbnailUrl = await downloadAndUploadThumbnail(youtubeId);
       if (s3ThumbnailUrl) {
         videoData.thumbnailUrl = s3ThumbnailUrl;
-        console.log(`Thumbnail uploaded to S3: ${s3ThumbnailUrl}`);
       }
     }
 
@@ -450,11 +440,9 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
       // Get the existing video to check if URL has changed
       const existingVideo = await Video.findById(req.params.id);
       if (existingVideo && existingVideo.youtubeUrl !== updateData.youtubeUrl) {
-        console.log(`YouTube URL changed, downloading new thumbnail for: ${youtubeId}`);
         const s3ThumbnailUrl = await downloadAndUploadThumbnail(youtubeId);
         if (s3ThumbnailUrl) {
           updateData.thumbnailUrl = s3ThumbnailUrl;
-          console.log(`New thumbnail uploaded to S3: ${s3ThumbnailUrl}`);
         }
       }
     }
