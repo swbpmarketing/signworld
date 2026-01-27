@@ -282,13 +282,17 @@ exports.createOwnerReview = async (req, res) => {
       });
     }
 
+    // Auto-approve vendor reviews for owners (vendors rating owners)
+    // Other reviews (like owner-to-owner) would need approval
+    const isVendorReview = req.user.role === 'vendor';
+
     const review = await Rating.create({
       owner: id,
       reviewer: req.user.id,
       rating: parseInt(rating),
       comment: comment?.trim() || '',
-      status: 'pending', // Reviews need approval
-      isPublished: false
+      status: isVendorReview ? 'approved' : 'pending',
+      isPublished: isVendorReview
     });
 
     const populatedReview = await Rating.findById(review._id)
@@ -297,7 +301,9 @@ exports.createOwnerReview = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Review submitted successfully and is pending approval',
+      message: isVendorReview
+        ? 'Review submitted and published successfully'
+        : 'Review submitted successfully and is pending approval',
       data: populatedReview,
     });
   } catch (error) {
