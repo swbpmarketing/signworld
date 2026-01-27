@@ -57,7 +57,7 @@ const navigation: {
   { name: "Forum", href: "/forum", icon: ChatBubbleLeftRightIcon, roles: ['admin', 'owner'], permission: 'canAccessForum', tourId: 'nav-forum' },
   { name: "Chat", href: "/chat", icon: ChatBubbleLeftIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessChat', tourId: 'nav-chat' },
   { name: "Library", href: "/library", icon: FolderIcon, roles: ['admin', 'owner'], permission: 'canAccessLibrary', tourId: 'nav-library' },
-  { name: "Owners Roster", href: "/owners", icon: UserGroupIcon, roles: ['admin', 'owner'], permission: 'canAccessDirectory', tourId: 'nav-owners' },
+  { name: "Owners Roster", href: "/owners", icon: UserGroupIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDirectory', tourId: 'nav-owners' },
   { name: "Map Search", href: "/map", icon: MapIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessDirectory', tourId: 'nav-map' },
   { name: "Partners", href: "/partners", icon: UserGroupIcon, roles: ['admin', 'owner', 'vendor'], permission: 'canAccessPartners', tourId: 'nav-partners' },
   { name: "Videos", href: "/videos", icon: VideoCameraIcon, roles: ['admin', 'owner'], permission: 'canAccessVideos', tourId: 'nav-videos' },
