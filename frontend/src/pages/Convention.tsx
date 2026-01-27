@@ -192,9 +192,7 @@ const Convention = () => {
 
   // Sync registration data when convention changes
   useEffect(() => {
-    if (displayConvention && displayConvention.registrationOptions) {
-      console.log('Convention registration options updated:', displayConvention.registrationOptions);
-    }
+    // Registration options synced
   }, [displayConvention?.registrationOptions]);
 
   // Load registration state from localStorage when convention changes
@@ -737,22 +735,15 @@ const Convention = () => {
   };
 
   const handleAddRegistrationOption = async () => {
-    console.log('handleAddRegistrationOption called');
-    console.log('newRegistrationOption:', newRegistrationOption);
-    console.log('selectedConvention:', selectedConvention);
-
     if (!newRegistrationOption.name || !newRegistrationOption.price || !newRegistrationOption.description) {
-      console.log('Validation failed - missing fields');
       toast.warning('Please fill in all registration option fields');
       return;
     }
 
     // Get the selected convention from the admin dropdown
     const selectedConv = conventions.find(c => c._id === selectedConvention);
-    console.log('selectedConv found:', selectedConv);
 
     if (!selectedConv) {
-      console.log('No convention selected');
       toast.warning('Please select a convention first');
       return;
     }
@@ -766,8 +757,6 @@ const Convention = () => {
         order: (selectedConv?.registrationOptions?.length || 0)
       }
     ];
-
-    console.log('updatedOptions:', updatedOptions);
 
     // Save to API immediately
     setLoading(true);
@@ -788,18 +777,13 @@ const Convention = () => {
 
       if (data.success) {
         // Update conventions list with updated convention
-        setConventions(prev => {
-          const updated = prev.map(c =>
-            c._id === selectedConvention
-              ? { ...c, registrationOptions: updatedOptions }
-              : c
-          );
-          console.log('Updated conventions list:', updated);
-          return updated;
-        });
+        setConventions(prev => prev.map(c =>
+          c._id === selectedConvention
+            ? { ...c, registrationOptions: updatedOptions }
+            : c
+        ));
 
         setNewRegistrationOption({ name: '', price: '', description: '' });
-        console.log('Option form cleared');
         toast.success('Registration option added successfully!');
       } else {
         toast.error(`Failed to add option: ${data.error || 'Unknown error'}`);
@@ -887,9 +871,6 @@ const Convention = () => {
         earlyBirdMessage: earlyBirdSettings.message || ''
       };
 
-      console.log('Saving registration settings:', updateData);
-      console.log('Convention ID:', selectedConvention);
-
       const response = await fetch(`${API_URL}/conventions/${selectedConvention}`, {
         method: 'PUT',
         headers: {
@@ -900,8 +881,6 @@ const Convention = () => {
       });
 
       const data = await response.json();
-      console.log('Save response:', data);
-      console.log('Response status:', response.status);
 
       if (data.success) {
         toast.success('Registration settings saved successfully!');
@@ -1165,7 +1144,6 @@ const Convention = () => {
           const updatedData = await updatedResponse.json();
           if (updatedData.success && updatedData.data) {
             setDisplayConvention(updatedData.data);
-            console.log('Convention data updated with new attendees');
           }
         } catch (fetchError) {
           console.error('Error fetching updated convention data:', fetchError);

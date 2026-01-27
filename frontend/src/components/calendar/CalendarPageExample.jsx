@@ -72,7 +72,6 @@ const CalendarPageExample = () => {
   }, []);
 
   const handleShareLinkGenerated = (links) => {
-    console.log('Share links generated:', links);
     // You can add custom logic here when share links are generated
     // For example, tracking analytics or showing notifications
   };

@@ -13,20 +13,6 @@ const User = require('./models/User');
 // Load env vars - override any existing environment variables
 dotenv.config({ path: require('path').join(__dirname, '.env'), override: true });
 
-// Debug AWS configuration
-console.log('AWS Configuration:');
-console.log('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID);
-console.log('AWS_REGION:', process.env.AWS_REGION);
-console.log('AWS_S3_BUCKET:', process.env.AWS_S3_BUCKET);
-
-// Debug: Log environment and email configuration
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('Email Configuration Loaded:');
-console.log('SMTP_HOST:', process.env.SMTP_HOST);
-console.log('SMTP_PORT:', process.env.SMTP_PORT);
-console.log('SMTP_USER:', process.env.SMTP_USER);
-console.log('SMTP_FROM_EMAIL:', process.env.SMTP_FROM_EMAIL);
-
 // Track database connection status
 let dbConnected = false;
 
@@ -124,7 +110,6 @@ app.set('io', io);
 
 // Socket.io connection handling with presence tracking
 io.on('connection', async (socket) => {
-  console.log('🔌 Socket connected:', socket.id);
   let userId = null;
 
   // Try to authenticate immediately if token is in handshake
@@ -157,10 +142,8 @@ io.on('connection', async (socket) => {
         status: 'online',
       });
 
-      console.log(`✅ User authenticated: ${user.name} (${userId})`);
       return true;
     } catch (error) {
-      console.error('Socket authentication error:', error);
       return false;
     }
   };
@@ -198,130 +181,108 @@ io.on('connection', async (socket) => {
   // Join brags room for real-time updates
   socket.on('join:brags', () => {
     socket.join('brags');
-    console.log(`📢 Socket ${socket.id} joined brags room`);
   });
 
   // Leave brags room
   socket.on('leave:brags', () => {
     socket.leave('brags');
-    console.log(`📢 Socket ${socket.id} left brags room`);
   });
 
   // Join forum room for real-time updates
   socket.on('join:forum', () => {
     socket.join('forum');
-    console.log(`📢 Socket ${socket.id} joined forum room`);
   });
 
   // Leave forum room
   socket.on('leave:forum', () => {
     socket.leave('forum');
-    console.log(`📢 Socket ${socket.id} left forum room`);
   });
 
   // Join specific forum thread room
   socket.on('join:thread', (threadId) => {
     socket.join(`thread:${threadId}`);
-    console.log(`📢 Socket ${socket.id} joined thread:${threadId} room`);
   });
 
   // Leave specific forum thread room
   socket.on('leave:thread', (threadId) => {
     socket.leave(`thread:${threadId}`);
-    console.log(`📢 Socket ${socket.id} left thread:${threadId} room`);
   });
 
   // Join chat room for real-time messages (user-specific room)
   socket.on('join:chat', (userId) => {
     socket.join(`chat:${userId}`);
-    console.log(`📢 Socket ${socket.id} joined chat:${userId} room`);
   });
 
   // Leave chat room
   socket.on('leave:chat', (userId) => {
     socket.leave(`chat:${userId}`);
-    console.log(`📢 Socket ${socket.id} left chat:${userId} room`);
   });
 
   // Join specific conversation room
   socket.on('join:conversation', (conversationId) => {
     socket.join(`conversation:${conversationId}`);
-    console.log(`📢 Socket ${socket.id} joined conversation:${conversationId} room`);
   });
 
   // Leave specific conversation room
   socket.on('leave:conversation', (conversationId) => {
     socket.leave(`conversation:${conversationId}`);
-    console.log(`📢 Socket ${socket.id} left conversation:${conversationId} room`);
   });
 
   // Join user-specific room for notifications
   socket.on('join:user', (userId) => {
     socket.join(`user:${userId}`);
-    console.log(`🔔 Socket ${socket.id} joined user:${userId} room for notifications`);
   });
 
   // Leave user-specific room
   socket.on('leave:user', (userId) => {
     socket.leave(`user:${userId}`);
-    console.log(`🔔 Socket ${socket.id} left user:${userId} room`);
   });
 
   // Join equipment room for real-time updates
   socket.on('join:equipment', () => {
     socket.join('equipment');
-    console.log(`📢 Socket ${socket.id} joined equipment room`);
   });
 
   // Leave equipment room
   socket.on('leave:equipment', () => {
     socket.leave('equipment');
-    console.log(`📢 Socket ${socket.id} left equipment room`);
   });
 
   // Join videos room for real-time updates
   socket.on('join:videos', () => {
     socket.join('videos');
-    console.log(`📢 Socket ${socket.id} joined videos room`);
   });
 
   // Leave videos room
   socket.on('leave:videos', () => {
     socket.leave('videos');
-    console.log(`📢 Socket ${socket.id} left videos room`);
   });
 
   // Join events room for real-time updates
   socket.on('join:events', () => {
     socket.join('events');
-    console.log(`📢 Socket ${socket.id} joined events room`);
   });
 
   // Leave events room
   socket.on('leave:events', () => {
     socket.leave('events');
-    console.log(`📢 Socket ${socket.id} left events room`);
   });
 
   socket.on('disconnect', () => {
-    console.log('🔌 Socket disconnected:', socket.id);
-    
     // Find user by socket ID if userId wasn't set (in case of connection issues)
     if (!userId) {
       userId = presenceService.getUserBySocketId(socket.id);
     }
-    
+
     // Mark user as offline if they were authenticated
     if (userId) {
       presenceService.setOffline(userId);
-      
+
       // Broadcast presence update to all connected clients
       io.emit('presence:update', {
         userId,
         status: 'offline',
       });
-      
-      console.log(`👋 User went offline: ${userId}`);
     }
   });
 });
@@ -366,7 +327,6 @@ const corsOptions = {
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.log('CORS blocked origin:', origin);
       callback(null, true); // For now, allow all origins in production
     }
   },
@@ -469,10 +429,10 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/equipment-stats', require('./routes/equipmentStats'));
 app.use('/api/bug-reports', require('./routes/bugReports'));
+app.use('/api/activity', require('./routes/activity'));
 
-// Add API route debugging
+// Handle API 404s
 app.use('/api/*', (req, res, next) => {
-  console.log(`API Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     success: false,
     message: `API endpoint not found: ${req.originalUrl}`,
@@ -492,7 +452,6 @@ app.use((err, req, res, next) => {
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
   const staticPath = path.join(__dirname, '../frontend/dist');
-  console.log('Serving static files from:', staticPath);
 
   // Only serve static files for non-API routes
   app.use((req, res, next) => {
@@ -508,7 +467,6 @@ if (process.env.NODE_ENV === 'production') {
     // Only serve index.html for non-API routes
     if (!req.path.startsWith('/api/')) {
       const indexPath = path.join(__dirname, '../frontend/dist/index.html');
-      console.log('Serving index.html from:', indexPath);
       res.sendFile(indexPath);
     } else {
       // If we reach here, it means an API route wasn't found

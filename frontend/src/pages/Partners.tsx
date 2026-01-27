@@ -38,6 +38,7 @@ import {
   createPartner,
   updatePartner,
   deletePartner,
+  addPartnerReview,
 } from '../services/partnerService';
 import type { Partner, PartnerCategory, PartnerStats } from '../services/partnerService';
 
@@ -102,6 +103,13 @@ const Partners = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [showMobileCategoriesDropdown, setShowMobileCategoriesDropdown] = useState(false);
+
+  // Review modal state
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [hoverRating, setHoverRating] = useState(0);
 
   // Fetch partners with filters
   const { data: partnersData, isLoading: partnersLoading, error: partnersError } = useQuery({
@@ -353,6 +361,35 @@ const Partners = () => {
       return `$${(amount / 1000).toFixed(0)}K`;
     }
     return `$${amount}`;
+  };
+
+  const handleSubmitReview = async () => {
+    if (!selectedPartner || reviewRating < 1) return;
+
+    setIsSubmittingReview(true);
+    try {
+      await addPartnerReview(selectedPartner._id, reviewRating, reviewComment || undefined);
+      toast.success('Review submitted successfully!');
+      setShowReviewModal(false);
+      setReviewRating(5);
+      setReviewComment('');
+      // Refresh partner data to show updated rating
+      queryClient.invalidateQueries({ queryKey: ['partners'] });
+      // Refetch the selected partner to update the modal
+      const response = await getPartner(selectedPartner._id);
+      setSelectedPartner(response.data);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } }; message?: string };
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit review');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  const openReviewModal = () => {
+    setReviewRating(5);
+    setReviewComment('');
+    setShowReviewModal(true);
   };
 
   return (
@@ -986,6 +1023,46 @@ const Partners = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Reviews Section */}
+                {selectedPartner.reviews && selectedPartner.reviews.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                      Recent Reviews ({selectedPartner.reviews.length})
+                    </h4>
+                    <div className="space-y-4 max-h-64 overflow-y-auto">
+                      {selectedPartner.reviews.slice(0, 5).map((review) => (
+                        <div key={review._id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center">
+                              <div className="flex items-center">
+                                {[...Array(5)].map((_, i) => (
+                                  <StarSolidIcon
+                                    key={i}
+                                    className={`h-4 w-4 ${
+                                      i < review.rating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {review.user?.firstName} {review.user?.lastName}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {new Date(review.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          {review.comment && (
+                            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                              {review.comment}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Footer */}
@@ -1011,6 +1088,16 @@ const Partners = () => {
                   )}
                 </div>
                 <div className="flex gap-3">
+                  {/* Write a Review button - visible to all authenticated users who are not the vendor */}
+                  {user && user.role !== 'vendor' && (
+                    <button
+                      onClick={openReviewModal}
+                      className="inline-flex items-center px-3 py-2 text-yellow-700 dark:text-yellow-400 font-medium rounded-lg border border-yellow-300 dark:border-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
+                    >
+                      <StarIcon className="h-4 w-4 mr-1" />
+                      Write a Review
+                    </button>
+                  )}
                   <button
                     onClick={closeModal}
                     className="px-4 py-2.5 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
@@ -1690,6 +1777,129 @@ const Partners = () => {
                     <>
                       <TrashIcon className="h-5 w-5 mr-2" />
                       Delete
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Write Review Modal */}
+      {showReviewModal && selectedPartner && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="review-modal" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              aria-hidden="true"
+              onClick={() => setShowReviewModal(false)}
+            ></div>
+
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-yellow-500 to-orange-500 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-white flex items-center">
+                    <StarIcon className="h-6 w-6 mr-2" />
+                    Write a Review
+                  </h3>
+                  <button
+                    onClick={() => setShowReviewModal(false)}
+                    className="text-white hover:text-yellow-200 transition-colors"
+                  >
+                    <XMarkIcon className="h-6 w-6" />
+                  </button>
+                </div>
+                <p className="text-yellow-100 text-sm mt-1">
+                  Share your experience with {selectedPartner.name}
+                </p>
+              </div>
+
+              {/* Content */}
+              <div className="px-6 py-6 space-y-6">
+                {/* Rating Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Your Rating
+                  </label>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        onClick={() => setReviewRating(star)}
+                        className="p-1 transition-transform hover:scale-110 focus:outline-none"
+                      >
+                        <StarSolidIcon
+                          className={`h-10 w-10 transition-colors ${
+                            star <= (hoverRating || reviewRating)
+                              ? 'text-yellow-400'
+                              : 'text-gray-300 dark:text-gray-600'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="ml-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      {reviewRating}/5
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    {reviewRating === 5 && 'Excellent!'}
+                    {reviewRating === 4 && 'Great!'}
+                    {reviewRating === 3 && 'Good'}
+                    {reviewRating === 2 && 'Fair'}
+                    {reviewRating === 1 && 'Poor'}
+                  </p>
+                </div>
+
+                {/* Comment */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Your Review (Optional)
+                  </label>
+                  <textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    placeholder="Share your experience working with this partner..."
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Your review helps other members make informed decisions.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowReviewModal(false)}
+                  className="px-4 py-2.5 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitReview}
+                  disabled={isSubmittingReview || reviewRating < 1}
+                  className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmittingReview ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <StarSolidIcon className="h-5 w-5 mr-2" />
+                      Submit Review
                     </>
                   )}
                 </button>

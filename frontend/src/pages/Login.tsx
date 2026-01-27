@@ -36,10 +36,8 @@ const Login = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      console.log('🔐 Login attempt:', { email: data.email });
       setLoading(true);
       await login(data.email, data.password);
-      console.log('✅ Login successful');
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (error: any) {

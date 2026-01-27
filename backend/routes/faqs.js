@@ -253,10 +253,6 @@ router.post('/:id/helpful', async (req, res) => {
   try {
     const { isHelpful, visitorId } = req.body;
 
-    console.log('=== FAQ VOTE REQUEST ===');
-    console.log('FAQ ID:', req.params.id);
-    console.log('Request body:', { isHelpful, visitorId });
-
     if (typeof isHelpful !== 'boolean') {
       return res.status(400).json({
         success: false,
@@ -266,7 +262,6 @@ router.post('/:id/helpful', async (req, res) => {
 
     // Use visitorId or IP as unique identifier for anonymous votes
     const uniqueId = String(visitorId || req.ip);
-    console.log('Using uniqueId:', uniqueId);
 
     // First, try to update existing vote using atomic operation
     const updateResult = await FAQ.findOneAndUpdate(
@@ -283,15 +278,12 @@ router.post('/:id/helpful', async (req, res) => {
       { new: true }
     );
 
-    console.log('Update existing vote result:', updateResult ? 'Found and updated' : 'Not found');
-
     let faq;
     if (updateResult) {
       // Existing vote was updated
       faq = updateResult;
     } else {
       // No existing vote, add new one
-      console.log('Adding new vote...');
       faq = await FAQ.findByIdAndUpdate(
         req.params.id,
         {
@@ -305,7 +297,6 @@ router.post('/:id/helpful', async (req, res) => {
         },
         { new: true }
       );
-      console.log('New vote added, total votes:', faq?.helpful?.length);
     }
 
     if (!faq) {
@@ -317,9 +308,6 @@ router.post('/:id/helpful', async (req, res) => {
 
     const helpfulCount = faq.helpful.filter(h => h.isHelpful === true).length;
     const notHelpfulCount = faq.helpful.filter(h => h.isHelpful === false).length;
-
-    console.log('Final counts:', { helpfulCount, notHelpfulCount, totalVotes: faq.helpful.length });
-    console.log('=== END FAQ VOTE ===');
 
     res.json({
       success: true,

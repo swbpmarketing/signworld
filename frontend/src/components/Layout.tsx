@@ -156,12 +156,8 @@ const Sidebar = memo(({
         {isExpanded && (
           <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">
-              {(() => {
-                console.log('Sidebar - actualUserRole:', actualUserRole, 'userRole:', userRole);
-                if (actualUserRole === 'admin' || userRole === 'admin') return 'Admin Portal';
-                if (actualUserRole === 'vendor' || userRole === 'vendor') return 'Partner Portal';
-                return 'Owner Portal';
-              })()}
+              {actualUserRole === 'admin' || userRole === 'admin' ? 'Admin Portal' :
+               actualUserRole === 'vendor' || userRole === 'vendor' ? 'Partner Portal' : 'Owner Portal'}
             </p>
           </div>
         )}

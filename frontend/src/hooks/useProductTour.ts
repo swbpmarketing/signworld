@@ -136,10 +136,7 @@ export const useProductTour = (userId?: string) => {
 
       // Only auto-start for new users who haven't completed the tour
       if (!completed) {
-        console.log('Product tour: Auto-starting for new user');
         startTour();
-      } else {
-        console.log('Product tour: Skipping auto-start - user has completed tour');
       }
     }, 1000); // 1 second delay after login
 

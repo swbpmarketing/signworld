@@ -146,25 +146,13 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Determine which permissions to use based on preview mode
   useEffect(() => {
-    console.log('[PermissionsContext] Effect triggered', {
-      user: user?.email,
-      userRole: user?.role,
-      isPreviewMode,
-      previewState,
-      myPermissions,
-      rolePermissions,
-      userPreviewData
-    });
-
     if (!user) {
-      console.log('[PermissionsContext] No user, clearing permissions');
       setPermissions(null);
       return;
     }
 
     // If admin is previewing a specific user
     if (isPreviewMode && previewState.type === 'user' && user.role === 'admin' && userPreviewData) {
-      console.log('[PermissionsContext] Setting user preview permissions', userPreviewData.permissions);
       setPermissions(userPreviewData.permissions);
       return;
     }
@@ -173,7 +161,6 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (isPreviewMode && previewState.type === 'role' && user.role === 'admin' && rolePermissions && previewState.role) {
       const previewPermissions = rolePermissions[previewState.role];
       if (previewPermissions) {
-        console.log('[PermissionsContext] Setting role preview permissions', previewPermissions);
         setPermissions({
           ...previewPermissions,
           canManageUsers: false,
@@ -186,11 +173,9 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     // Otherwise use the user's actual permissions
     if (myPermissions) {
-      console.log('[PermissionsContext] Setting permissions from API', myPermissions);
       setPermissions(myPermissions);
     } else {
       // Fallback to defaults based on role
-      console.log('[PermissionsContext] Using default permissions for role:', user.role);
       switch (user.role) {
         case 'admin':
           setPermissions(defaultAdminPermissions);
@@ -199,7 +184,6 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
           setPermissions(defaultOwnerPermissions);
           break;
         case 'vendor':
-          console.log('[PermissionsContext] Setting default vendor permissions', defaultVendorPermissions);
           setPermissions(defaultVendorPermissions);
           break;
         default:
@@ -214,16 +198,9 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return true;
     }
     if (!permissions) {
-      console.log(`[PermissionsContext] hasPermission(${permission}) - no permissions loaded yet`);
       return false;
     }
-    const result = permissions[permission] === true;
-    console.log(`[PermissionsContext] hasPermission(${permission}) = ${result}`, {
-      userRole: user?.role,
-      isPreviewMode,
-      permissions
-    });
-    return result;
+    return permissions[permission] === true;
   }, [user?.role, isPreviewMode, permissions]);
 
   const refetchPermissions = useCallback(() => {

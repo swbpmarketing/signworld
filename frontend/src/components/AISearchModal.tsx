@@ -216,7 +216,6 @@ const AISearchModal = ({ isOpen, onClose, userRole = 'owner', userName, userComp
   };
 
   const handleFilterToggle = (filterValue: string[]) => {
-    console.log('Filter toggled:', filterValue);
     setSelectedFilters(filterValue);
   };
 

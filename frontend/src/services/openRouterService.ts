@@ -44,11 +44,6 @@ export const chatWithAI = async (
       dataTypeFilters: dataTypeFilters || []
     };
 
-    console.log('Frontend sending to AI chat:', {
-      dataTypeFilters,
-      lastMessage: messages[messages.length - 1]?.content
-    });
-
     const response = await fetch(`${API_URL}/ai/chat`, {
       method: 'POST',
       headers: {

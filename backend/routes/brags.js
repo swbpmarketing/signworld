@@ -53,10 +53,8 @@ router.get('/', optionalProtect, handlePreviewMode, async (req, res) => {
 
     // Filter by tags (case-insensitive)
     if (tag) {
-      console.log('[BRAGS] Tag filter:', tag);
       // MongoDB regex syntax for case-insensitive exact match in array
       query.tags = { $regex: `^${tag}$`, $options: 'i' };
-      console.log('[BRAGS] Query tags:', query.tags);
     }
 
     // Filter by author
@@ -95,7 +93,6 @@ router.get('/', optionalProtect, handlePreviewMode, async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Get stories with pagination
-    console.log('Full query:', JSON.stringify(query));
     const brags = await Brag.find(query)
       .populate('author', 'name email role location company')
       .populate('moderatedBy', 'name email')
@@ -105,11 +102,6 @@ router.get('/', optionalProtect, handlePreviewMode, async (req, res) => {
       .limit(parseInt(limit))
       .skip(skip)
       .lean();
-
-    console.log('Found brags:', brags.length);
-    if (tag && brags.length > 0) {
-      console.log('First brag tags:', brags[0].tags);
-    }
 
     // Get total count for pagination
     const total = await Brag.countDocuments(query);

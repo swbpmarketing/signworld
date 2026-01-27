@@ -26,20 +26,24 @@ import {
   PlusIcon,
   PencilIcon,
   XMarkIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
+import { submitOwnerReview } from '../services/ownerService';
 
 interface OwnerDisplay extends Owner {
   avatar: string;
   location: string;
   joinDate: string;
   rating: number;
+  totalRatings: number;
   totalProjects: number;
   territory: string;
   status: 'active' | 'inactive' | 'new';
   awards: number;
   certifications: string[];
   bio: string;
+  yearEstablished?: number;
 }
 
 // Loading skeleton component
@@ -73,8 +77,10 @@ const staticOwners: OwnerDisplay[] = [
     location: "Phoenix, AZ",
     joinDate: "Jan 2019",
     yearsInBusiness: 5,
+    yearEstablished: 2019,
     specialties: ["Vehicle Wraps", "LED Signs", "Monument Signs"],
     rating: 4.9,
+    totalRatings: 47,
     totalProjects: 342,
     email: "sarah@arizonasigns.com",
     phone: "(602) 555-0123",
@@ -92,8 +98,10 @@ const staticOwners: OwnerDisplay[] = [
     location: "Seattle, WA",
     joinDate: "Mar 2018",
     yearsInBusiness: 8,
+    yearEstablished: 2016,
     specialties: ["Digital Displays", "Wayfinding", "Corporate Branding"],
     rating: 4.8,
+    totalRatings: 89,
     totalProjects: 567,
     email: "mchen@pacificcoastsigns.com",
     phone: "(206) 555-0456",
@@ -111,8 +119,10 @@ const staticOwners: OwnerDisplay[] = [
     location: "Miami, FL",
     joinDate: "Jun 2020",
     yearsInBusiness: 3,
+    yearEstablished: 2021,
     specialties: ["Neon Signs", "Channel Letters", "Window Graphics"],
     rating: 4.7,
+    totalRatings: 23,
     totalProjects: 189,
     email: "emily@miamisigns.com",
     phone: "(305) 555-0789",
@@ -130,8 +140,10 @@ const staticOwners: OwnerDisplay[] = [
     location: "Austin, TX",
     joinDate: "Sep 2017",
     yearsInBusiness: 10,
+    yearEstablished: 2014,
     specialties: ["Monument Signs", "Pylon Signs", "ADA Signage"],
     rating: 5.0,
+    totalRatings: 156,
     totalProjects: 892,
     email: "david@texaspremiersigns.com",
     phone: "(512) 555-0234",
@@ -177,6 +189,74 @@ const OwnersRoster = () => {
     yearsInBusiness: 0,
     specialties: [] as string[],
   });
+
+  // Review modal state
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewingOwner, setReviewingOwner] = useState<OwnerDisplay | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [hoverRating, setHoverRating] = useState(0);
+
+  // Check if user can see ratings (admin, vendor, or the owner themselves)
+  const canSeeRatings = (ownerId: string) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    if (user.role === 'vendor') return true;
+    if (currentUserId === ownerId) return true;
+    return false;
+  };
+
+  // Check if user can submit ratings (vendors only, not for themselves)
+  const canRateOwner = (ownerId: string) => {
+    if (!user) return false;
+    if (user.role === 'vendor' && currentUserId !== ownerId) return true;
+    return false;
+  };
+
+  // Calculate years in business from year established
+  const calculateYearsInBusiness = (owner: Owner): number => {
+    if (owner.yearsInBusiness && owner.yearsInBusiness > 0) {
+      return owner.yearsInBusiness;
+    }
+    // Try to calculate from openDate (year established)
+    if (owner.openDate) {
+      const establishedYear = new Date(owner.openDate).getFullYear();
+      const currentYear = new Date().getFullYear();
+      return currentYear - establishedYear;
+    }
+    return 0;
+  };
+
+  const handleOpenReviewModal = (owner: OwnerDisplay, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setReviewingOwner(owner);
+    setReviewRating(5);
+    setReviewComment('');
+    setShowReviewModal(true);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewingOwner || reviewRating < 1) return;
+
+    setIsSubmittingReview(true);
+    try {
+      await submitOwnerReview(reviewingOwner.id, reviewRating, reviewComment || '');
+      toast.success('Review submitted successfully!');
+      setShowReviewModal(false);
+      setReviewingOwner(null);
+      setReviewRating(5);
+      setReviewComment('');
+      // Refresh owner data
+      queryClient.invalidateQueries({ queryKey: ['owners'] });
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } }; message?: string };
+      toast.error(err.response?.data?.error || err.message || 'Failed to submit review');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
 
   // Update owner mutation
   const updateOwnerMutation = useMutation({
@@ -499,6 +579,9 @@ const OwnersRoster = () => {
   // Transform API data to display format
   const owners: OwnerDisplay[] = data?.data?.map((owner: Owner) => {
     try {
+      const yearsInBusiness = calculateYearsInBusiness(owner);
+      const yearEstablished = owner.openDate ? new Date(owner.openDate).getFullYear() : undefined;
+
       return {
         ...owner,
         id: owner._id || owner.id, // Use _id from MongoDB
@@ -506,14 +589,17 @@ const OwnersRoster = () => {
         location: owner.address ? `${owner.address.city}, ${owner.address.state}` : 'Unknown',
         joinDate: owner.openDate ? new Date(owner.openDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Unknown',
         rating: owner.rating?.averageRating || owner.stats?.averageRating || 0,
+        totalRatings: owner.rating?.totalRatings || owner.stats?.totalRatings || 0,
         totalProjects: owner.stats?.projectsCompleted || 0,
         territory: owner.address?.state || 'Unknown',
         status: 'active' as const,
         awards: 0,
         certifications: [],
-        bio: owner.name && owner.company && owner.address 
+        bio: owner.name && owner.company && owner.address
           ? `${owner.name} operates ${owner.company} in ${owner.address.city}, ${owner.address.state}.`
           : 'No bio available.',
+        yearsInBusiness,
+        yearEstablished,
       };
     } catch (err) {
       console.error('Error transforming owner data:', err, owner);
@@ -817,19 +903,34 @@ const OwnersRoster = () => {
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-500 dark:text-gray-400">Years in Business</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{owner.yearsInBusiness}</span>
+                    <div className="flex items-center">
+                      <ClockIcon className="h-4 w-4 text-gray-400 mr-1" />
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {owner.yearsInBusiness} {owner.yearsInBusiness === 1 ? 'year' : 'years'}
+                        {owner.yearEstablished && (
+                          <span className="text-gray-400 ml-1">(Est. {owner.yearEstablished})</span>
+                        )}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-500 dark:text-gray-400">Projects</span>
                     <span className="font-medium text-gray-900 dark:text-gray-100">{owner.totalProjects}</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Rating</span>
-                    <div className="flex items-center">
-                      <StarSolidIcon className="h-4 w-4 text-yellow-400 mr-1" />
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{owner.rating}</span>
+                  {canSeeRatings(owner.id) && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Rating</span>
+                      <div className="flex items-center">
+                        <StarSolidIcon className="h-4 w-4 text-yellow-400 mr-1" />
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {owner.rating > 0 ? owner.rating.toFixed(1) : 'No ratings'}
+                        </span>
+                        {owner.totalRatings > 0 && (
+                          <span className="text-gray-400 ml-1">({owner.totalRatings})</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Specialties */}
@@ -861,6 +962,16 @@ const OwnersRoster = () => {
                   )}
                   {currentUserId !== owner.id && (
                     <>
+                      {/* Rate Owner button - only for vendors */}
+                      {canRateOwner(owner.id) && (
+                        <button
+                          onClick={(e) => handleOpenReviewModal(owner, e)}
+                          className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-yellow-300 dark:border-yellow-600 text-xs sm:text-sm font-medium rounded-lg text-yellow-700 dark:text-yellow-400 bg-white dark:bg-gray-800 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
+                        >
+                          <StarIcon className="h-4 w-4 mr-1.5" />
+                          Rate Owner
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -904,6 +1015,9 @@ const OwnersRoster = () => {
                     Location
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Years in Business
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Specialties
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -912,7 +1026,7 @@ const OwnersRoster = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[140px]">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[180px]">
                     Actions
                   </th>
                 </tr>
@@ -934,6 +1048,19 @@ const OwnersRoster = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-xs sm:text-sm text-gray-900 dark:text-gray-100">{owner.location}</div>
                       <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{owner.territory}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center text-xs sm:text-sm">
+                        <ClockIcon className="h-4 w-4 text-gray-400 mr-1" />
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {owner.yearsInBusiness} {owner.yearsInBusiness === 1 ? 'yr' : 'yrs'}
+                        </span>
+                      </div>
+                      {owner.yearEstablished && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Est. {owner.yearEstablished}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1 max-w-[200px]">
@@ -958,10 +1085,17 @@ const OwnersRoster = () => {
                           <span className="text-gray-500 dark:text-gray-400">Projects: </span>
                           <span className="font-medium text-gray-900 dark:text-gray-100">{owner.totalProjects}</span>
                         </div>
-                        <div className="flex items-center text-xs sm:text-sm">
-                          <StarSolidIcon className="h-4 w-4 text-yellow-400 mr-1" />
-                          <span className="font-medium text-gray-900 dark:text-gray-100">{owner.rating}</span>
-                        </div>
+                        {canSeeRatings(owner.id) && (
+                          <div className="flex items-center text-xs sm:text-sm">
+                            <StarSolidIcon className="h-4 w-4 text-yellow-400 mr-1" />
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
+                              {owner.rating > 0 ? owner.rating.toFixed(1) : '-'}
+                            </span>
+                            {owner.totalRatings > 0 && (
+                              <span className="text-gray-400 ml-1">({owner.totalRatings})</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -969,10 +1103,10 @@ const OwnersRoster = () => {
                         {owner.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium min-w-[140px]">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium min-w-[180px]">
                       <div className="flex flex-row gap-2 justify-end">
                         <Link to={`/owners/${owner.id}`} className="text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 text-xs sm:text-sm">
-                          View Profile
+                          View
                         </Link>
                         {currentUserId === owner.id ? (
                           <button
@@ -982,12 +1116,22 @@ const OwnersRoster = () => {
                             Edit
                           </button>
                         ) : (
-                          <button
-                            onClick={() => handleOpenMessage(owner)}
-                            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-xs sm:text-sm"
-                          >
-                            Message
-                          </button>
+                          <>
+                            {canRateOwner(owner.id) && (
+                              <button
+                                onClick={(e) => handleOpenReviewModal(owner, e)}
+                                className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300 text-xs sm:text-sm font-medium"
+                              >
+                                Rate
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleOpenMessage(owner)}
+                              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-xs sm:text-sm"
+                            >
+                              Message
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -1156,6 +1300,140 @@ const OwnersRoster = () => {
                     </>
                   ) : (
                     'Save Changes'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && reviewingOwner && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="review-modal" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              aria-hidden="true"
+              onClick={() => setShowReviewModal(false)}
+            ></div>
+
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-yellow-500 to-orange-500 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-white flex items-center">
+                    <StarSolidIcon className="h-6 w-6 mr-2" />
+                    Rate Owner
+                  </h3>
+                  <button
+                    onClick={() => setShowReviewModal(false)}
+                    className="text-white hover:text-yellow-200 transition-colors"
+                  >
+                    <XMarkIcon className="h-6 w-6" />
+                  </button>
+                </div>
+                <p className="text-yellow-100 text-sm mt-1">
+                  Share your experience with {reviewingOwner.name}
+                </p>
+              </div>
+
+              {/* Content */}
+              <div className="px-6 py-6 space-y-6">
+                {/* Owner Info */}
+                <div className="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold">
+                    {reviewingOwner.avatar}
+                  </div>
+                  <div className="ml-4">
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{reviewingOwner.name}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{reviewingOwner.company}</div>
+                  </div>
+                </div>
+
+                {/* Rating Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Your Rating
+                  </label>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        onClick={() => setReviewRating(star)}
+                        className="p-1 transition-transform hover:scale-110 focus:outline-none"
+                      >
+                        <StarSolidIcon
+                          className={`h-10 w-10 transition-colors ${
+                            star <= (hoverRating || reviewRating)
+                              ? 'text-yellow-400'
+                              : 'text-gray-300 dark:text-gray-600'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="ml-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      {reviewRating}/5
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    {reviewRating === 5 && 'Excellent!'}
+                    {reviewRating === 4 && 'Great!'}
+                    {reviewRating === 3 && 'Good'}
+                    {reviewRating === 2 && 'Fair'}
+                    {reviewRating === 1 && 'Poor'}
+                  </p>
+                </div>
+
+                {/* Comment */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Your Review (Optional)
+                  </label>
+                  <textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    placeholder="Share your experience working with this owner..."
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Your review will be visible to admins, vendors, and this owner.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowReviewModal(false)}
+                  className="px-4 py-2.5 text-gray-700 dark:text-gray-300 font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitReview}
+                  disabled={isSubmittingReview || reviewRating < 1}
+                  className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmittingReview ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <StarSolidIcon className="h-5 w-5 mr-2" />
+                      Submit Review
+                    </>
                   )}
                 </button>
               </div>

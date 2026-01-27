@@ -44,7 +44,6 @@ router.get('/seed', async (req, res) => {
     let organizer = await User.findOne({ role: 'admin' });
     
     if (!organizer) {
-      console.log('No admin user found. Creating a default organizer...');
       const bcrypt = require('bcryptjs');
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash('admin123', salt);
@@ -60,7 +59,6 @@ router.get('/seed', async (req, res) => {
 
     // Clear existing events
     await Event.deleteMany({});
-    console.log('Cleared existing events');
 
     // Sample events data
     const events = [

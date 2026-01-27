@@ -725,12 +725,7 @@ router.get('/:id', protect, async (req, res) => {
 // @access  Private (Admin and Owner - Owner uploads go to pending based on settings)
 router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), async (req, res) => {
   try {
-    console.log('Library upload route called');
-    console.log('User:', req.user._id, req.user.role);
-    console.log('File:', req.file ? { name: req.file.originalname, size: req.file.size, type: req.file.mimetype, s3Url: req.file.s3Url } : 'none');
-
     if (!req.file) {
-      console.error('No file provided in request');
       return res.status(400).json({
         success: false,
         error: 'Please upload a file'
@@ -738,7 +733,6 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
     }
 
     const { title, description, category, tags, folderId, folderPath } = req.body;
-    console.log('Upload metadata:', { title, description, category, tags, folderId, folderPath });
 
     // Get system settings to check if library approval is required
     const settings = await SystemSettings.getSettings();
@@ -754,7 +748,6 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
 
     // Validate S3 URL exists
     if (!req.file.s3Url && !req.file.location) {
-      console.error('S3 URL missing:', { s3Url: req.file.s3Url, location: req.file.location });
       return res.status(400).json({
         success: false,
         error: 'File upload to storage failed. Please try again.'
@@ -804,21 +797,7 @@ router.post('/', protect, authorize('admin', 'owner'), upload.single('file'), as
       status
     };
 
-    console.log('Creating library file record:', {
-      title: fileData.title,
-      fileUrl: fileData.fileUrl,
-      fileType: fileData.fileType,
-      fileSize: fileData.fileSize,
-      category: fileData.category,
-      status: fileData.status
-    });
-
-    if (!fileData.fileUrl) {
-      console.error('WARNING: No S3 URL found. req.file.s3Url:', req.file.s3Url, 'req.file.location:', req.file.location);
-    }
-
     const libraryFile = await LibraryFile.create(fileData);
-    console.log('Library file created:', libraryFile._id, 'with fileUrl:', libraryFile.fileUrl);
 
     res.status(201).json({
       success: true,
