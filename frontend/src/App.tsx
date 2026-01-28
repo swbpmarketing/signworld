@@ -32,6 +32,7 @@ const RecentlyDeleted = lazy(() => import('./pages/RecentlyDeleted'));
 const Resources = lazy(() => import('./pages/Resources'));
 const OwnersRoster = lazy(() => import('./pages/OwnersRoster'));
 const OwnerProfileEnhanced = lazy(() => import('./pages/OwnerProfileEnhanced'));
+const OwnerProfileManagement = lazy(() => import('./pages/OwnerProfileManagement'));
 const MapSearch = lazy(() => import('./pages/MapSearch'));
 const Partners = lazy(() => import('./pages/Partners'));
 const Videos = lazy(() => import('./pages/Videos'));
@@ -241,6 +242,12 @@ function AppContent() {
                   <Route path="bug-reports" element={
                     <ProtectedRoute>
                       <BugReports />
+                    </ProtectedRoute>
+                  } />
+                  {/* Owner-specific routes */}
+                  <Route path="owner-profile-management" element={
+                    <ProtectedRoute allowedRoles={['owner']} requiredPermission="canAccessDashboard">
+                      <OwnerProfileManagement />
                     </ProtectedRoute>
                   } />
                 </Route>
