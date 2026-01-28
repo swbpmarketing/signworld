@@ -65,9 +65,11 @@ const ProductTour: React.FC<ProductTourProps> = ({ userId, userRole }) => {
    */
   const handleJoyrideCallback = useCallback((data: CallBackProps) => {
     const { status, type, action, index } = data;
+    console.log('[ProductTour] Joyride callback:', { status, type, action, index });
 
     // Handle tour completion
     if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+      console.log('[ProductTour] Tour ended with status:', status);
       completeTour();
       return;
     }
@@ -88,9 +90,10 @@ const ProductTour: React.FC<ProductTourProps> = ({ userId, userRole }) => {
       }
     }
 
-    // Handle close button
+    // Handle close button - treat as completion/skip
     if (action === ACTIONS.CLOSE) {
-      stopTour();
+      console.log('[ProductTour] Close button clicked, marking as completed');
+      completeTour();
     }
   }, [completeTour, stopTour, setTourState, handleRouteChange]);
 

@@ -585,19 +585,19 @@ const OwnersRoster = () => {
       return {
         ...owner,
         id: owner._id || owner.id, // Use _id from MongoDB
-        avatar: owner.name ? owner.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'NA',
+        avatar: owner.profileImage || (owner.name ? owner.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'NA'),
         location: owner.address ? `${owner.address.city}, ${owner.address.state}` : 'Unknown',
         joinDate: owner.openDate ? new Date(owner.openDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Unknown',
         rating: owner.rating?.averageRating || owner.stats?.averageRating || 0,
         totalRatings: owner.rating?.totalRatings || owner.stats?.totalRatings || 0,
         totalProjects: owner.stats?.projectsCompleted || 0,
-        territory: owner.address?.state || 'Unknown',
+        territory: owner.territory || owner.address?.state || 'Unknown',
         status: 'active' as const,
-        awards: 0,
-        certifications: [],
-        bio: owner.name && owner.company && owner.address
+        awards: owner.awards || 0,
+        certifications: owner.certifications || [],
+        bio: owner.bio || (owner.name && owner.company && owner.address
           ? `${owner.name} operates ${owner.company} in ${owner.address.city}, ${owner.address.state}.`
-          : 'No bio available.',
+          : 'No bio available.'),
         yearsInBusiness,
         yearEstablished,
       };
@@ -878,9 +878,17 @@ const OwnersRoster = () => {
                 {/* Owner Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center">
-                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-xl">
-                      {owner.avatar}
-                    </div>
+                    {owner.profileImage ? (
+                      <img
+                        src={owner.profileImage}
+                        alt={owner.name}
+                        className="h-16 w-16 rounded-full object-cover border-2 border-primary-100 dark:border-primary-900"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-xl">
+                        {owner.avatar}
+                      </div>
+                    )}
                     <div className="ml-4 min-w-0">
                       <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{owner.name}</h3>
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{owner.company}</p>
@@ -934,19 +942,44 @@ const OwnersRoster = () => {
                 </div>
 
                 {/* Specialties */}
-                <div className="mt-4">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Specialties</p>
-                  <div className="flex flex-wrap gap-1">
-                    {owner.specialties.slice(0, 3).map((specialty) => (
-                      <span
-                        key={specialty}
-                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
-                      >
-                        {specialty}
-                      </span>
-                    ))}
+                {owner.specialties && owner.specialties.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Specialties</p>
+                    <div className="flex flex-wrap gap-1">
+                      {owner.specialties.slice(0, 3).map((specialty) => (
+                        <span
+                          key={specialty}
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
+                        >
+                          {specialty}
+                        </span>
+                      ))}
+                      {owner.specialties.length > 3 && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-gray-500 dark:text-gray-400">
+                          +{owner.specialties.length - 3} more
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Awards & Certifications */}
+                {(owner.awards > 0 || (owner.certifications && owner.certifications.length > 0)) && (
+                  <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                    {owner.awards > 0 && (
+                      <div className="flex items-center text-yellow-600 dark:text-yellow-400">
+                        <TrophyIcon className="h-4 w-4 mr-1" />
+                        <span className="font-medium">{owner.awards} {owner.awards === 1 ? 'Award' : 'Awards'}</span>
+                      </div>
+                    )}
+                    {owner.certifications && owner.certifications.length > 0 && (
+                      <div className="flex items-center text-green-600 dark:text-green-400">
+                        <AcademicCapIcon className="h-4 w-4 mr-1" />
+                        <span className="font-medium">{owner.certifications.length} {owner.certifications.length === 1 ? 'Certification' : 'Certifications'}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="mt-6 flex flex-col sm:flex-row gap-2">

@@ -65,6 +65,7 @@ const navigation: {
   { name: "My Listings", href: "/vendor-equipment", icon: ClipboardDocumentListIcon, roles: ['vendor'], permission: 'canListEquipment', tourId: 'nav-vendor-equipment' },
   { name: "My Inquiries", href: "/vendor-inquiries", icon: InboxIcon, roles: ['vendor'], permission: 'canAccessEquipment', tourId: 'nav-vendor-inquiries' },
   { name: "Business Profile", href: "/vendor-profile", icon: BuildingStorefrontIcon, roles: ['vendor'], permission: 'canAccessDashboard', tourId: 'nav-vendor-profile' },
+  { name: "My Roster Profile", href: "/owner-profile-management", icon: UserIcon, roles: ['owner'], permission: 'canAccessDashboard', tourId: 'nav-owner-profile' },
   { name: "FAQs", href: "/faqs", icon: QuestionMarkCircleIcon, roles: ['admin', 'owner', 'vendor'], tourId: 'nav-faqs' },
   { name: "Bug Reports", href: "/bug-reports", icon: BugAntIcon, roles: ['admin', 'owner', 'vendor'], tourId: 'nav-bug-reports' },
 ];

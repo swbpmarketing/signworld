@@ -1,0 +1,3 @@
+name,email,password,phone,company,street,city,state,zipCode,country,website,facebook,linkedin,instagram,yearsInBusiness,openDate,specialties,equipment,profileImage,longitude,latitude,isActive
+John Smith,john.smith@example.com,,555-123-4567,SignWorld Dallas,123 Main St,Dallas,TX,75201,USA,https://signworlddallas.com,https://facebook.com/signworlddallas,,,5,2019-01-15,"Vehicle Wraps,Channel Letters","Roland Printer,Laminator",,-96.7970,32.7767,true
+Jane Doe,jane.doe@example.com,,555-987-6543,SignWorld Austin,456 Oak Ave,Austin,TX,78701,USA,https://signworldaustin.com,,,https://instagram.com/signworldaustin,3,2021-06-01,"Digital Printing,Banners","HP Latex Printer",,-97.7431,30.2672,true

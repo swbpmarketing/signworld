@@ -14,6 +14,7 @@ import {
   ArrowLeftIcon,
   ShareIcon,
   FlagIcon,
+  TrophyIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -227,6 +228,12 @@ const OwnerProfileEnhanced = () => {
                 <div className="text-primary-100">
                   <span className="font-semibold text-white">{owner.stats?.projectsCompleted || 0}</span> projects completed
                 </div>
+                {owner.awards && owner.awards > 0 && (
+                  <div className="flex items-center text-white">
+                    <TrophyIcon className="h-5 w-5 mr-1" />
+                    <span className="font-semibold">{owner.awards}</span> {owner.awards === 1 ? 'Award' : 'Awards'}
+                  </div>
+                )}
               </div>
 
               {/* Contact Buttons */}
@@ -259,6 +266,14 @@ const OwnerProfileEnhanced = () => {
           </div>
         </div>
       </div>
+
+      {/* Bio Section */}
+      {owner.bio && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">About</h3>
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{owner.bio}</p>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -333,6 +348,15 @@ const OwnerProfileEnhanced = () => {
                       <div>
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Open Since</p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(owner.openDate)}</p>
+                      </div>
+                    </div>
+                  )}
+                  {owner.territory && (
+                    <div className="flex items-start">
+                      <MapPinIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Territory</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{owner.territory}</p>
                       </div>
                     </div>
                   )}
@@ -415,6 +439,24 @@ const OwnerProfileEnhanced = () => {
                     <p className="text-sm text-gray-500 dark:text-gray-400">No specialties listed</p>
                   )}
                 </div>
+
+                {/* Certifications */}
+                {owner.certifications && owner.certifications.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Certifications</h3>
+                    <div className="grid grid-cols-1 gap-3">
+                      {owner.certifications.map((cert, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3"
+                        >
+                          <AcademicCapIcon className="h-5 w-5 text-green-600 dark:text-green-400 mr-3 mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{cert}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Mentoring Status */}
                 {owner.mentoring?.available && (

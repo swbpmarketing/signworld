@@ -96,6 +96,22 @@ const userSchema = new mongoose.Schema({
   }],
   yearsInBusiness: Number,
   profileImage: String,
+  bio: {
+    type: String,
+    trim: true,
+  },
+  territory: {
+    type: String,
+    trim: true,
+  },
+  certifications: [{
+    type: String,
+    trim: true,
+  }],
+  awards: {
+    type: Number,
+    default: 0,
+  },
   socialLinks: {
     facebook: String,
     linkedin: String,

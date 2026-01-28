@@ -24,6 +24,8 @@ export interface Owner {
   phone: string;
   company: string;
   profileImage: string;
+  bio?: string;
+  territory?: string;
   address: {
     street: string;
     city: string;
@@ -37,6 +39,8 @@ export interface Owner {
   yearsInBusiness: number;
   specialties: string[];
   equipment: string[];
+  certifications?: string[];
+  awards?: number;
   mentoring: {
     available: boolean;
     areas: string[];
