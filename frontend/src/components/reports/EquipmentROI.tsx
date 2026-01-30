@@ -20,8 +20,8 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 const EquipmentROI: React.FC<EquipmentROIProps> = ({ dateRange, filters, onFiltersChange }) => {
   const { data, isLoading, error } = useQuery<EquipmentAnalyticsData>({
-    queryKey: ['equipmentAnalytics', dateRange],
-    queryFn: getEquipmentAnalytics,
+    queryKey: ['equipmentAnalytics', dateRange, filters],
+    queryFn: () => getEquipmentAnalytics(dateRange, filters),
   });
 
   if (isLoading) {

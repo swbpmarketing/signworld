@@ -14,10 +14,10 @@ interface ProjectAnalyticsProps {
   onFiltersChange: (filters: Record<string, any>) => void;
 }
 
-const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ dateRange }) => {
+const ProjectAnalytics: React.FC<ProjectAnalyticsProps> = ({ dateRange, filters }) => {
   const { data, isLoading, error } = useQuery<ProjectAnalyticsData>({
-    queryKey: ['projectAnalytics', dateRange],
-    queryFn: getProjectAnalytics,
+    queryKey: ['projectAnalytics', dateRange, filters],
+    queryFn: () => getProjectAnalytics(dateRange, filters),
   });
 
   const getStatIcon = (iconName: string) => {

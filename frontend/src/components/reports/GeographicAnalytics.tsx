@@ -20,10 +20,10 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1'];
 
-const GeographicAnalytics: React.FC<GeographicAnalyticsProps> = ({ dateRange }) => {
+const GeographicAnalytics: React.FC<GeographicAnalyticsProps> = ({ dateRange, filters }) => {
   const { data, isLoading, error } = useQuery<GeographicAnalyticsData>({
-    queryKey: ['geographicAnalytics', dateRange],
-    queryFn: getGeographicAnalytics,
+    queryKey: ['geographicAnalytics', dateRange, filters],
+    queryFn: () => getGeographicAnalytics(dateRange, filters),
   });
 
   if (isLoading) {

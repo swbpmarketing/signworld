@@ -28,7 +28,7 @@ const EmptyState = ({ icon, title, description, action, className = '' }: EmptyS
       {action && (
         <button
           onClick={action.onClick}
-          className="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium text-sm"
+          className="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium text-sm hover-lift focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
         >
           {action.label}
         </button>

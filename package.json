@@ -21,6 +21,12 @@
     "seed:videos": "node backend/scripts/seedVideos.js",
     "seed:all": "npm run seed:owners && npm run seed:library && npm run seed:videos && npm run seed:events",
     "seed:production-owners": "node backend/seedProductionOwners.js",
+    "migrate:owners": "node backend/migrations/importOwnersFromCSV.js",
+    "migrate:validate": "node backend/migrations/validateCSV.js",
+    "migrate:analyze": "node backend/migrations/analyzeCSV.js",
+    "migrate:scrape": "node backend/migrations/scrapeOldApp.js",
+    "migrate:map": "node backend/migrations/mapColumns.js",
+    "migrate:export-ghl": "node backend/migrations/exportForGoHighLevel.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
@@ -38,6 +44,7 @@
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
+    "csv-parser": "^3.2.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
@@ -56,6 +63,8 @@
   "devDependencies": {
     "concurrently": "^8.2.1",
     "cross-env": "^10.1.0",
-    "nodemon": "^3.1.11"
+    "json2csv": "^6.0.0-alpha.2",
+    "nodemon": "^3.1.11",
+    "puppeteer": "^24.36.1"
   }
 }

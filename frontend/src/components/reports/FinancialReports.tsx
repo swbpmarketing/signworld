@@ -21,10 +21,10 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   DocumentTextIcon,
 };
 
-const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange }) => {
+const FinancialReports: React.FC<FinancialReportsProps> = ({ dateRange, filters }) => {
   const { data, isLoading, error } = useQuery<FinancialAnalyticsData>({
-    queryKey: ['financialAnalytics', dateRange],
-    queryFn: getFinancialAnalytics,
+    queryKey: ['financialAnalytics', dateRange, filters],
+    queryFn: () => getFinancialAnalytics(dateRange, filters),
   });
 
   if (isLoading) {

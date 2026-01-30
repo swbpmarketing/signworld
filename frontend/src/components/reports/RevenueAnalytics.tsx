@@ -16,8 +16,8 @@ interface RevenueAnalyticsProps {
 
 const RevenueAnalytics: React.FC<RevenueAnalyticsProps> = ({ dateRange, filters, onFiltersChange }) => {
   const { data, isLoading, error } = useQuery<RevenueAnalyticsData>({
-    queryKey: ['revenueAnalytics', dateRange],
-    queryFn: () => getRevenueAnalytics(dateRange),
+    queryKey: ['revenueAnalytics', dateRange, filters],
+    queryFn: () => getRevenueAnalytics(dateRange, filters),
   });
 
   const COLORS = ['#1890ff', '#096dd9', '#0050b3', '#003a8c', '#002766'];

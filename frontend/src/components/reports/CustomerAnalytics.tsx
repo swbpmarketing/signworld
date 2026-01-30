@@ -14,10 +14,10 @@ interface CustomerAnalyticsProps {
   onFiltersChange: (filters: Record<string, any>) => void;
 }
 
-const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({ dateRange }) => {
+const CustomerAnalytics: React.FC<CustomerAnalyticsProps> = ({ dateRange, filters }) => {
   const { data, isLoading, error } = useQuery<CustomerAnalyticsData>({
-    queryKey: ['customerAnalytics', dateRange],
-    queryFn: getCustomerAnalytics,
+    queryKey: ['customerAnalytics', dateRange, filters],
+    queryFn: () => getCustomerAnalytics(dateRange, filters),
   });
 
   const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d'];

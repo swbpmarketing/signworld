@@ -636,7 +636,7 @@ const Videos = () => {
             </div>
             <button
               type="submit"
-              className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+              className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2 hover-lift focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
             >
               <MagnifyingGlassIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Search</span>
@@ -968,8 +968,20 @@ const Videos = () => {
 
           {/* Loading State */}
           {videosLoading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                  <div className="aspect-video w-full bg-gray-200 dark:bg-gray-700 animate-shimmer" />
+                  <div className="p-4 space-y-3">
+                    <div className="h-5 w-3/4 rounded animate-shimmer" />
+                    <div className="h-4 w-full rounded animate-shimmer" />
+                    <div className="flex justify-between items-center mt-4">
+                      <div className="h-4 w-20 rounded animate-shimmer" />
+                      <div className="h-4 w-16 rounded animate-shimmer" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

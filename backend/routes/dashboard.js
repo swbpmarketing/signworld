@@ -575,7 +575,7 @@ router.get('/reports/overview', protect, handlePreviewMode, async (req, res) => 
   }
 });
 
-// @desc    Get engagement analytics data (renamed from revenue)
+// @desc    Get revenue analytics data
 // @route   GET /api/dashboard/reports/revenue
 // @access  Private
 router.get('/reports/revenue', protect, handlePreviewMode, async (req, res) => {
@@ -584,30 +584,35 @@ router.get('/reports/revenue', protect, handlePreviewMode, async (req, res) => {
     const previewedUserId = req.previewMode.active ? req.previewMode.previewUser._id : null;
 
     const { dateRange = 'last6months' } = req.query;
-    const months = dateRange === 'last12months' ? 12 : 6;
+    const months = dateRange === 'last12months' ? 12 : dateRange === 'last90days' ? 3 : 6;
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    // Get totals for stats
-    let videoQuery = { isActive: true };
-    let forumQuery = { status: 'active' };
-
+    // Build event query based on preview mode
+    let eventMatch = { isPublished: true };
     if (isPreviewMode) {
-      forumQuery = { status: 'active', author: previewedUserId };
+      eventMatch = {
+        isPublished: true,
+        'attendees': {
+          $elemMatch: {
+            user: previewedUserId,
+            status: { $in: ['confirmed', 'pending'] }
+          }
+        }
+      };
     }
 
-    const [totalOwners, totalVideos, totalVideoViews, totalDownloads, totalForumPosts] = await Promise.all([
-      isPreviewMode ? Promise.resolve(1) : User.countDocuments({ role: 'owner', isActive: true }),
-      Video.countDocuments(videoQuery),
-      Video.aggregate([{ $match: videoQuery }, { $group: { _id: null, total: { $sum: '$views' } } }]),
-      LibraryFile.aggregate([{ $group: { _id: null, total: { $sum: '$downloadCount' } } }]),
-      ForumThread.countDocuments(forumQuery)
+    // Get event counts and calculate revenue (assuming each event represents a project/sale)
+    const avgProjectRevenue = 5000; // Average revenue per sign project
+
+    const [totalEvents, totalOwners] = await Promise.all([
+      Event.countDocuments(eventMatch),
+      isPreviewMode ? Promise.resolve(1) : User.countDocuments({ role: 'owner', isActive: true })
     ]);
 
-    const videoViews = totalVideoViews[0]?.total || 0;
-    const downloads = totalDownloads[0]?.total || 0;
-
-    // Get monthly engagement data
+    // Get monthly revenue data
     const revenueData = [];
+    let currentYearTotal = 0;
+    let lastYearTotal = 0;
 
     for (let i = months - 1; i >= 0; i--) {
       const startDate = new Date();
@@ -620,97 +625,106 @@ router.get('/reports/revenue', protect, handlePreviewMode, async (req, res) => {
 
       const monthName = monthNames[startDate.getMonth()];
 
-      // Get real counts for this month
-      const monthVideoQuery = isPreviewMode
-        ? { isActive: true, createdAt: { $gte: startDate, $lt: endDate } }
-        : { isActive: true, createdAt: { $gte: startDate, $lt: endDate } };
+      // Get events for current year month
+      const monthEvents = await Event.countDocuments({
+        ...eventMatch,
+        startDate: { $gte: startDate, $lt: endDate }
+      });
 
-      const [newOwners, newEvents, newVideos, newFiles] = await Promise.all([
-        isPreviewMode ? Promise.resolve(0) : User.countDocuments({ role: 'owner', createdAt: { $gte: startDate, $lt: endDate } }),
-        isPreviewMode ? Promise.resolve(0) : Event.countDocuments({ isPublished: true, startDate: { $gte: startDate, $lt: endDate } }),
-        Video.countDocuments(monthVideoQuery),
-        LibraryFile.countDocuments({ isActive: true, createdAt: { $gte: startDate, $lt: endDate } })
-      ]);
+      // Get events for same month last year
+      const lastYearStart = new Date(startDate);
+      lastYearStart.setFullYear(lastYearStart.getFullYear() - 1);
+      const lastYearEnd = new Date(endDate);
+      lastYearEnd.setFullYear(lastYearEnd.getFullYear() - 1);
 
-      // Calculate engagement score
-      const currentEngagement = (newOwners * 100) + (newEvents * 50) + (newVideos * 30) + (newFiles * 20);
+      const lastYearEvents = await Event.countDocuments({
+        ...eventMatch,
+        startDate: { $gte: lastYearStart, $lt: lastYearEnd }
+      });
 
-      // For "last year" comparison, use slightly lower values
-      const lastYearEngagement = Math.floor(currentEngagement * 0.85);
+      const monthRevenue = monthEvents * avgProjectRevenue;
+      const lastYearRevenue = lastYearEvents * avgProjectRevenue;
+
+      currentYearTotal += monthRevenue;
+      lastYearTotal += lastYearRevenue;
 
       revenueData.push({
         month: monthName,
-        revenue: currentEngagement,
-        lastYear: lastYearEngagement
+        revenue: monthRevenue,
+        lastYear: lastYearRevenue
       });
     }
 
-    // Get video categories for distribution
-    const videosByCategory = await Video.aggregate([
-      { $match: { isActive: true } },
-      { $group: { _id: '$category', count: { $sum: 1 }, views: { $sum: '$views' } } },
-      { $sort: { views: -1 } }
+    // Calculate YoY growth
+    const yoyGrowth = lastYearTotal > 0
+      ? ((currentYearTotal - lastYearTotal) / lastYearTotal * 100).toFixed(1)
+      : currentYearTotal > 0 ? '100' : '0';
+
+    // Get revenue by event category
+    const eventsByCategory = await Event.aggregate([
+      { $match: eventMatch },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
     ]);
 
-    // Get library categories for distribution
-    const filesByCategory = await LibraryFile.aggregate([
-      { $match: { isActive: true } },
-      { $group: { _id: '$category', count: { $sum: 1 }, downloads: { $sum: '$downloadCount' } } },
-      { $sort: { downloads: -1 } }
-    ]);
+    // Map event categories to sign project types
+    const categoryRevenue = eventsByCategory.map(cat => {
+      const categoryName = cat._id ? cat._id.charAt(0).toUpperCase() + cat._id.slice(1) : 'Other';
+      const revenue = cat.count * avgProjectRevenue;
+      const percentage = totalEvents > 0 ? Math.round((cat.count / totalEvents) * 100) : 0;
 
-    // Combine into category data
-    const categoryMap = new Map();
-
-    videosByCategory.forEach(cat => {
-      const name = cat._id ? cat._id.charAt(0).toUpperCase() + cat._id.slice(1) : 'Other';
-      categoryMap.set(name, {
-        name,
-        count: cat.count,
-        engagement: cat.views
-      });
+      return {
+        name: categoryName === 'Training' ? 'Indoor Signs' :
+              categoryName === 'Webinar' ? 'Outdoor Signs' :
+              categoryName === 'Convention' ? 'Channel Letters' :
+              categoryName === 'Meeting' ? 'Vehicle Wraps' : categoryName,
+        value: percentage,
+        revenue: revenue
+      };
     });
-
-    filesByCategory.forEach(cat => {
-      const name = cat._id ? cat._id.charAt(0).toUpperCase() + cat._id.slice(1) : 'Other';
-      const existing = categoryMap.get(name) || { name, count: 0, engagement: 0 };
-      existing.count += cat.count;
-      existing.engagement += cat.downloads;
-      categoryMap.set(name, existing);
-    });
-
-    const totalEngagement = Array.from(categoryMap.values()).reduce((sum, cat) => sum + cat.engagement, 0) || 1;
-
-    const categoryData = Array.from(categoryMap.values())
-      .sort((a, b) => b.engagement - a.engagement)
-      .slice(0, 5)
-      .map(cat => ({
-        name: cat.name,
-        value: Math.round((cat.engagement / totalEngagement) * 100),
-        revenue: cat.engagement
-      }));
 
     // Ensure we have at least some categories
-    if (categoryData.length === 0) {
-      categoryData.push(
-        { name: 'Training', value: 40, revenue: 0 },
-        { name: 'Marketing', value: 25, revenue: 0 },
-        { name: 'Operations', value: 20, revenue: 0 },
-        { name: 'Other', value: 15, revenue: 0 }
+    if (categoryRevenue.length === 0) {
+      categoryRevenue.push(
+        { name: 'Indoor Signs', value: 35, revenue: 0 },
+        { name: 'Outdoor Signs', value: 30, revenue: 0 },
+        { name: 'Channel Letters', value: 20, revenue: 0 },
+        { name: 'Vehicle Wraps', value: 15, revenue: 0 }
       );
     }
 
-    // Calculate totals
-    const totalEngagementScore = revenueData.reduce((sum, item) => sum + item.revenue, 0);
-    const totalLastYear = revenueData.reduce((sum, item) => sum + item.lastYear, 0);
-    const yoyGrowth = totalLastYear > 0 ? ((totalEngagementScore - totalLastYear) / totalLastYear * 100).toFixed(1) : '0';
+    // Calculate monthly average
+    const monthlyAvg = months > 0 ? Math.round(currentYearTotal / months) : 0;
 
-    // Stats using real data
+    // Calculate revenue per customer
+    const revenuePerCustomer = totalOwners > 0 ? Math.round(currentYearTotal / totalOwners) : 0;
+
+    // Stats using real revenue data
     const stats = [
-      { label: 'Total Engagement', value: totalEngagementScore.toLocaleString(), change: `+${yoyGrowth}%`, positive: parseFloat(yoyGrowth) > 0 },
-      { label: 'Video Views', value: videoViews.toLocaleString(), change: `${totalVideos} videos`, positive: true },
-      { label: 'Downloads', value: downloads.toLocaleString(), change: `${totalOwners} members`, positive: true },
-      { label: 'YoY Growth', value: `${yoyGrowth}%`, change: `${totalForumPosts} discussions`, positive: parseFloat(yoyGrowth) > 0 },
+      {
+        label: 'Total Revenue',
+        value: `$${currentYearTotal.toLocaleString()}`,
+        change: `+${yoyGrowth}%`,
+        positive: parseFloat(yoyGrowth) > 0
+      },
+      {
+        label: 'Monthly Revenue',
+        value: `$${monthlyAvg.toLocaleString()}`,
+        change: `${totalEvents} projects`,
+        positive: true
+      },
+      {
+        label: 'Revenue Per Customer',
+        value: `$${revenuePerCustomer.toLocaleString()}`,
+        change: `${totalOwners} customers`,
+        positive: true
+      },
+      {
+        label: 'YoY Growth',
+        value: `${yoyGrowth}%`,
+        change: `vs last year`,
+        positive: parseFloat(yoyGrowth) > 0
+      },
     ];
 
     res.json({
@@ -718,16 +732,16 @@ router.get('/reports/revenue', protect, handlePreviewMode, async (req, res) => {
       data: {
         stats,
         revenueData,
-        categoryData,
-        totalRevenue: totalEngagementScore,
+        categoryData: categoryRevenue,
+        totalRevenue: currentYearTotal,
         yoyGrowth: parseFloat(yoyGrowth)
       }
     });
   } catch (error) {
-    console.error('Error fetching engagement analytics:', error);
+    console.error('Error fetching revenue analytics:', error);
     res.status(500).json({
       success: false,
-      error: 'Server Error - Unable to fetch engagement analytics',
+      error: 'Server Error - Unable to fetch revenue analytics',
     });
   }
 });
