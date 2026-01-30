@@ -109,7 +109,8 @@ const OwnerProfileEnhanced = () => {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  const renderStars = (rating: number, interactive = false) => {
+  const renderStars = (rating: number, interactive = false, size: 'sm' | 'md' = 'md') => {
+    const sizeClasses = size === 'sm' ? 'h-3.5 w-3.5' : 'h-5 w-5';
     return Array.from({ length: 5 }, (_, i) => (
       <button
         key={i}
@@ -119,9 +120,9 @@ const OwnerProfileEnhanced = () => {
         className={`star ${interactive ? 'cursor-pointer' : 'cursor-default'}`}
       >
         {i < Math.floor(rating) ? (
-          <StarIconSolid className="h-5 w-5 text-yellow-400" />
+          <StarIconSolid className={`${sizeClasses} text-yellow-400`} />
         ) : (
-          <StarIcon className="h-5 w-5 text-gray-300 dark:text-gray-600" />
+          <StarIcon className={`${sizeClasses} text-gray-300 dark:text-gray-600`} />
         )}
       </button>
     ));
@@ -192,76 +193,112 @@ const OwnerProfileEnhanced = () => {
         </div>
       </div>
 
-      {/* Header Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-8 sm:px-8">
-          <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
-            {/* Profile Image */}
-            <div className="flex-shrink-0 profile-image-container">
-              <img
-                className="h-32 w-32 rounded-full border-4 border-white shadow-xl object-cover"
-                src={owner.profileImage || 'https://storage.googleapis.com/msgsndr/DecfA7BjYEDxFe8pqRZs/media/688c61c7ea6d0f0042107b99.jpeg'}
-                alt={owner.name}
-              />
+      {/* Header Section - Mobile Optimized */}
+      <div className="bg-gradient-to-b from-primary-50 to-white dark:from-primary-900/10 dark:to-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-6 py-10 sm:px-8">
+          {/* Profile Header - Responsive Layout */}
+          <div className="flex flex-col items-center mb-8">
+            {/* Mobile: Side by side, Desktop: Centered stack */}
+            <div className="flex items-center gap-4 md:flex-col md:gap-0 md:items-center">
+              {/* Avatar */}
+              <div className="relative flex-shrink-0 profile-image-container md:mb-6">
+                <div className="h-20 w-20 sm:h-24 sm:w-24 md:h-32 md:w-32 rounded-full ring-4 ring-white dark:ring-gray-700 shadow-xl bg-white overflow-hidden">
+                  <img
+                    className="h-full w-full object-cover"
+                    src={owner.profileImage || 'https://storage.googleapis.com/msgsndr/DecfA7BjYEDxFe8pqRZs/media/688c61c7ea6d0f0042107b99.jpeg'}
+                    alt={owner.name}
+                  />
+                </div>
+              </div>
+
+              {/* Name */}
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white md:text-center md:mb-4">{owner.name}</h1>
             </div>
-            
-            {/* Owner Info */}
-            <div className="flex-1 text-center md:text-left">
-              <h1 className="text-3xl font-bold text-white">{owner.name}</h1>
-              {owner.company && <p className="text-xl text-primary-100 mt-1">{owner.company}</p>}
 
-              {/* Stats */}
-              <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-6 stats-container">
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center star-rating">
-                    {renderStars(owner.rating?.averageRating || owner.stats?.averageRating || 0)}
-                  </div>
-                  <span className="text-white font-medium">
-                    {owner.rating?.averageRating || owner.stats?.averageRating || 0} ({owner.rating?.totalRatings || owner.stats?.totalRatings || 0} reviews)
-                  </span>
-                </div>
-                {owner.yearsInBusiness && (
-                  <div className="text-primary-100">
-                    <span className="font-semibold text-white">{owner.yearsInBusiness}</span> years in business
-                  </div>
-                )}
-                <div className="text-primary-100">
-                  <span className="font-semibold text-white">{owner.stats?.projectsCompleted || 0}</span> projects completed
-                </div>
-                {owner.awards && owner.awards > 0 && (
-                  <div className="flex items-center text-white">
-                    <TrophyIcon className="h-5 w-5 mr-1" />
-                    <span className="font-semibold">{owner.awards}</span> {owner.awards === 1 ? 'Award' : 'Awards'}
-                  </div>
-                )}
-              </div>
+            {/* Company */}
+            {owner.company && (
+              <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 text-center">
+                {owner.company}
+              </p>
+            )}
+          </div>
 
-              {/* Contact Buttons */}
-              <div className="mt-6 flex flex-wrap gap-3 justify-center md:justify-start contact-buttons">
-                {owner.phone && (
-                  <a
-                    href={`tel:${owner.phone}`}
-                    className="contact-button inline-flex items-center px-4 py-2 bg-white text-primary-600 rounded-lg font-medium hover:bg-primary-50 transition-colors duration-200"
-                  >
-                    <PhoneIcon className="h-5 w-5 mr-2" />
-                    Call
-                  </a>
-                )}
+          {/* Stats - Compact Horizontal Row */}
+          {((owner.rating?.totalRatings || owner.stats?.totalRatings || 0) > 0 || (owner.stats?.projectsCompleted || 0) > 0) && (
+            <div className="flex items-center justify-center gap-6 mb-8 pb-8 border-b border-gray-200 dark:border-gray-700 flex-wrap stats-container">
+              {/* Reviews */}
+              {(owner.rating?.totalRatings || owner.stats?.totalRatings || 0) > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex-shrink-0 flex items-center star-rating">
+                    {renderStars(owner.rating?.averageRating || owner.stats?.averageRating || 0, false, 'sm')}
+                  </div>
+                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {(owner.rating?.averageRating || owner.stats?.averageRating || 0).toFixed(1)}
+                    </span>
+                    {' '}({owner.rating?.totalRatings || owner.stats?.totalRatings || 0})
+                  </div>
+                </div>
+              )}
+
+              {/* Separator */}
+              {(owner.rating?.totalRatings || owner.stats?.totalRatings || 0) > 0 && (owner.stats?.projectsCompleted || 0) > 0 && (
+                <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
+              )}
+
+              {/* Projects */}
+              {(owner.stats?.projectsCompleted || 0) > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <TrophyIcon className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
+                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {owner.stats?.projectsCompleted || 0}
+                    </span>
+                    {' '}project{(owner.stats?.projectsCompleted || 0) !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Empty state for no stats */}
+          {!((owner.rating?.totalRatings || owner.stats?.totalRatings || 0) > 0 || (owner.stats?.projectsCompleted || 0) > 0) && (
+            <div className="mb-8 pb-8 border-b border-gray-200 dark:border-gray-700">
+              <p className="text-center text-xs text-gray-400 dark:text-gray-600">
+                No reviews or projects yet
+              </p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="space-y-3 contact-buttons">
+            {/* Primary CTA - Message */}
+            <button
+              className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-4 bg-primary-600 text-white rounded-xl font-semibold text-base hover:bg-primary-700 active:bg-primary-800 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+              onClick={() => navigate(`/chat?contact=${owner._id || owner.id}`)}
+            >
+              <ChatBubbleLeftRightIcon className="h-5 w-5" />
+              <span>Send Message</span>
+            </button>
+
+            {/* Secondary CTAs - Call & Email */}
+            <div className="grid grid-cols-2 gap-3">
+              {owner.phone && (
                 <a
-                  href={`mailto:${owner.email}`}
-                  className="contact-button inline-flex items-center px-4 py-2 bg-white text-primary-600 rounded-lg font-medium hover:bg-primary-50 transition-colors duration-200"
+                  href={`tel:${owner.phone}`}
+                  className="contact-button inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
-                  <EnvelopeIcon className="h-5 w-5 mr-2" />
-                  Email
+                  <PhoneIcon className="h-4 w-4" />
+                  <span>Call</span>
                 </a>
-                <button
-                  className="contact-button inline-flex items-center px-4 py-2 bg-primary-800 text-white rounded-lg font-medium hover:bg-primary-900 transition-colors duration-200"
-                  onClick={() => navigate(`/chat?contact=${owner._id || owner.id}`)}
-                >
-                  <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
-                  Message
-                </button>
-              </div>
+              )}
+              <a
+                href={`mailto:${owner.email}`}
+                className="contact-button inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-sm hover:bg-gray-50 dark:hover:bg-gray-600 active:bg-gray-100 dark:active:bg-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+              >
+                <EnvelopeIcon className="h-4 w-4" />
+                <span>Email</span>
+              </a>
             </div>
           </div>
         </div>

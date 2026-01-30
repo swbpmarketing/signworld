@@ -9,24 +9,19 @@ import {
   PhoneIcon,
   MapPinIcon,
   CalendarIcon,
-  KeyIcon,
   BellIcon,
   ShieldCheckIcon,
   Cog6ToothIcon,
   CameraIcon,
   PencilIcon,
   BuildingOfficeIcon,
-  EyeIcon,
-  EyeSlashIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { AnimatePresence, motion } from 'framer-motion';
-import { createPortal } from 'react-dom';
 import {
   getCurrentUser,
   updateProfile,
-  updatePassword,
   uploadProfilePhoto,
   getNotificationSettings,
   saveNotificationSettings,
@@ -65,10 +60,6 @@ const UserProfile = () => {
   const isVendor = effectiveRole === 'vendor';
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch full user profile
@@ -94,12 +85,6 @@ const UserProfile = () => {
     city: '',
     state: '',
     zipCode: '',
-  });
-
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
   });
 
   const [notifications, setNotifications] = useState<NotificationSettings>({
@@ -156,22 +141,6 @@ const UserProfile = () => {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to update profile');
-    },
-  });
-
-  // Update password mutation
-  const updatePasswordMutation = useMutation({
-    mutationFn: updatePassword,
-    onSuccess: (data) => {
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-      }
-      toast.success('Password updated successfully!');
-      setShowPasswordModal(false);
-      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update password');
     },
   });
 
@@ -241,21 +210,6 @@ const UserProfile = () => {
     setIsEditing(false);
   };
 
-  const handlePasswordChange = () => {
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
-    }
-    if (passwordForm.newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-    updatePasswordMutation.mutate({
-      currentPassword: passwordForm.currentPassword,
-      newPassword: passwordForm.newPassword,
-    });
-  };
-
   const handleNotificationToggle = (key: keyof NotificationSettings) => {
     const newSettings = { ...notifications, [key]: !notifications[key] };
     setNotifications(newSettings);
@@ -270,118 +224,8 @@ const UserProfile = () => {
     { id: 'settings', name: 'Settings', icon: Cog6ToothIcon },
   ];
 
-  // Password Change Modal
-  const PasswordModal = () => {
-    if (!showPasswordModal) return null;
-
-    return createPortal(
-      <div className="fixed inset-0 z-50 overflow-y-auto">
-        <div className="flex min-h-full items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPasswordModal(false)} />
-          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Change Password</h3>
-              <button
-                onClick={() => setShowPasswordModal(false)}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <XMarkIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Current Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showCurrentPassword ? 'text' : 'password'}
-                    value={passwordForm.currentPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter current password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    {showCurrentPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  New Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showNewPassword ? 'text' : 'password'}
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Enter new password (min 6 characters)"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    {showNewPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Confirm New Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Confirm new password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    {showConfirmPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowPasswordModal(false)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handlePasswordChange}
-                disabled={updatePasswordMutation.isPending}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-              >
-                {updatePasswordMutation.isPending ? 'Updating...' : 'Update Password'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>,
-      document.body
-    );
-  };
-
   return (
     <div className="space-y-8">
-      <PasswordModal />
 
       {/* Header */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg overflow-hidden">
@@ -442,7 +286,7 @@ const UserProfile = () => {
               )}
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="inline-flex items-center px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 transition-colors duration-200 hover-lift focus:outline-none focus:ring-2 focus:ring-white/30"
               >
                 <PencilIcon className="h-4 w-4 mr-2" />
                 {isEditing ? 'Cancel' : 'Edit Profile'}
@@ -647,7 +491,7 @@ const UserProfile = () => {
                     <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                       <button
                         onClick={handleCancel}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                        className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 hover-lift dark:focus:ring-offset-gray-800"
                       >
                         <XMarkIcon className="h-4 w-4 mr-2" />
                         Cancel
@@ -655,7 +499,7 @@ const UserProfile = () => {
                       <button
                         onClick={handleSave}
                         disabled={updateProfileMutation.isPending}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 hover-lift dark:focus:ring-offset-gray-800"
                       >
                         <CheckIcon className="h-4 w-4 mr-2" />
                         {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
@@ -669,24 +513,6 @@ const UserProfile = () => {
                 <div className="space-y-6">
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
                     <div className="flex items-center space-x-3">
-                      <KeyIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Password & Security</h3>
-                    </div>
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                      Manage your password and security settings to keep your account safe.
-                    </p>
-                    <div className="mt-4">
-                      <button
-                        onClick={() => setShowPasswordModal(true)}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
-                      >
-                        Change Password
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                    <div className="flex items-center space-x-3">
                       <ShieldCheckIcon className="h-6 w-6 text-green-600" />
                       <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Two-Factor Authentication</h3>
                     </div>
@@ -694,7 +520,7 @@ const UserProfile = () => {
                       Add an extra layer of security to your account with two-factor authentication.
                     </p>
                     <div className="mt-4">
-                      <button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <button className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 hover-lift focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-800">
                         Enable 2FA
                       </button>
                     </div>

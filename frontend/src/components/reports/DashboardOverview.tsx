@@ -22,7 +22,7 @@ const DashboardOverview = ({ dateRange, filters }: DashboardOverviewProps) => {
   // Fetch reports overview data
   const { data, isLoading, error } = useQuery({
     queryKey: ['reports-overview', dateRange, filters],
-    queryFn: getReportsOverview,
+    queryFn: () => getReportsOverview(dateRange, filters),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -407,36 +407,45 @@ const DashboardOverview = ({ dateRange, filters }: DashboardOverviewProps) => {
             </div>
           </div>
         </div>
-        <div className="h-64 sm:h-72 overflow-x-auto">
+        <div className="h-64 sm:h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={performanceMetrics} layout="horizontal" barGap={8}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+            <BarChart
+              data={performanceMetrics}
+              layout="horizontal"
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" horizontal={true} vertical={false} />
               <XAxis
                 type="number"
-                domain={[0, 100]}
-                tick={{ fontSize: 12, fill: '#9ca3af' }}
+                domain={[0, 'auto']}
+                tick={{ fontSize: 12 }}
+                className="fill-gray-500 dark:fill-gray-400"
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
                 dataKey="metric"
                 type="category"
-                tick={{ fontSize: 12, fill: '#9ca3af' }}
-                width={150}
+                tick={{ fontSize: 12 }}
+                className="fill-gray-700 dark:fill-gray-300"
+                width={120}
                 axisLine={false}
                 tickLine={false}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                  backgroundColor: 'rgb(31 41 55)',
                   border: 'none',
                   borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  color: 'white'
                 }}
-                formatter={(value) => `${value}%`}
+                formatter={(value: any) => [`${Number(value).toFixed(1)}`, '']}
+                labelStyle={{ color: 'white' }}
               />
-              <Bar dataKey="current" fill="#3b82f6" name="Current" radius={[0, 4, 4, 0]} barSize={20} />
-              <Bar dataKey="target" fill="#10b981" name="Target" radius={[0, 4, 4, 0]} barSize={20} />
+              <Legend />
+              <Bar dataKey="current" fill="#3b82f6" name="Current" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="target" fill="#10b981" name="Target" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

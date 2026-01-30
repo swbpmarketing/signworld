@@ -105,7 +105,8 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
         </div>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1"
+          aria-label="Close notifications"
         >
           <XMarkIcon className="h-5 w-5" />
         </button>
@@ -121,9 +122,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 e.stopPropagation();
                 onMarkAllAsRead();
               }}
-              className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
             >
-              Mark all as read
+              <CheckIcon className="h-3.5 w-3.5" />
+              Mark all read
             </button>
           )}
           <button
@@ -132,8 +134,9 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
               e.stopPropagation();
               onClearAll();
             }}
-            className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium transition-colors ml-auto"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium transition-colors rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 ml-auto focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
           >
+            <TrashIcon className="h-3.5 w-3.5" />
             Clear all
           </button>
         </div>
@@ -142,9 +145,21 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
       {/* Notifications List */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 px-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">Loading notifications...</p>
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="p-4">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full animate-shimmer"></div>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 rounded animate-shimmer"></div>
+                    <div className="h-3 w-full rounded animate-shimmer"></div>
+                    <div className="h-3 w-1/2 rounded animate-shimmer"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -174,8 +189,8 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                     onClose();
                     navigate(route);
                   }}
-                  className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer ${
-                    !notification.isRead ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''
+                  className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 cursor-pointer hover-lift ${
+                    !notification.isRead ? 'bg-primary-50/50 dark:bg-primary-900/10 border-l-2 border-primary-500' : ''
                   }`}
                 >
                   <div className="flex gap-3">
@@ -239,10 +254,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                               e.stopPropagation();
                               onMarkAsRead(notification._id);
                             }}
-                            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-medium transition-colors flex items-center gap-1"
+                            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-medium transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1"
                           >
                             <CheckIcon className="h-3.5 w-3.5" />
-                            Mark as read
+                            <span className="hidden sm:inline">Mark as read</span>
                           </button>
                         )}
                         <button
@@ -251,10 +266,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                             e.stopPropagation();
                             onDismiss(notification._id);
                           }}
-                          className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-medium transition-colors flex items-center gap-1"
+                          className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-medium transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
                         >
                           <TrashIcon className="h-3.5 w-3.5" />
-                          Dismiss
+                          <span className="hidden sm:inline">Dismiss</span>
                         </button>
                       </div>
                     </div>

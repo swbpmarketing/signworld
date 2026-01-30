@@ -126,8 +126,16 @@ export const useProductTour = (userId?: string) => {
    * - RETURNING users (completed/skipped tour): Tour does NOT auto-start
    * - Only runs ONCE per session to prevent re-triggering
    * - Can always be manually started from Settings
+   *
+   * DISABLED: Product tour will NOT auto-start on login
+   * Users can manually start it from Settings if needed
    */
   useEffect(() => {
+    // DISABLED: Do not auto-start product tour
+    // Users can manually trigger it from Settings
+    console.log('[ProductTour] Auto-start is DISABLED. Tour will not start automatically.');
+    return;
+
     // Don't run if no userId
     if (!userId) {
       console.log('[ProductTour] Auto-start: no userId, skipping');

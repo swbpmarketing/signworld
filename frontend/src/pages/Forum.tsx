@@ -1247,7 +1247,7 @@ const Forum = () => {
             </div>
             <button
               type="submit"
-              className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2"
+              className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2 hover-lift focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
             >
               <MagnifyingGlassIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Search</span>
@@ -1396,8 +1396,21 @@ const Forum = () => {
               </div>
               <div className="p-6">
                 {loadingMyThreads ? (
-                  <div className="flex items-center justify-center py-8">
-                    <ArrowPathIcon className="h-8 w-8 text-primary-600 animate-spin" />
+                  <div className="space-y-4">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 space-y-2">
+                            <div className="h-5 w-3/4 rounded animate-shimmer" />
+                            <div className="h-4 w-1/2 rounded animate-shimmer" />
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="h-9 w-9 rounded-lg animate-shimmer" />
+                            <div className="h-9 w-9 rounded-lg animate-shimmer" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : myThreads.length === 0 ? (
                   <div className="text-center py-8">
@@ -1405,7 +1418,7 @@ const Forum = () => {
                     <p className="text-gray-500 dark:text-gray-400">You haven't created any threads yet.</p>
                     <button
                       onClick={() => setShowCreateModal(true)}
-                      className="mt-4 inline-flex items-center px-2.5 py-1.5 bg-primary-600 text-sm text-white font-medium rounded-lg hover:bg-primary-700"
+                      className="mt-4 inline-flex items-center px-2.5 py-1.5 bg-primary-600 text-sm text-white font-medium rounded-lg hover:bg-primary-700 hover-lift focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                     >
                       <PlusIcon className="h-4 w-4 mr-2" />
                       Create Your First Thread
@@ -1472,11 +1485,23 @@ const Forum = () => {
 
           {/* Loading State */}
           {loading && !showMyThreads && (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center space-y-4">
-                <ArrowPathIcon className="h-12 w-12 text-primary-600 dark:text-primary-400 animate-spin" />
-                <p className="text-gray-600 dark:text-gray-400">Loading threads...</p>
-              </div>
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-full animate-shimmer" />
+                    <div className="flex-1 space-y-3">
+                      <div className="h-5 w-3/4 rounded animate-shimmer" />
+                      <div className="h-4 w-full rounded animate-shimmer" />
+                      <div className="flex gap-4 mt-3">
+                        <div className="h-4 w-20 rounded animate-shimmer" />
+                        <div className="h-4 w-20 rounded animate-shimmer" />
+                        <div className="h-4 w-20 rounded animate-shimmer" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

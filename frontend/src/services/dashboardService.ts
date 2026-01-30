@@ -88,9 +88,11 @@ export const getRecentActivity = async (limit: number = 10): Promise<Activity[]>
 };
 
 // Get reports overview data
-export const getReportsOverview = async (): Promise<ReportsOverviewData> => {
+export const getReportsOverview = async (dateRange?: string, filters?: any): Promise<ReportsOverviewData> => {
   try {
-    const response = await api.get('/dashboard/reports/overview');
+    const response = await api.get('/dashboard/reports/overview', {
+      params: { dateRange, ...filters }
+    });
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching reports overview:', error);
@@ -121,10 +123,10 @@ export interface RevenueAnalyticsData {
 }
 
 // Get revenue analytics data
-export const getRevenueAnalytics = async (dateRange?: string): Promise<RevenueAnalyticsData> => {
+export const getRevenueAnalytics = async (dateRange?: string, filters?: any): Promise<RevenueAnalyticsData> => {
   try {
     const response = await api.get('/dashboard/reports/revenue', {
-      params: { dateRange }
+      params: { dateRange, ...filters }
     });
     return response.data.data;
   } catch (error: any) {
@@ -162,9 +164,11 @@ export interface ProjectAnalyticsData {
 }
 
 // Get project analytics data
-export const getProjectAnalytics = async (): Promise<ProjectAnalyticsData> => {
+export const getProjectAnalytics = async (dateRange?: string, filters?: any): Promise<ProjectAnalyticsData> => {
   try {
-    const response = await api.get('/dashboard/reports/projects');
+    const response = await api.get('/dashboard/reports/projects', {
+      params: { dateRange, ...filters }
+    });
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching project analytics:', error);
@@ -203,9 +207,11 @@ export interface CustomerAnalyticsData {
 }
 
 // Get customer analytics data
-export const getCustomerAnalytics = async (): Promise<CustomerAnalyticsData> => {
+export const getCustomerAnalytics = async (dateRange?: string, filters?: any): Promise<CustomerAnalyticsData> => {
   try {
-    const response = await api.get('/dashboard/reports/customers');
+    const response = await api.get('/dashboard/reports/customers', {
+      params: { dateRange, ...filters }
+    });
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching customer analytics:', error);
@@ -242,9 +248,11 @@ export interface EquipmentAnalyticsData {
 }
 
 // Get equipment analytics data
-export const getEquipmentAnalytics = async (): Promise<EquipmentAnalyticsData> => {
+export const getEquipmentAnalytics = async (dateRange?: string, filters?: any): Promise<EquipmentAnalyticsData> => {
   try {
-    const response = await api.get('/dashboard/reports/equipment');
+    const response = await api.get('/dashboard/reports/equipment', {
+      params: { dateRange, ...filters }
+    });
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching equipment analytics:', error);
@@ -282,9 +290,11 @@ export interface TeamAnalyticsData {
 }
 
 // Get team analytics data
-export const getTeamAnalytics = async (): Promise<TeamAnalyticsData> => {
+export const getTeamAnalytics = async (dateRange?: string, filters?: any): Promise<TeamAnalyticsData> => {
   try {
-    const response = await api.get('/dashboard/reports/team');
+    const response = await api.get('/dashboard/reports/team', {
+      params: { dateRange, ...filters }
+    });
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching team analytics:', error);
@@ -321,9 +331,11 @@ export interface GeographicAnalyticsData {
 }
 
 // Get geographic analytics data
-export const getGeographicAnalytics = async (): Promise<GeographicAnalyticsData> => {
+export const getGeographicAnalytics = async (dateRange?: string, filters?: any): Promise<GeographicAnalyticsData> => {
   try {
-    const response = await api.get('/dashboard/reports/geographic');
+    const response = await api.get('/dashboard/reports/geographic', {
+      params: { dateRange, ...filters }
+    });
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching geographic analytics:', error);
@@ -368,9 +380,11 @@ export interface FinancialAnalyticsData {
 }
 
 // Get financial analytics data
-export const getFinancialAnalytics = async (): Promise<FinancialAnalyticsData> => {
+export const getFinancialAnalytics = async (dateRange?: string, filters?: any): Promise<FinancialAnalyticsData> => {
   try {
-    const response = await api.get('/dashboard/reports/financial');
+    const response = await api.get('/dashboard/reports/financial', {
+      params: { dateRange, ...filters }
+    });
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching financial analytics:', error);

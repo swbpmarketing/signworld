@@ -18,10 +18,10 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   TrophyIcon,
 };
 
-const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange }) => {
+const TeamPerformance: React.FC<TeamPerformanceProps> = ({ dateRange, filters }) => {
   const { data, isLoading, error } = useQuery<TeamAnalyticsData>({
-    queryKey: ['teamAnalytics', dateRange],
-    queryFn: getTeamAnalytics,
+    queryKey: ['teamAnalytics', dateRange, filters],
+    queryFn: () => getTeamAnalytics(dateRange, filters),
   });
 
   if (isLoading) {

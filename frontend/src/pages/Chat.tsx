@@ -798,6 +798,9 @@ const Chat = () => {
   };
 
   const filteredContacts = contacts.filter(contact => {
+    // Only show conversations with at least one message
+    const hasMessages = contact.lastMessage && contact.lastMessage.trim() !== '';
+
     // Search filter
     const matchesSearch = contact.name.toLowerCase().includes(searchInput.toLowerCase()) ||
       contact.role.toLowerCase().includes(searchInput.toLowerCase());
@@ -805,7 +808,7 @@ const Chat = () => {
     // Role filter
     const matchesRole = roleFilter === 'all' || contact.role.toLowerCase() === roleFilter;
 
-    return matchesSearch && matchesRole;
+    return hasMessages && matchesSearch && matchesRole;
   });
 
   if (loading) {

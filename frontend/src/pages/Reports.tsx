@@ -95,7 +95,7 @@ const reportSections = [
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState('overview');
-  const [dateRange, setDateRange] = useState('last7days');
+  const [dateRange, setDateRange] = useState('last90days');
   const [filters, setFilters] = useState({});
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());

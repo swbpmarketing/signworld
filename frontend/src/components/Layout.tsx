@@ -82,7 +82,8 @@ const Sidebar = memo(({
   onToggleCollapse,
   hasPermission,
   isPreviewMode: _isPreviewMode,
-  permissions: _permissions
+  permissions: _permissions,
+  onHoverChange
 }: {
   sidebarOpen: boolean;
   sidebarCollapsed: boolean;
@@ -94,6 +95,7 @@ const Sidebar = memo(({
   hasPermission: (permission: keyof Permissions) => boolean;
   isPreviewMode: boolean;
   permissions: Permissions | null;
+  onHoverChange: (isHovering: boolean) => void;
 }) => {
   // Sidebar is expanded when not collapsed, or when hovering while collapsed
   const [isHovering, setIsHovering] = useState(false);
@@ -101,11 +103,13 @@ const Sidebar = memo(({
   const handleMouseEnter = () => {
     if (sidebarCollapsed) {
       setIsHovering(true);
+      onHoverChange(true);
     }
   };
 
   const handleMouseLeave = () => {
     setIsHovering(false);
+    onHoverChange(false);
   };
 
   // Expanded when: not collapsed OR (collapsed but hovering)
@@ -142,23 +146,26 @@ const Sidebar = memo(({
       >
         <div className="flex h-full flex-col bg-white dark:bg-gray-800">
           {/* Logo - with explicit dimensions to prevent layout shift */}
-          <div className="flex h-16 items-center justify-center px-2 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 relative">
-            {isExpanded ? (
-              <img
-                src="/logo.png"
-                alt="Sign Company Logo"
-                className="w-full max-w-[200px] h-auto object-contain brightness-[0.2] dark:brightness-0 dark:invert"
-              />
-            ) : (
-              <div className="w-8 h-8 bg-primary-600 dark:bg-primary-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">SC</span>
-              </div>
-            )}
+          <div className="flex h-16 items-center justify-center px-2 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 relative overflow-hidden">
+            <img
+              src="/logo.png"
+              alt="Sign Company Logo"
+              className={`w-full max-w-[200px] h-auto object-contain brightness-[0.2] dark:brightness-0 dark:invert absolute transition-all duration-300 ${
+                isExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+              }`}
+            />
+            <img
+              src="/logo-csb.png"
+              alt="Sign Company Logo"
+              className={`w-10 h-10 object-contain brightness-[0.2] dark:brightness-0 dark:invert transition-all duration-300 ${
+                !isExpanded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+              }`}
+            />
           </div>
 
           {/* Portal Title */}
           {isExpanded && (
-            <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700">
+            <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-700 animate-fadeIn">
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">
                 {actualUserRole === 'admin' || userRole === 'admin' ? 'Admin Portal' :
                  actualUserRole === 'vendor' || userRole === 'vendor' ? 'Partner Portal' : 'Owner Portal'}
@@ -185,13 +192,13 @@ const Sidebar = memo(({
                   title={!isExpanded ? item.name : undefined}
                 >
                   <item.icon
-                    className={`${!isExpanded ? '' : 'mr-3'} h-5 w-5 flex-shrink-0 sidebar-icon ${
+                    className={`${!isExpanded ? '' : 'mr-3'} h-5 w-5 flex-shrink-0 sidebar-icon transition-all duration-300 ${
                       isActive
                         ? "text-primary-600 dark:text-primary-400"
                         : "text-gray-400 dark:text-gray-500"
                     }`}
                   />
-                  {isExpanded && <span>{item.name}</span>}
+                  {isExpanded && <span className="animate-fadeIn">{item.name}</span>}
                 </Link>
               );
             })}
@@ -212,13 +219,13 @@ const Sidebar = memo(({
                 title={!isExpanded ? bugReportsItem.name : undefined}
               >
                 <bugReportsItem.icon
-                  className={`${!isExpanded ? '' : 'mr-3'} h-5 w-5 flex-shrink-0 sidebar-icon ${
+                  className={`${!isExpanded ? '' : 'mr-3'} h-5 w-5 flex-shrink-0 sidebar-icon transition-all duration-300 ${
                     currentPath === bugReportsItem.href
                       ? "text-primary-600 dark:text-primary-400"
                       : "text-gray-400 dark:text-gray-500"
                   }`}
                 />
-                {isExpanded && <span>{bugReportsItem.name}</span>}
+                {isExpanded && <span className="animate-fadeIn">{bugReportsItem.name}</span>}
               </Link>
             </div>
           )}
@@ -347,6 +354,21 @@ const Breadcrumb = memo(({ pathname }: { pathname: string }) => {
       );
     }
 
+    // Owner Profile pages
+    if (pathname.startsWith('/owners/') && pathname !== '/owners') {
+      return (
+        <>
+          <Link to="/owners" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+            Owners Roster
+          </Link>
+          <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">&gt;</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+            Owner Profile
+          </span>
+        </>
+      );
+    }
+
     // Default page name
     return (
       <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -380,6 +402,7 @@ const Layout = () => {
     const saved = localStorage.getItem('sidebarCollapsed');
     return saved !== null ? JSON.parse(saved) : true;
   });
+  const [sidebarHovering, setSidebarHovering] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
@@ -419,6 +442,10 @@ const Layout = () => {
       localStorage.setItem('sidebarCollapsed', JSON.stringify(newValue));
       return newValue;
     });
+  }, []);
+
+  const handleSidebarHoverChange = useCallback((isHovering: boolean) => {
+    setSidebarHovering(isHovering);
   }, []);
 
   const handleUserMenuToggle = useCallback(() => {
@@ -510,10 +537,11 @@ const Layout = () => {
         hasPermission={hasPermission}
         isPreviewMode={isPreviewMode}
         permissions={permissions}
+        onHoverChange={handleSidebarHoverChange}
       />
 
       {/* Main content */}
-      <div className={`flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'} ${isPreviewMode ? 'pt-10' : ''}`}>
+      <div className={`flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden transition-all duration-300 ${sidebarCollapsed && !sidebarHovering ? 'md:ml-16' : 'md:ml-64'} ${isPreviewMode ? 'pt-10' : ''}`}>
         {/* Top bar */}
         <header className={`sticky ${isPreviewMode ? 'top-10' : 'top-0'} z-30 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-md pt-3`}>
           <div className="px-4 sm:px-6">
@@ -523,12 +551,12 @@ const Layout = () => {
                 {/* Mobile menu button */}
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none md:hidden transition-colors"
+                  className="inline-flex items-center justify-center p-2.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500 md:hidden transition-colors"
                   onClick={handleSidebarToggle}
+                  aria-label="Open sidebar"
                 >
-                  <span className="sr-only">Open sidebar</span>
                   <svg
-                    className="h-5 w-5"
+                    className="h-6 w-6"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -554,10 +582,10 @@ const Layout = () => {
                   <button
                     type="button"
                     onClick={handleSearchModalOpen}
-                    className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                    title="Search (Ctrl+K)"
+                    className="p-2.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    aria-label="Search (Ctrl+K)"
                   >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </button>
@@ -565,14 +593,14 @@ const Layout = () => {
                   {/* Dark mode toggle */}
                   <button
                     type="button"
-                    className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                    title={darkMode ? "Light mode" : "Dark mode"}
+                    className="p-2.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
                     onClick={toggleDarkMode}
                   >
                     {darkMode ? (
-                      <SunIcon className="h-4 w-4" />
+                      <SunIcon className="h-5 w-5" />
                     ) : (
-                      <MoonIcon className="h-4 w-4" />
+                      <MoonIcon className="h-5 w-5" />
                     )}
                   </button>
 
@@ -580,16 +608,16 @@ const Layout = () => {
                   <div className="relative">
                     <button
                       type="button"
-                      className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                      title="Notifications"
+                      className="relative p-2.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleNotificationToggle();
                       }}
                     >
-                      <BellIcon className="h-4 w-4" />
+                      <BellIcon className="h-5 w-5" />
                       {unreadCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center h-4 w-4 text-[10px] font-medium text-white bg-primary-500 rounded-full ring-1 ring-white dark:ring-gray-900">
+                        <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center h-5 w-5 text-[10px] font-bold text-white bg-primary-500 rounded-full ring-2 ring-white dark:ring-gray-900">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
@@ -611,20 +639,21 @@ const Layout = () => {
                   {/* User Avatar */}
                   <button
                     type="button"
-                    className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                    className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
                     onClick={handleUserMenuToggle}
+                    aria-label="User menu"
                   >
                     {user?.profileImage ? (
                       <img
-                        className="h-7 w-7 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
+                        className="h-8 w-8 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
                         src={user.profileImage}
                         alt={user?.name || "User profile"}
-                        width={28}
-                        height={28}
+                        width={32}
+                        height={32}
                         loading="lazy"
                       />
                     ) : (
-                      <div className="h-7 w-7 rounded-full bg-primary-600 flex items-center justify-center ring-2 ring-gray-200 dark:ring-gray-700">
+                      <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center ring-2 ring-gray-200 dark:ring-gray-700">
                         <span className="text-xs font-medium text-white">
                           {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
                         </span>
@@ -640,7 +669,8 @@ const Layout = () => {
                     type="button"
                     onClick={handleSearchModalOpen}
                     data-tour="search-button"
-                    className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md px-2 py-1"
+                    aria-label="Search (Ctrl+K)"
                   >
                     <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -654,8 +684,8 @@ const Layout = () => {
                   {/* Dark mode toggle */}
                   <button
                     type="button"
-                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    title={darkMode ? "Light mode" : "Dark mode"}
+                    className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
                     onClick={toggleDarkMode}
                   >
                     {darkMode ? (
@@ -670,8 +700,8 @@ const Layout = () => {
                     <button
                       type="button"
                       data-tour="notifications-button"
-                      className="relative p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                      title="Notifications"
+                      className="relative p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleNotificationToggle();
@@ -679,7 +709,7 @@ const Layout = () => {
                     >
                       <BellIcon className="h-5 w-5" />
                       {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 flex items-center justify-center h-5 w-5 text-xs font-medium text-white bg-primary-500 rounded-full ring-2 ring-white dark:ring-gray-800">
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center h-5 w-5 text-xs font-bold text-white bg-primary-500 rounded-full ring-2 ring-white dark:ring-gray-800">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
@@ -702,20 +732,21 @@ const Layout = () => {
                   <button
                     type="button"
                     data-tour="user-menu"
-                    className="relative"
+                    className="relative focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-full"
                     onClick={handleUserMenuToggle}
+                    aria-label="User menu"
                   >
                     {user?.profileImage ? (
                       <img
-                        className="h-8 w-8 rounded-full object-cover"
+                        className="h-9 w-9 rounded-full object-cover"
                         src={user.profileImage}
                         alt={user?.name || "User profile"}
-                        width={32}
-                        height={32}
+                        width={36}
+                        height={36}
                         loading="lazy"
                       />
                     ) : (
-                      <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center">
+                      <div className="h-9 w-9 rounded-full bg-primary-600 flex items-center justify-center">
                         <span className="text-sm font-medium text-white">
                           {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
                         </span>

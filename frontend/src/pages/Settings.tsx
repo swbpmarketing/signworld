@@ -434,8 +434,8 @@ const Settings = () => {
                 </div>
               </div>
 
-              {/* Email Test Section - Only for non-vendors */}
-              {effectiveRole !== 'vendor' && (
+              {/* Email Test Section - Only for admin and super_admin */}
+              {(effectiveRole === 'admin' || effectiveRole === 'super_admin') && (
                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>
