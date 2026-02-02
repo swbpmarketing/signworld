@@ -929,7 +929,25 @@ const UserManagement = () => {
 
       {/* Create User Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-start sm:items-center justify-center pt-16 sm:pt-0 p-4">
+        <div
+          className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-start sm:items-center justify-center pt-16 sm:pt-0 p-4"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 flex items-center justify-between p-4 sm:p-5 md:p-6 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -1045,7 +1063,25 @@ const UserManagement = () => {
 
       {/* User Details Modal */}
       {isUserDetailsModalOpen && selectedUser && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-start sm:items-center justify-center pt-16 sm:pt-0 p-4">
+        <div
+          className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-start sm:items-center justify-center pt-16 sm:pt-0 p-4"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-3xl w-full max-h-[80vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
             <div className="flex-shrink-0 bg-white dark:bg-gray-800 flex items-center justify-between p-4 sm:p-5 md:p-6 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -1258,7 +1294,25 @@ const UserManagement = () => {
 
       {/* Bulk Role Change Modal */}
       {showRoleModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full">
             <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">

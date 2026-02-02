@@ -2088,7 +2088,25 @@ const Convention = () => {
 
       {/* Create Convention Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
             <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Create New Convention</h3>
@@ -2316,7 +2334,25 @@ const Convention = () => {
 
       {/* File Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full">
             <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center">
@@ -2411,7 +2447,25 @@ const Convention = () => {
 
       {/* Schedule Management Modal */}
       {showScheduleModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
             <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Events to Schedule</h3>
@@ -2644,7 +2698,25 @@ const Convention = () => {
 
       {/* Speaker Details Modal */}
       {selectedSpeaker && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white dark:bg-gray-800 flex items-start justify-between p-5 sm:p-6 border-b border-gray-200 dark:border-gray-700 z-10">
               <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">Speaker Profile</h3>
@@ -2763,7 +2835,25 @@ const Convention = () => {
 
       {/* Confirm Delete Schedule Modal */}
       {showConfirmDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-sm w-full">
             <div className="p-6">
               <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
@@ -2803,7 +2893,25 @@ const Convention = () => {
 
       {/* Delete Speaker Confirmation Modal */}
       {showConfirmDeleteSpeaker && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-sm w-full">
             <div className="p-6">
               <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
@@ -2843,7 +2951,25 @@ const Convention = () => {
 
       {/* Add Speaker Modal */}
       {showSpeakerModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
             <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
@@ -3113,7 +3239,25 @@ const Convention = () => {
 
       {/* Registration Management Modal */}
       {showRegistrationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
             <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Manage Registration Settings</h3>
@@ -3296,7 +3440,25 @@ const Convention = () => {
 
       {/* Convention Settings Modal */}
       {showSettingsModal && editingSettings && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full my-8">
             <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
@@ -3522,6 +3684,22 @@ const Convention = () => {
       {lightboxImage && (
         <div
           className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
           onClick={() => setLightboxImage(null)}
         >
           <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col">

@@ -813,8 +813,39 @@ const Chat = () => {
 
   if (loading) {
     return (
-      <div className="flex h-[calc(100vh-7rem)] bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="flex h-[calc(100vh-7rem)] bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {/* Sidebar Skeleton */}
+        <aside className="w-full sm:w-80 lg:w-80 h-full border-r border-gray-200 dark:border-gray-700 flex flex-col bg-gray-50 dark:bg-gray-900">
+          {/* Search Header Skeleton */}
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex gap-2">
+              <div className="h-10 flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg animate-shimmer"></div>
+              <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-shimmer"></div>
+            </div>
+          </div>
+
+          {/* Contacts List Skeleton */}
+          <div className="flex-1 overflow-hidden">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3 border-l-4 border-transparent">
+                <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700 animate-shimmer"></div>
+                <div className="flex-1 min-w-0">
+                  <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer mb-2"></div>
+                  <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        {/* Empty Chat Area */}
+        <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <div className="text-center px-4">
+            <div className="h-16 w-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center mx-auto mb-4 animate-shimmer"></div>
+            <div className="h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded mx-auto mb-2 animate-shimmer"></div>
+            <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded mx-auto animate-shimmer"></div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1178,7 +1209,7 @@ const Chat = () => {
                             if (showEmojiPicker === message._id) setShowEmojiPicker(null);
                           }}
                         >
-                          <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[75%] md:max-w-[70%] ${isOwn ? 'flex-row-reverse' : ''}`}>
+                          <div className={`flex items-end gap-2 max-w-[90%] sm:max-w-[80%] md:max-w-[75%] lg:max-w-[70%] ${isOwn ? 'flex-row-reverse' : ''}`}>
                             {!isOwn && (
                               <div className="hidden sm:flex relative h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                                 {selectedContact.avatar}
@@ -1449,6 +1480,7 @@ const Chat = () => {
                                   onClick={() => handleStartEdit(message)}
                                   className="p-1 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                                   title="Edit message"
+                                  aria-label="Edit this message"
                                 >
                                   <PencilIcon className="h-3 w-3" />
                                 </button>
@@ -1459,18 +1491,27 @@ const Chat = () => {
                                     onClick={() => setShowEmojiPicker(showEmojiPicker === message._id ? null : message._id)}
                                     className="p-1 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                                     title="Add reaction"
+                                    aria-label="Add emoji reaction to message"
+                                    aria-expanded={showEmojiPicker === message._id}
+                                    aria-haspopup="true"
                                   >
                                     <FaceSmileIcon className="h-3 w-3" />
                                   </button>
 
                                   {/* Emoji picker popup */}
                                   {showEmojiPicker === message._id && (
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-50 whitespace-nowrap">
+                                    <div
+                                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-50 whitespace-nowrap"
+                                      role="menu"
+                                      aria-label="Select emoji reaction"
+                                    >
                                       {quickEmojis.map((emoji) => (
                                         <button
                                           key={emoji}
                                           onClick={() => handleReaction(message._id, emoji)}
                                           className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors text-lg"
+                                          role="menuitem"
+                                          aria-label={`React with ${emoji}`}
                                         >
                                           {emoji}
                                         </button>
@@ -1485,6 +1526,7 @@ const Chat = () => {
                                   disabled={isDeleting}
                                   className="p-1 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
                                   title="Unsend message"
+                                  aria-label="Unsend this message"
                                 >
                                   <TrashIcon className="h-3 w-3" />
                                 </button>
@@ -1501,18 +1543,27 @@ const Chat = () => {
                                     onClick={() => setShowEmojiPicker(showEmojiPicker === message._id ? null : message._id)}
                                     className="p-1 rounded-full bg-white dark:bg-gray-700 shadow-md hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                                     title="Add reaction"
+                                    aria-label="Add emoji reaction to message"
+                                    aria-expanded={showEmojiPicker === message._id}
+                                    aria-haspopup="true"
                                   >
                                     <FaceSmileIcon className="h-3 w-3" />
                                   </button>
 
                                   {/* Emoji picker popup */}
                                   {showEmojiPicker === message._id && (
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-50 whitespace-nowrap">
+                                    <div
+                                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex gap-1 z-50 whitespace-nowrap"
+                                      role="menu"
+                                      aria-label="Select emoji reaction"
+                                    >
                                       {quickEmojis.map((emoji) => (
                                         <button
                                           key={emoji}
                                           onClick={() => handleReaction(message._id, emoji)}
                                           className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors text-lg"
+                                          role="menuitem"
+                                          aria-label={`React with ${emoji}`}
                                         >
                                           {emoji}
                                         </button>
@@ -1563,6 +1614,7 @@ const Chat = () => {
                   onChange={handleFileSelect}
                   className="hidden"
                   accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                  aria-label="File attachment input"
                 />
                 <button
                   data-tour="chat-attach"
@@ -1570,6 +1622,7 @@ const Chat = () => {
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2 rounded-full text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   title="Attach file"
+                  aria-label="Attach file to message"
                 >
                   <PaperClipIcon className="h-5 w-5" />
                 </button>
@@ -1581,10 +1634,13 @@ const Chat = () => {
                     onChange={(e) => setMessageInput(e.target.value)}
                     placeholder={selectedFile ? "Add a message (optional)..." : "Message..."}
                     className="w-full px-4 py-2.5 lg:py-3 pr-10 lg:pr-12 bg-gray-100 dark:bg-gray-700 border-0 rounded-full text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    aria-label="Type your message"
                   />
                   <button
                     type="button"
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    aria-label="Add emoji to message"
+                    title="Add emoji"
                   >
                     <FaceSmileIcon className="h-5 w-5" />
                   </button>
@@ -1593,6 +1649,7 @@ const Chat = () => {
                   type="submit"
                   disabled={(!messageInput.trim() && !selectedFile) || sendingMessage || uploadingFile}
                   className="p-2.5 lg:p-3 rounded-full bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg hover:shadow-xl"
+                  aria-label="Send message"
                 >
                   <PaperAirplaneIcon className="h-5 w-5" />
                 </button>

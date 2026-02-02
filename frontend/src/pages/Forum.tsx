@@ -242,6 +242,7 @@ const Forum = () => {
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyingToAuthor, setReplyingToAuthor] = useState<string | null>(null);
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Fetch threads from API
   const fetchThreads = async (pageNum: number = 1, append: boolean = false) => {
@@ -1656,52 +1657,100 @@ const Forum = () => {
                     {thread.images && thread.images.length > 0 && (
                       <div className="mb-4 -mx-6">
                         {thread.images.length === 1 && (
-                          <img
-                            src={thread.images[0]}
-                            alt={thread.title}
-                            className="w-full h-64 object-cover"
-                          />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedImage(thread.images![0]);
+                            }}
+                            className="w-full focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          >
+                            <img
+                              src={thread.images[0]}
+                              alt={thread.title}
+                              className="w-full h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                            />
+                          </button>
                         )}
                         {thread.images.length === 2 && (
                           <div className="grid grid-cols-2 gap-0.5">
                             {thread.images.map((image, index) => (
-                              <img
+                              <button
                                 key={index}
-                                src={image}
-                                alt={`${thread.title} - ${index + 1}`}
-                                className="w-full h-48 object-cover"
-                              />
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedImage(image);
+                                }}
+                                className="focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              >
+                                <img
+                                  src={image}
+                                  alt={`${thread.title} - ${index + 1}`}
+                                  className="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                />
+                              </button>
                             ))}
                           </div>
                         )}
                         {thread.images.length === 3 && (
                           <div className="grid grid-cols-2 gap-0.5">
-                            <img
-                              src={thread.images[0]}
-                              alt={`${thread.title} - 1`}
-                              className="w-full h-48 object-cover row-span-2"
-                            />
-                            <img
-                              src={thread.images[1]}
-                              alt={`${thread.title} - 2`}
-                              className="w-full h-24 object-cover"
-                            />
-                            <img
-                              src={thread.images[2]}
-                              alt={`${thread.title} - 3`}
-                              className="w-full h-24 object-cover"
-                            />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedImage(thread.images![0]);
+                              }}
+                              className="row-span-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            >
+                              <img
+                                src={thread.images[0]}
+                                alt={`${thread.title} - 1`}
+                                className="w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                              />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedImage(thread.images![1]);
+                              }}
+                              className="focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            >
+                              <img
+                                src={thread.images[1]}
+                                alt={`${thread.title} - 2`}
+                                className="w-full h-24 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                              />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedImage(thread.images![2]);
+                              }}
+                              className="focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            >
+                              <img
+                                src={thread.images[2]}
+                                alt={`${thread.title} - 3`}
+                                className="w-full h-24 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                              />
+                            </button>
                           </div>
                         )}
                         {thread.images.length === 4 && (
                           <div className="grid grid-cols-2 gap-0.5">
                             {thread.images.map((image, index) => (
-                              <img
+                              <button
                                 key={index}
-                                src={image}
-                                alt={`${thread.title} - ${index + 1}`}
-                                className="w-full h-32 object-cover"
-                              />
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedImage(image);
+                                }}
+                                className="focus:outline-none focus:ring-2 focus:ring-primary-500"
+                              >
+                                <img
+                                  src={image}
+                                  alt={`${thread.title} - ${index + 1}`}
+                                  className="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                />
+                              </button>
                             ))}
                           </div>
                         )}
@@ -1710,32 +1759,47 @@ const Forum = () => {
                             {/* Top row - 2 large images */}
                             <div className="grid grid-cols-2 gap-0.5">
                               {thread.images.slice(0, 2).map((image, index) => (
-                                <img
+                                <button
                                   key={index}
-                                  src={image}
-                                  alt={`${thread.title} - ${index + 1}`}
-                                  className="w-full h-40 object-cover"
-                                />
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedImage(image);
+                                  }}
+                                  className="focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                >
+                                  <img
+                                    src={image}
+                                    alt={`${thread.title} - ${index + 1}`}
+                                    className="w-full h-40 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                  />
+                                </button>
                               ))}
                             </div>
                             {/* Bottom row - 3 smaller images */}
                             <div className="grid grid-cols-3 gap-0.5">
                               {thread.images.slice(2, 5).map((image, index) => (
-                                <div key={index} className="relative">
+                                <button
+                                  key={index}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedImage(image);
+                                  }}
+                                  className="relative focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                >
                                   <img
                                     src={image}
                                     alt={`${thread.title} - ${index + 3}`}
-                                    className="w-full h-28 object-cover"
+                                    className="w-full h-28 object-cover cursor-pointer hover:opacity-90 transition-opacity"
                                   />
                                   {/* Show +X overlay on the last image if there are more */}
                                   {index === 2 && thread.images!.length > 5 && (
-                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
                                       <span className="text-white text-2xl font-semibold">
                                         +{thread.images!.length - 5}
                                       </span>
                                     </div>
                                   )}
-                                </div>
+                                </button>
                               ))}
                             </div>
                           </div>
@@ -1813,6 +1877,22 @@ const Forum = () => {
       {showCreateModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
           onClick={() => setShowCreateModal(false)}
         >
           <div
@@ -2049,6 +2129,22 @@ const Forum = () => {
       {showDetailModal && selectedThread && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
           onClick={handleCloseDetail}
         >
           <div
@@ -2130,19 +2226,17 @@ const Forum = () => {
                   <div className="mb-6">
                     <div className={`grid gap-3 ${selectedThread.images.length === 1 ? 'grid-cols-1' : selectedThread.images.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
                       {selectedThread.images.map((image, index) => (
-                        <a
+                        <button
                           key={index}
-                          href={image}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block"
+                          onClick={() => setSelectedImage(image)}
+                          className="block focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-lg"
                         >
                           <img
                             src={image}
                             alt={`Thread image ${index + 1}`}
                             className="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-gray-600 hover:opacity-90 transition-opacity cursor-pointer"
                           />
-                        </a>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -2423,6 +2517,22 @@ const Forum = () => {
       {showEditThreadModal && editingThread && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
           onClick={() => setShowEditThreadModal(false)}
         >
           <div
@@ -2573,6 +2683,22 @@ const Forum = () => {
       {showDeleteModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm dark:bg-opacity-70 flex items-center justify-center p-4 z-50"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
           onClick={() => {
             setShowDeleteModal(false);
             setReplyToDelete(null);
@@ -2614,6 +2740,47 @@ const Forum = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Full Screen Image Viewer */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+          onClick={() => setSelectedImage(null)}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-10"
+            aria-label="Close image viewer"
+          >
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+
+          {/* Image */}
+          <img
+            src={selectedImage}
+            alt="Full size preview"
+            className="max-w-[98vw] max-h-[98vh] w-auto h-auto object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 

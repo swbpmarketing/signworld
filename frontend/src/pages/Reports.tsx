@@ -238,7 +238,7 @@ const Reports = () => {
       <div className="space-y-4 w-full max-w-full">
         {/* Mobile Report Navigation */}
         <div className="lg:hidden w-full">
-          <nav className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full">
+          <nav className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 w-full">
             {reportSections.map((section) => (
               <button
                 key={section.id}

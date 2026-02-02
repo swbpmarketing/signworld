@@ -728,6 +728,22 @@ const Calendar = () => {
       {selectedEvent && (
         <div
           className="fixed inset-0 bg-gray-900/60 backdrop-blur-md flex items-end sm:items-center justify-center sm:p-4 z-50 animate-fadeIn"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
           onClick={() => setSelectedEvent(null)}
         >
           <div
@@ -837,6 +853,22 @@ const Calendar = () => {
       {showAddModal && (
         <div
           className="fixed inset-0 bg-gray-900/60 backdrop-blur-md flex items-end sm:items-center justify-center sm:p-4 z-50 animate-fadeIn"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
           onClick={() => setShowAddModal(false)}
         >
           <div
