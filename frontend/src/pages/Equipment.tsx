@@ -611,7 +611,26 @@ const Equipment = () => {
     return createPortal(
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setSelectedEquipment(null); setCameFrom(null); }} />
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100dvh',
+              maxHeight: '100vh',
+              minHeight: '100vh',
+              margin: 0,
+              padding: 0,
+              transform: 'translateZ(0)',
+              WebkitBackfaceVisibility: 'hidden',
+              backfaceVisibility: 'hidden'
+            } as React.CSSProperties}
+            onClick={() => { setSelectedEquipment(null); setCameFrom(null); }}
+          />
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             {/* Back to Inquiries button (when came from inquiries page) */}
             {cameFrom === 'inquiries' && (
@@ -789,7 +808,26 @@ const Equipment = () => {
 
     return createPortal(
       <div className="fixed inset-0 z-50 overflow-hidden">
-        <div className="absolute inset-0 bg-black/50" onClick={() => setShowCartDrawer(false)} />
+        <div
+          className="absolute inset-0 bg-black/50"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+          onClick={() => setShowCartDrawer(false)}
+        />
         <div className="absolute inset-y-0 right-0 max-w-full flex">
           <div className="w-screen max-w-md">
             <div className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-xl">
@@ -905,7 +943,26 @@ const Equipment = () => {
 
     return createPortal(
       <div className="fixed inset-0 z-50 overflow-hidden">
-        <div className="absolute inset-0 bg-black/50" onClick={() => setShowWishlistDrawer(false)} />
+        <div
+          className="absolute inset-0 bg-black/50"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+          onClick={() => setShowWishlistDrawer(false)}
+        />
         <div className="absolute inset-y-0 right-0 max-w-full flex">
           <div className="w-screen max-w-md">
             <div className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-xl">
@@ -993,7 +1050,26 @@ const Equipment = () => {
     return createPortal(
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowQuoteModal(false)} />
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100dvh',
+              maxHeight: '100vh',
+              minHeight: '100vh',
+              margin: 0,
+              padding: 0,
+              transform: 'translateZ(0)',
+              WebkitBackfaceVisibility: 'hidden',
+              backfaceVisibility: 'hidden'
+            } as React.CSSProperties}
+            onClick={() => setShowQuoteModal(false)}
+          />
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-6">
             <button
               onClick={() => setShowQuoteModal(false)}
@@ -1131,7 +1207,26 @@ const Equipment = () => {
     return createPortal(
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowFinancingCalculator(false)} />
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100dvh',
+              maxHeight: '100vh',
+              minHeight: '100vh',
+              margin: 0,
+              padding: 0,
+              transform: 'translateZ(0)',
+              WebkitBackfaceVisibility: 'hidden',
+              backfaceVisibility: 'hidden'
+            } as React.CSSProperties}
+            onClick={() => setShowFinancingCalculator(false)}
+          />
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-6">
             <button
               onClick={() => setShowFinancingCalculator(false)}
@@ -1256,7 +1351,26 @@ const Equipment = () => {
     return createPortal(
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowComparisonModal(false)} />
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100dvh',
+              maxHeight: '100vh',
+              minHeight: '100vh',
+              margin: 0,
+              padding: 0,
+              transform: 'translateZ(0)',
+              WebkitBackfaceVisibility: 'hidden',
+              backfaceVisibility: 'hidden'
+            } as React.CSSProperties}
+            onClick={() => setShowComparisonModal(false)}
+          />
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
             <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1424,7 +1538,26 @@ const Equipment = () => {
       {showInquiryModal && selectedEquipment && createPortal(
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowInquiryModal(false); setSelectedEquipment(null); }} />
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: '100vw',
+                height: '100dvh',
+                maxHeight: '100vh',
+                minHeight: '100vh',
+                margin: 0,
+                padding: 0,
+                transform: 'translateZ(0)',
+                WebkitBackfaceVisibility: 'hidden',
+                backfaceVisibility: 'hidden'
+              } as React.CSSProperties}
+              onClick={() => { setShowInquiryModal(false); setSelectedEquipment(null); }}
+            />
             <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-6">
               <button
                 onClick={() => { setShowInquiryModal(false); setSelectedEquipment(null); }}

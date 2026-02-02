@@ -26,6 +26,9 @@ import {
   NewspaperIcon,
   BugAntIcon,
   SparklesIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  MinusIcon,
 } from '@heroicons/react/24/outline';
 import EngagementMetricsWidget from '../components/analytics/EngagementMetricsWidget';
 import EngagementTrendChart from '../components/analytics/EngagementTrendChart';
@@ -187,7 +190,7 @@ const Dashboard = () => {
     refetchOnWindowFocus: false,
   });
 
-  // Map stats data to display format
+  // Map stats data to display format with navigation paths
   // For regular users and preview mode, show user-specific events instead of total owners
   const stats = statsData ? [
     {
@@ -195,28 +198,36 @@ const Dashboard = () => {
       value: isAdmin ? statsData.owners.total.toString() : (statsData.myRsvps?.total || 0).toString(),
       icon: isAdmin ? UserGroupIcon : CalendarIcon,
       change: isAdmin ? statsData.owners.change : (statsData.myRsvps?.change || '0'),
-      changeType: isAdmin ? statsData.owners.changeType : (statsData.myRsvps?.changeType || 'neutral')
+      changeType: isAdmin ? statsData.owners.changeType : (statsData.myRsvps?.changeType || 'neutral'),
+      path: isAdmin ? '/owners' : '/calendar',
+      description: isAdmin ? 'View all registered owners' : 'View your registered events'
     },
     {
       name: isAdmin ? 'Upcoming Events' : 'Available Events',
       value: statsData.events.total.toString(),
       icon: CalendarIcon,
       change: statsData.events.change,
-      changeType: statsData.events.changeType
+      changeType: statsData.events.changeType,
+      path: '/calendar',
+      description: 'Browse and manage events'
     },
     {
       name: 'Library Files',
       value: statsData.library.total.toString(),
       icon: DocumentDuplicateIcon,
       change: statsData.library.change,
-      changeType: statsData.library.changeType
+      changeType: statsData.library.changeType,
+      path: '/library',
+      description: 'Access downloadable resources'
     },
     {
       name: 'Video Lessons',
       value: statsData.videos.total.toString(),
       icon: VideoCameraIcon,
       change: statsData.videos.change,
-      changeType: statsData.videos.changeType
+      changeType: statsData.videos.changeType,
+      path: '/videos',
+      description: 'Watch training videos'
     },
   ] : [];
 
@@ -309,7 +320,7 @@ const Dashboard = () => {
 
       {/* Platform Overview Stats */}
       {isAdmin && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <div
             onClick={() => !isLoadingAdminStats && navigate('/calendar')}
             className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
@@ -505,34 +516,46 @@ const Dashboard = () => {
           ))
         ) : (
           stats.map((stat) => (
-            <div key={stat.name} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover-lift">
+            <button
+              key={stat.name}
+              onClick={() => navigate(stat.path)}
+              className="w-full text-left bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover-lift cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary-200 dark:hover:border-primary-800 focus-ring group"
+              title={stat.description}
+              aria-label={`${stat.name}: ${stat.value}. ${stat.description}`}
+            >
               <div className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{stat.name}</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                      {stat.name}
+                    </p>
                     <div className="mt-2 flex items-baseline space-x-2">
                       <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
                       <span
-                        className={`inline-flex items-baseline px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           stat.changeType === 'positive'
                             ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
                             : stat.changeType === 'negative'
                             ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
                             : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                         }`}
+                        aria-label={`${stat.changeType === 'positive' ? 'Increased' : stat.changeType === 'negative' ? 'Decreased' : 'No change'} by ${stat.change}`}
                       >
-                        {stat.change}
+                        {stat.changeType === 'positive' && <ArrowUpIcon className="h-3 w-3" aria-hidden="true" />}
+                        {stat.changeType === 'negative' && <ArrowDownIcon className="h-3 w-3" aria-hidden="true" />}
+                        {stat.changeType === 'neutral' && <MinusIcon className="h-3 w-3" aria-hidden="true" />}
+                        <span>{stat.change}</span>
                       </span>
                     </div>
                   </div>
                   <div className="flex-shrink-0">
-                    <div className="p-3 bg-primary-50 dark:bg-primary-900/30 rounded-lg">
+                    <div className="p-3 bg-primary-50 dark:bg-primary-900/30 rounded-lg group-hover:bg-primary-100 dark:group-hover:bg-primary-900/50 transition-colors">
                       <stat.icon className="h-6 w-6 text-primary-600 dark:text-primary-400" aria-hidden="true" />
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>

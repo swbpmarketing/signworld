@@ -609,26 +609,33 @@ const Videos = () => {
 
       {/* Search Bar */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
-        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4" role="search" aria-label="Video search">
           <div className="flex-1 flex gap-2">
             <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" />
+              <label htmlFor="video-search-input" className="sr-only">
+                Search videos
+              </label>
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
               <input
+                id="video-search-input"
                 data-tour="video-search"
-                type="text"
+                type="search"
                 placeholder="Search videos by title, topic, or instructor..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                aria-label="Search videos by title, topic, or instructor"
               />
               {searchInput && (
                 <button
                   type="button"
                   onClick={handleClearSearch}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
+                  aria-label="Clear search"
+                  title="Clear search"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -637,12 +644,16 @@ const Videos = () => {
             <button
               type="submit"
               className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2 hover-lift focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+              aria-label="Search videos"
             >
-              <MagnifyingGlassIcon className="h-5 w-5" />
+              <MagnifyingGlassIcon className="h-5 w-5" aria-hidden="true" />
               <span className="hidden sm:inline">Search</span>
             </button>
           </div>
           <div className="w-40">
+            <label htmlFor="video-sort" className="sr-only">
+              Sort videos by
+            </label>
             <CustomSelect
               value={sortBy}
               onChange={(value) => setSortBy(value)}
@@ -1202,7 +1213,23 @@ const Videos = () => {
       {selectedVideo && createPortal(
         <div
           className="fixed inset-0 bg-black/80 flex items-center justify-center p-4"
-          style={{ zIndex: 9999 }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden',
+            zIndex: 9999
+          } as React.CSSProperties}
           onClick={(e) => {
             if (e.target === e.currentTarget) closeVideo();
           }}
@@ -1290,7 +1317,25 @@ const Videos = () => {
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
@@ -1529,18 +1574,38 @@ const Videos = () => {
                 </label>
               </div>
 
-              {/* Upload Progress */}
+              {/* Upload Progress - Prominent Display */}
               {isUploading && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-                    <span>Uploading...</span>
-                    <span>{uploadProgress}%</span>
+                <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary-200 dark:border-primary-800 border-t-primary-600 dark:border-t-primary-400"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs font-semibold text-primary-600 dark:text-primary-400">{uploadProgress}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-primary-900 dark:text-primary-100">
+                          Uploading video...
+                        </p>
+                        <p className="text-xs text-primary-700 dark:text-primary-300">
+                          Please don't close this window
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-primary-900 dark:text-primary-100">{uploadProgress}%</p>
+                      <p className="text-xs text-primary-700 dark:text-primary-300">Complete</p>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div className="w-full bg-primary-200 dark:bg-primary-900/40 rounded-full h-3 overflow-hidden">
                     <div
-                      className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                      className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all duration-300 relative overflow-hidden"
                       style={{ width: `${uploadProgress}%` }}
-                    />
+                    >
+                      <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1582,7 +1647,25 @@ const Videos = () => {
 
       {/* Edit Video Modal */}
       {showEditModal && editingVideo && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
