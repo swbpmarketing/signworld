@@ -7,7 +7,7 @@ const { bugReportFiles } = require('../middleware/upload');
 
 // @desc    Get all bug reports with filtering
 // @route   GET /api/bug-reports
-// @access  Private
+// @access  Private (admin sees all, others see only their own)
 router.get('/', protect, handlePreviewMode, async (req, res) => {
   try {
     const {
@@ -20,8 +20,13 @@ router.get('/', protect, handlePreviewMode, async (req, res) => {
       sort = '-createdAt'
     } = req.query;
 
-    // Build query - all authenticated users can see all reports
+    // Build query - admins see all reports, others see only their own
     const query = {};
+
+    // Non-admins can only see their own reports
+    if (req.user.role !== 'admin') {
+      query.author = req.user.id;
+    }
 
     // Filter by status
     if (status && status !== 'all') {
@@ -167,7 +172,7 @@ router.get('/stats', protect, authorize('admin'), async (req, res) => {
 
 // @desc    Get single bug report
 // @route   GET /api/bug-reports/:id
-// @access  Private
+// @access  Private (admin can view all, others can view only their own)
 router.get('/:id', protect, async (req, res) => {
   try {
     const report = await BugReport.findById(req.params.id)
@@ -182,7 +187,14 @@ router.get('/:id', protect, async (req, res) => {
       });
     }
 
-    // Any authenticated user can view individual reports (consistent with GET / list handler)
+    // Non-admins can only view their own reports
+    if (req.user.role !== 'admin' && report.author._id.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to view this report'
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: {
