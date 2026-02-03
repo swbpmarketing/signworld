@@ -742,6 +742,203 @@ const BugReports = () => {
     );
   };
 
+  // Non-admin view: Just the submission form inline
+  if (!isAdmin) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6" data-tour="bug-reports-content">
+        {/* Header */}
+        <div className="text-center">
+          <div className="inline-flex p-4 bg-primary-600/10 rounded-full mb-4">
+            <BugAntIcon className="h-10 w-10 text-primary-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Submit Feedback
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            Report a bug or request a new feature. We appreciate your feedback!
+          </p>
+        </div>
+
+        {/* Inline Submission Form */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <form onSubmit={handleCreateSubmit} className="p-6 space-y-5">
+            {/* Type Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                What would you like to submit?
+              </label>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setNewReport({ ...newReport, type: 'bug' })}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+                    newReport.type === 'bug'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <BugAntIcon className="h-5 w-5" />
+                  Bug Report
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewReport({ ...newReport, type: 'feature' })}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+                    newReport.type === 'feature'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <LightBulbIcon className="h-5 w-5" />
+                  Feature Request
+                </button>
+              </div>
+            </div>
+
+            {/* Title */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Title
+              </label>
+              <input
+                type="text"
+                value={newReport.title}
+                onChange={(e) => setNewReport({ ...newReport, title: e.target.value })}
+                placeholder={newReport.type === 'bug' ? 'Brief description of the bug' : 'Brief description of the feature'}
+                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                required
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Description
+              </label>
+              <textarea
+                value={newReport.description}
+                onChange={(e) => setNewReport({ ...newReport, description: e.target.value })}
+                placeholder={newReport.type === 'bug' ? 'Describe what happened...' : 'Describe the feature you would like...'}
+                rows={4}
+                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                required
+              />
+            </div>
+
+            {/* Steps to Reproduce - only show for bugs */}
+            {newReport.type === 'bug' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Steps to Reproduce <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  value={newReport.stepsToReproduce}
+                  onChange={(e) => setNewReport({ ...newReport, stepsToReproduce: e.target.value })}
+                  placeholder="1. Go to... 2. Click on... 3. See error"
+                  rows={3}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                />
+              </div>
+            )}
+
+            {/* Attachments */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Attachments <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                accept="image/*,video/*"
+                multiple
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                <ArrowUpTrayIcon className="h-5 w-5" />
+                Upload Screenshot/Video
+              </button>
+              <p className="text-xs text-gray-500 mt-1.5">Accepted: Images and videos up to 50MB</p>
+
+              {/* Attachment previews */}
+              {attachments.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+                  {attachments.map((file, index) => (
+                    <div
+                      key={index}
+                      className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700"
+                    >
+                      {file.type.startsWith('image/') ? (
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          className="w-full h-24 object-cover"
+                        />
+                      ) : file.type.startsWith('video/') ? (
+                        <div className="relative w-full h-24 bg-gray-800 flex items-center justify-center">
+                          <video
+                            src={URL.createObjectURL(file)}
+                            className="w-full h-24 object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
+                              <svg className="w-5 h-5 text-gray-800 ml-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full h-24 flex items-center justify-center">
+                          <span className="text-gray-500 text-xs">{file.name}</span>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                        <p className="text-white text-xs truncate">{file.name}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(index)}
+                        className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={handleEnhanceWithAI}
+                disabled={isEnhancing || !newReport.description.trim()}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <SparklesIcon className="h-5 w-5" />
+                {isEnhancing ? 'Enhancing...' : 'Enhance with AI'}
+              </button>
+
+              <button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                {createMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6" data-tour="bug-reports-content">
       {/* Header */}
