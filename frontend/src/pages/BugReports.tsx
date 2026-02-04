@@ -157,6 +157,7 @@ const BugReports = () => {
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   const [draggedReport, setDraggedReport] = useState<BugReport | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<keyof typeof statusConfig | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Fetch bug reports
   const { data: reportsData, isLoading } = useQuery({
@@ -408,6 +409,7 @@ const BugReports = () => {
   // Drag and Drop handlers
   const handleDragStart = (e: React.DragEvent, report: BugReport) => {
     if (!isAdmin) return;
+    setIsDragging(true);
     setDraggedReport(report);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -415,6 +417,8 @@ const BugReports = () => {
   const handleDragEnd = () => {
     setDraggedReport(null);
     setDragOverColumn(null);
+    // Small delay to prevent click from firing after drag
+    setTimeout(() => setIsDragging(false), 100);
   };
 
   const handleDragOver = (e: React.DragEvent, status: keyof typeof statusConfig) => {
@@ -618,13 +622,18 @@ const BugReports = () => {
   const KanbanCard = ({ report }: { report: BugReport }) => (
     <div
       data-tour="bug-card"
-      draggable={isAdmin}
+      draggable={isAdmin ? true : false}
       onDragStart={(e) => handleDragStart(e, report)}
       onDragEnd={handleDragEnd}
       className={`bg-white dark:bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm ${
-        isAdmin ? 'hover:cursor-move' : ''
+        isAdmin ? 'hover:cursor-move select-none' : ''
       } ${draggedReport?._id === report._id ? 'opacity-50' : ''}`}
-      onClick={() => openDetailModal(report)}
+      onClick={() => {
+        // Only open modal if not dragging
+        if (!isDragging) {
+          openDetailModal(report);
+        }
+      }}
     >
       {/* Header with type badge */}
       <div className="flex items-start justify-between gap-2 mb-2">
