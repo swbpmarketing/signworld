@@ -159,6 +159,7 @@ const BugReports = () => {
   const [dragOverColumn, setDragOverColumn] = useState<keyof typeof statusConfig | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragHappened = useRef(false);
+  const dragEndTime = useRef(0);
 
   // Fetch bug reports
   const { data: reportsData, isLoading } = useQuery({
@@ -455,14 +456,12 @@ const BugReports = () => {
     setDragOverColumn(null);
     // Immediately reset dragging state
     setIsDragging(false);
-    // Small delay to prevent click from firing after actual drag
+    // Record when drag ended to block immediate clicks
     if (dragHappened.current) {
-      setTimeout(() => {
-        dragHappened.current = false;
-      }, 100);
-    } else {
-      dragHappened.current = false;
+      dragEndTime.current = Date.now();
     }
+    // Reset drag happened flag immediately
+    dragHappened.current = false;
   };
 
   const handleDragOver = (e: React.DragEvent, status: keyof typeof statusConfig) => {
@@ -679,13 +678,16 @@ const BugReports = () => {
         isAdmin && !draggedReport ? 'active:cursor-move' : ''
       }`}
       onClick={() => {
-        console.log('Card clicked, isDragging:', isDragging, 'dragHappened:', dragHappened.current);
-        // Only open modal if not dragging OR if drag didn't actually happen
-        if (!isDragging || !dragHappened.current) {
-          openDetailModal(report);
-        } else {
-          console.log('Blocked by actual drag');
+        const timeSinceDragEnd = Date.now() - dragEndTime.current;
+        console.log('Card clicked, isDragging:', isDragging, 'dragHappened:', dragHappened.current, 'timeSinceDragEnd:', timeSinceDragEnd);
+
+        // Block click only if it happens within 100ms of drag end
+        if (dragEndTime.current > 0 && timeSinceDragEnd < 100) {
+          console.log('Blocked - click too soon after drag');
+          return;
         }
+
+        openDetailModal(report);
       }}
     >
       {/* Header with type badge */}
