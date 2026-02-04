@@ -657,9 +657,11 @@ const BugReports = () => {
       draggable={isAdmin ? true : false}
       onDragStart={(e) => handleDragStart(e, report)}
       onDragEnd={handleDragEnd}
-      className={`bg-white dark:bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm ${
-        isAdmin ? 'hover:cursor-move select-none' : ''
-      } ${draggedReport?._id === report._id ? 'opacity-50' : ''}`}
+      className={`bg-white dark:bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-all border border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-md shadow-sm ${
+        isAdmin ? 'select-none' : ''
+      } ${draggedReport?._id === report._id ? 'opacity-50 cursor-move' : ''} ${
+        isAdmin && !draggedReport ? 'active:cursor-move' : ''
+      }`}
       onClick={() => {
         // Only open modal if not dragging
         if (!isDragging) {
