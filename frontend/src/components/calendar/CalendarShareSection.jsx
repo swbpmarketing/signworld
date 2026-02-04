@@ -75,17 +75,30 @@ const CalendarShareSection = ({
     }
   };
 
-  // Copy link to clipboard
+  // Copy link to clipboard and open calendar service
   const copyToClipboard = async (url, type) => {
     try {
-      await navigator.clipboard.writeText(url);
+      // Copy the iCal URL (not the service-specific URL)
+      await navigator.clipboard.writeText(shareLinks.ical);
       setCopiedLink(type);
       setTimeout(() => setCopiedLink(''), 2000);
+
+      // Show toast notification
+      if (type === 'google') {
+        // Open Google Calendar settings page where they can paste the URL
+        window.open('https://calendar.google.com/calendar/u/0/r/settings/addbyurl', '_blank');
+      } else if (type === 'outlook') {
+        // Outlook should work with direct URL
+        window.open(url, '_blank');
+      } else if (type === 'apple') {
+        // Apple Calendar will prompt when clicking webcal:// link
+        window.location.href = url;
+      }
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
-      textArea.value = url;
+      textArea.value = shareLinks.ical;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
@@ -178,13 +191,14 @@ const CalendarShareSection = ({
         <div className="share-quick-actions">
           {shareOptions.map((option) => (
             <div key={option.key} className="share-quick-card">
-              <a
-                href={shareLinks[option.key]}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="share-quick-btn"
+              <button
+                onClick={async (e) => {
+                  e.preventDefault();
+                  await copyToClipboard(shareLinks[option.key], option.key);
+                }}
                 disabled={loading || !shareLinks[option.key]}
-                title={`Subscribe to ${calendarName} in ${option.name}`}
+                className="share-quick-btn"
+                title={option.key === 'google' ? 'Copy URL and open Google Calendar settings' : `Subscribe to ${calendarName} in ${option.name}`}
               >
                 <div className="share-btn-content">
                   <div className="share-quick-icon">
@@ -192,21 +206,15 @@ const CalendarShareSection = ({
                   </div>
                   <div className="share-btn-text">
                     <span className="share-quick-name">{option.name}</span>
-                    <span className="share-quick-desc">{option.description}</span>
+                    <span className="share-quick-desc">
+                      {option.key === 'google' ? 'Copy URL & open settings' : option.description}
+                    </span>
                   </div>
                 </div>
-                <LinkIcon className="h-4 w-4 share-quick-link-icon" />
-              </a>
-              <button
-                onClick={() => copyToClipboard(shareLinks[option.key], option.key)}
-                className="share-quick-copy"
-                disabled={loading || !shareLinks[option.key]}
-                title={`Copy ${option.name} link`}
-              >
                 {copiedLink === option.key ? (
-                  <CheckIcon className="h-4 w-4" />
+                  <CheckIcon className="h-4 w-4 share-quick-link-icon text-green-500" />
                 ) : (
-                  <DocumentDuplicateIcon className="h-4 w-4" />
+                  <LinkIcon className="h-4 w-4 share-quick-link-icon" />
                 )}
               </button>
             </div>
