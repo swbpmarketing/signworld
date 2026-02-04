@@ -158,6 +158,7 @@ const BugReports = () => {
   const [draggedReport, setDraggedReport] = useState<BugReport | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<keyof typeof statusConfig | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const dragHappened = useRef(false);
 
   // Fetch bug reports
   const { data: reportsData, isLoading } = useQuery({
@@ -439,6 +440,9 @@ const BugReports = () => {
     e.dataTransfer.setData('text/plain', report._id);
     e.dataTransfer.setData('application/json', JSON.stringify(report));
 
+    // Mark that drag started, but not that it actually moved yet
+    dragHappened.current = false;
+
     // Defer state updates to next frame to not interfere with drag start
     requestAnimationFrame(() => {
       setDraggedReport(report);
@@ -449,14 +453,24 @@ const BugReports = () => {
   const handleDragEnd = () => {
     setDraggedReport(null);
     setDragOverColumn(null);
-    // Small delay to prevent click from firing after drag
-    setTimeout(() => setIsDragging(false), 100);
+    // Immediately reset dragging state
+    setIsDragging(false);
+    // Small delay to prevent click from firing after actual drag
+    if (dragHappened.current) {
+      setTimeout(() => {
+        dragHappened.current = false;
+      }, 100);
+    } else {
+      dragHappened.current = false;
+    }
   };
 
   const handleDragOver = (e: React.DragEvent, status: keyof typeof statusConfig) => {
     e.preventDefault();
     if (!isAdmin || !draggedReport) return;
     e.dataTransfer.dropEffect = 'move';
+    // Mark that an actual drag is happening (mouse is moving)
+    dragHappened.current = true;
     setDragOverColumn(status);
   };
 
@@ -665,12 +679,12 @@ const BugReports = () => {
         isAdmin && !draggedReport ? 'active:cursor-move' : ''
       }`}
       onClick={() => {
-        console.log('Card clicked, isDragging:', isDragging);
-        // Only open modal if not dragging
-        if (!isDragging) {
+        console.log('Card clicked, isDragging:', isDragging, 'dragHappened:', dragHappened.current);
+        // Only open modal if not dragging OR if drag didn't actually happen
+        if (!isDragging || !dragHappened.current) {
           openDetailModal(report);
         } else {
-          console.log('Blocked by isDragging');
+          console.log('Blocked by actual drag');
         }
       }}
     >
