@@ -409,11 +409,17 @@ const BugReports = () => {
   // Drag and Drop handlers
   const handleDragStart = (e: React.DragEvent, report: BugReport) => {
     if (!isAdmin) return;
+
+    // Critical: Set data first before any state updates
     e.dataTransfer.effectAllowed = 'move';
-    // Set data to enable drag - required for drag to actually work
     e.dataTransfer.setData('text/plain', report._id);
-    setDraggedReport(report);
-    setIsDragging(true);
+    e.dataTransfer.setData('application/json', JSON.stringify(report));
+
+    // Defer state updates to next frame to not interfere with drag start
+    requestAnimationFrame(() => {
+      setDraggedReport(report);
+      setIsDragging(true);
+    });
   };
 
   const handleDragEnd = () => {
