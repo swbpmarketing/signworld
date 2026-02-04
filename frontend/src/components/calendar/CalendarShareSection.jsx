@@ -48,11 +48,12 @@ const CalendarShareSection = ({
         : window.location.origin;
       
       const icalUrl = `${baseUrl}/api/events/calendar.ics`;
-      
+
       // Generate platform-specific URLs
-      const googleCalUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(icalUrl)}`;
-      const outlookUrl = `https://outlook.live.com/owa/?path=/calendar/action/compose&rru=addsubscription&url=${encodeURIComponent(icalUrl)}&name=${encodeURIComponent(calendarName)}`;
-      const appleUrl = `webcal://${icalUrl.replace('http://', '').replace('https://', '')}`;
+      // Google Calendar: Use the webcal protocol for better compatibility
+      const googleCalUrl = `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(icalUrl)}`;
+      const outlookUrl = `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(icalUrl)}&name=${encodeURIComponent(calendarName)}`;
+      const appleUrl = `webcal://${icalUrl.replace('https://', '').replace('http://', '')}`;
 
       const links = {
         ical: icalUrl,
