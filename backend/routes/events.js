@@ -168,26 +168,42 @@ router.get('/calendar-feed', async (req, res) => {
   });
 });
 
-// Generate iCal calendar feed (public route - must come BEFORE /:id route)
+// Generate iCal calendar feed (COMPLETELY PUBLIC - NO AUTH)
+// This route MUST come BEFORE any /:id routes to avoid route conflicts
 router.get('/calendar.ics', async (req, res) => {
-  try {
-    console.log('Fetching events for calendar feed...');
+  // Detailed logging for Google Calendar subscription debugging
+  const timestamp = new Date().toISOString();
+  const userAgent = req.get('user-agent') || 'unknown';
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const referer = req.get('referer') || 'direct';
 
-    // Fetch all published events
+  console.log('='.repeat(80));
+  console.log(`[${timestamp}] 📅 CALENDAR FEED REQUEST`);
+  console.log(`  IP: ${ip}`);
+  console.log(`  User-Agent: ${userAgent}`);
+  console.log(`  Referer: ${referer}`);
+  console.log(`  Host: ${req.get('host')}`);
+  console.log(`  Method: ${req.method}`);
+  console.log(`  URL: ${req.originalUrl}`);
+  console.log('='.repeat(80));
+
+  try {
+    // Fetch all published events (include past week to show recent events)
+    console.log('📊 Querying database for published events...');
     const events = await Event.find({
       isPublished: true,
-      startDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Include events from last 7 days
+      startDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
     }).populate('organizer', 'name email').lean();
 
-    console.log(`Found ${events.length} events for calendar feed`);
+    console.log(`✅ Found ${events.length} published events for calendar feed`);
 
-    // Create calendar
+    // Create iCal calendar object
     const calendar = ical({
-      domain: req.get('host') || 'localhost',
-      name: process.env.CALENDAR_NAME || 'Sign Company Calendar',
+      domain: req.get('host') || 'signworld-dashboard.onrender.com',
+      name: 'Sign Company Calendar',
       description: 'Sign Company Dashboard Events and Schedule',
-      timezone: process.env.CALENDAR_TIMEZONE || 'America/New_York',
-      ttl: 60 * 60 * 24, // 24 hours cache
+      timezone: 'America/New_York',
+      ttl: 3600, // 1 hour refresh interval
       prodId: {
         company: 'Sign Company Dashboard',
         product: 'Calendar Feed',
@@ -195,76 +211,89 @@ router.get('/calendar.ics', async (req, res) => {
       }
     });
 
-    // Add events to calendar
+    console.log('📝 Adding events to calendar...');
+
+    // Add each event to the calendar
     events.forEach(event => {
-      const icalEvent = calendar.createEvent({
-        uid: event._id.toString(),
-        start: event.startDate,
-        end: event.endDate,
-        summary: event.title,
-        description: event.description,
-        location: event.location || '',
-        organizer: {
-          name: event.organizer?.name || 'Sign Company',
-          email: event.organizer?.email || process.env.DEFAULT_ORGANIZER_EMAIL || 'events@signcompany.com'
-        },
-        url: event.onlineLink || '',
-        categories: event.category ? [{ name: event.category }] : [],
-        created: event.createdAt,
-        lastModified: event.updatedAt || event.createdAt
-      });
-      
-      // Add attendees if available
-      if (event.attendees && event.attendees.length > 0) {
-        event.attendees
-          .filter(attendee => attendee.status === 'confirmed')
-          .forEach(attendee => {
-            if (attendee.user && attendee.user.email) {
-              icalEvent.createAttendee({
-                email: attendee.user.email,
-                name: attendee.user.name || attendee.user.email,
-                status: 'ACCEPTED'
-              });
-            }
-          });
+      try {
+        const icalEvent = calendar.createEvent({
+          uid: event._id.toString(),
+          start: event.startDate,
+          end: event.endDate,
+          summary: event.title,
+          description: event.description || 'No description provided',
+          location: event.location || '',
+          organizer: {
+            name: event.organizer?.name || 'Sign Company',
+            email: event.organizer?.email || 'events@signcompany.com'
+          },
+          url: event.onlineLink || '',
+          categories: event.category ? [{ name: event.category }] : [],
+          created: event.createdAt,
+          lastModified: event.updatedAt || event.createdAt
+        });
+
+        // Add reminders
+        icalEvent.createAlarm({
+          type: 'display',
+          trigger: 24 * 60 * 60,
+          description: `Reminder: ${event.title}`
+        });
+
+        icalEvent.createAlarm({
+          type: 'display',
+          trigger: 60 * 60,
+          description: `Starting soon: ${event.title}`
+        });
+      } catch (eventError) {
+        console.error(`⚠️  Failed to add event ${event._id}: ${eventError.message}`);
       }
-      
-      // Add alarms/reminders
-      icalEvent.createAlarm({
-        type: 'display',
-        trigger: 24 * 60 * 60, // 24 hours before
-        description: `Reminder: ${event.title}`
-      });
-      
-      icalEvent.createAlarm({
-        type: 'display',
-        trigger: 60 * 60, // 1 hour before
-        description: `Starting soon: ${event.title}`
-      });
     });
-    
-    // Set appropriate headers
+
+    console.log(`✅ Successfully added ${events.length} events to calendar`);
+
+    // Generate the ICS file content
+    const icsContent = calendar.toString();
+    console.log(`📦 Generated ICS file: ${icsContent.length} bytes`);
+
+    // Set headers - MUST be text/calendar for Google Calendar to accept it
     res.set({
       'Content-Type': 'text/calendar; charset=utf-8',
-      'Content-Disposition': 'attachment; filename="sign-company-calendar.ics"',
-      'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+      'Content-Disposition': 'inline; filename="sign-company-calendar.ics"',
+      'Cache-Control': 'public, max-age=3600',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET',
-      'Access-Control-Allow-Headers': 'Content-Type'
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'X-Robots-Tag': 'noindex', // Don't index calendar feeds
     });
-    
-    // Send calendar
-    res.send(calendar.toString());
+
+    console.log('✅ Sending ICS calendar feed...');
+    console.log('='.repeat(80));
+
+    // Send the raw ICS content (NOT JSON!)
+    return res.send(icsContent);
 
   } catch (error) {
-    console.error('Error generating iCal feed:', error);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({
-      success: false,
-      message: 'Error generating calendar feed',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    console.error('='.repeat(80));
+    console.error(`❌ ERROR GENERATING CALENDAR FEED`);
+    console.error(`  Error: ${error.message}`);
+    console.error(`  Stack: ${error.stack}`);
+    console.error('='.repeat(80));
+
+    // Even on error, return text/calendar to avoid breaking subscriptions
+    res.set({
+      'Content-Type': 'text/calendar; charset=utf-8',
+      'Cache-Control': 'no-cache',
     });
+
+    // Return a minimal valid ICS file with error message
+    const errorCalendar = ical({
+      domain: req.get('host') || 'signworld-dashboard.onrender.com',
+      name: 'Sign Company Calendar (Error)',
+      description: `Error loading calendar: ${error.message}`,
+    });
+
+    return res.status(500).send(errorCalendar.toString());
   }
 });
 
