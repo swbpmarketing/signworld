@@ -487,6 +487,8 @@ const BugReports = () => {
   };
 
   const openDetailModal = (report: BugReport) => {
+    console.log('Opening detail modal for report:', report._id);
+    console.log('isDragging:', isDragging);
     setSelectedReport(report);
     setShowDetailModal(true);
     setShowActionsMenu(false);
@@ -663,9 +665,12 @@ const BugReports = () => {
         isAdmin && !draggedReport ? 'active:cursor-move' : ''
       }`}
       onClick={() => {
+        console.log('Card clicked, isDragging:', isDragging);
         // Only open modal if not dragging
         if (!isDragging) {
           openDetailModal(report);
+        } else {
+          console.log('Blocked by isDragging');
         }
       }}
     >
