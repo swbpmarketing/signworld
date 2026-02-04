@@ -409,9 +409,11 @@ const BugReports = () => {
   // Drag and Drop handlers
   const handleDragStart = (e: React.DragEvent, report: BugReport) => {
     if (!isAdmin) return;
-    setIsDragging(true);
-    setDraggedReport(report);
     e.dataTransfer.effectAllowed = 'move';
+    // Set data to enable drag - required for drag to actually work
+    e.dataTransfer.setData('text/plain', report._id);
+    setDraggedReport(report);
+    setIsDragging(true);
   };
 
   const handleDragEnd = () => {
