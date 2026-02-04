@@ -12,8 +12,9 @@ router.get('/public', async (req, res) => {
   try {
     const events = await Event.find({ isPublished: true })
       .populate('organizer', 'name email')
+      .lean()
       .sort({ startDate: 1 });
-    
+
     res.json({
       success: true,
       count: events.length,
@@ -21,9 +22,12 @@ router.get('/public', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching public events:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching events'
+      message: 'Server error while fetching events',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
@@ -167,12 +171,16 @@ router.get('/calendar-feed', async (req, res) => {
 // Generate iCal calendar feed (public route - must come BEFORE /:id route)
 router.get('/calendar.ics', async (req, res) => {
   try {
+    console.log('Fetching events for calendar feed...');
+
     // Fetch all published events
-    const events = await Event.find({ 
+    const events = await Event.find({
       isPublished: true,
       startDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } // Include events from last 7 days
-    }).populate('organizer', 'name email');
-    
+    }).populate('organizer', 'name email').lean();
+
+    console.log(`Found ${events.length} events for calendar feed`);
+
     // Create calendar
     const calendar = ical({
       domain: req.get('host') || 'localhost',
@@ -186,7 +194,7 @@ router.get('/calendar.ics', async (req, res) => {
         language: 'EN'
       }
     });
-    
+
     // Add events to calendar
     events.forEach(event => {
       const icalEvent = calendar.createEvent({
@@ -247,12 +255,15 @@ router.get('/calendar.ics', async (req, res) => {
     
     // Send calendar
     res.send(calendar.toString());
-    
+
   } catch (error) {
     console.error('Error generating iCal feed:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Error generating calendar feed'
+      message: 'Error generating calendar feed',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
