@@ -229,6 +229,26 @@ const BugReports = () => {
       const response = await api.put(`/bug-reports/${id}/status`, { status });
       return { id, data: response.data };
     },
+    onMutate: async ({ id, status }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['bugReports'] });
+
+      // Snapshot the previous value
+      const previousReports = queryClient.getQueryData<BugReport[]>(['bugReports']);
+
+      // Optimistically update to the new value
+      if (previousReports) {
+        queryClient.setQueryData<BugReport[]>(
+          ['bugReports'],
+          previousReports.map(report =>
+            report._id === id ? { ...report, status: status as any } : report
+          )
+        );
+      }
+
+      // Return context with snapshot
+      return { previousReports };
+    },
     onSuccess: async ({ id }) => {
       queryClient.invalidateQueries({ queryKey: ['bugReports'] });
       toast.success('Status updated successfully');
@@ -242,7 +262,11 @@ const BugReports = () => {
         }
       }
     },
-    onError: () => {
+    onError: (error, variables, context) => {
+      // Roll back to the previous value on error
+      if (context?.previousReports) {
+        queryClient.setQueryData(['bugReports'], context.previousReports);
+      }
       toast.error('Failed to update status');
     },
   });
