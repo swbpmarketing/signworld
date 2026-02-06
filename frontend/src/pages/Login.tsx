@@ -200,6 +200,7 @@ const Login = () => {
                   Email Address
                 </label>
                 <input
+                  id="email"
                   {...register('email', {
                     required: 'Email is required',
                     pattern: {
@@ -224,6 +225,7 @@ const Login = () => {
                 </label>
                 <div className="relative">
                   <input
+                    id="password"
                     {...register('password', { required: 'Password is required' })}
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
