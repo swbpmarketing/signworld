@@ -24,18 +24,11 @@ const ForgotPassword = () => {
   }, []);
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
-    console.log('🔥 [FRONTEND] Forgot password form submitted');
-    console.log('Email:', data.email);
-
     try {
       setLoading(true);
-      console.log('📤 [FRONTEND] Making API request to /auth/forgot-password');
-
       const response = await api.post('/auth/forgot-password', {
         email: data.email,
       });
-
-      console.log('📨 [FRONTEND] Response received:', response);
 
       if (response.data.success) {
         setSubmittedEmail(data.email);
@@ -43,8 +36,6 @@ const ForgotPassword = () => {
         toast.success('Check your email for reset instructions!');
       }
     } catch (error: any) {
-      console.error('❌ [FRONTEND] Error:', error);
-      console.error('Error response:', error.response);
       toast.error(error.response?.data?.error || 'Failed to send reset email');
     } finally {
       setLoading(false);
