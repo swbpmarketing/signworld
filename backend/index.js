@@ -1,5 +1,7 @@
+// Load env vars FIRST before any other imports
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env'), override: true });
+
 const express = require('express');
-const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 const http = require('http');
@@ -9,9 +11,6 @@ const { initConventionReminderJob } = require('./jobs/conventionReminders');
 const presenceService = require('./utils/presenceService');
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');
-
-// Load env vars from project root - override any existing environment variables
-dotenv.config({ path: require('path').join(__dirname, '..', '.env'), override: true });
 
 // Track database connection status
 let dbConnected = false;
