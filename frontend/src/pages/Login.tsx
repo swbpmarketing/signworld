@@ -38,18 +38,27 @@ const Login = () => {
     }
   }, [user, navigate]);
 
+  // Debug: Track modal state changes
+  useEffect(() => {
+    console.log('📧 Verification modal state changed:', showVerificationPrompt);
+  }, [showVerificationPrompt]);
+
   const handleResendVerification = async () => {
     try {
       setSendingVerification(true);
+      console.log('📤 Sending verification email to:', unverifiedEmail);
       const response = await api.post('/auth/resend-verification', {
         email: unverifiedEmail,
       });
 
       if (response.data.success) {
+        console.log('✅ Verification email sent successfully');
         toast.success('Verification email sent! Check your inbox.');
+        console.log('🚪 Closing modal after successful send');
         setShowVerificationPrompt(false);
       }
     } catch (error: any) {
+      console.error('❌ Failed to send verification email:', error);
       toast.error(error.response?.data?.error || 'Failed to send verification email');
     } finally {
       setSendingVerification(false);
@@ -67,8 +76,10 @@ const Login = () => {
 
       // Check if error is due to unverified email
       if (error.emailNotVerified) {
+        console.log('🔒 Email not verified, showing verification modal');
         setUnverifiedEmail(data.email);
         setShowVerificationPrompt(true);
+        console.log('Modal state set to true');
       } else {
         toast.error(error.message || 'Login failed');
       }
@@ -368,8 +379,20 @@ const Login = () => {
 
       {/* Email Verification Modal */}
       {showVerificationPrompt && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-2xl p-8 max-w-md w-full border border-yellow-500/30">
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            // Prevent modal from closing when clicking backdrop
+            e.stopPropagation();
+          }}
+        >
+          <div
+            className="bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-2xl p-8 max-w-md w-full border border-yellow-500/30"
+            onClick={(e) => {
+              // Prevent clicks inside modal from closing it
+              e.stopPropagation();
+            }}
+          >
             <div className="text-center mb-6">
               <div className="mb-4 p-4 bg-yellow-500/10 rounded-full inline-block border border-yellow-500/30">
                 <svg className="h-12 w-12 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -413,7 +436,10 @@ const Login = () => {
               </button>
 
               <button
-                onClick={() => setShowVerificationPrompt(false)}
+                onClick={() => {
+                  console.log('❌ User clicked Cancel, closing modal');
+                  setShowVerificationPrompt(false);
+                }}
                 className="w-full px-6 py-3 bg-gray-700/50 hover:bg-gray-700 text-gray-300 font-semibold rounded-lg transition-all duration-300"
               >
                 Cancel
