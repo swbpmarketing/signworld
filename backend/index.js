@@ -10,8 +10,8 @@ const presenceService = require('./utils/presenceService');
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');
 
-// Load env vars - override any existing environment variables
-dotenv.config({ path: require('path').join(__dirname, '.env'), override: true });
+// Load env vars from project root - override any existing environment variables
+dotenv.config({ path: require('path').join(__dirname, '..', '.env'), override: true });
 
 // Track database connection status
 let dbConnected = false;
