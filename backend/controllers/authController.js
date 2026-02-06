@@ -622,14 +622,15 @@ exports.resetPassword = async (req, res) => {
 
     console.log('Token valid, updating password');
 
-    // Update password
+    // Update password and verify email (if they can reset via email, they have access to it)
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+    user.emailVerified = true; // Auto-verify email since they accessed the reset link
 
     console.log('Before save - isModified(password):', user.isModified('password'));
     await user.save();
-    console.log('Password saved successfully');
+    console.log('Password saved successfully and email verified');
 
     res.status(200).json({
       success: true,
