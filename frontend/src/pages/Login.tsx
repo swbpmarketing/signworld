@@ -33,8 +33,9 @@ const Login = () => {
 
   // Redirect to dashboard if already logged in (check once on mount)
   useEffect(() => {
+    console.log('🔄 Login mount effect running, user:', user ? 'exists' : 'null');
     if (user) {
-      console.log('✅ User already logged in, redirecting to dashboard');
+      console.log('✅ User already logged in on mount, redirecting to dashboard');
       navigate('/dashboard', { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
