@@ -10,25 +10,12 @@ const VerifyEmail = () => {
   const [verifying, setVerifying] = useState(true);
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState('');
-  const [countdown, setCountdown] = useState(5);
 
   const token = searchParams.get('token');
 
   useEffect(() => {
     document.title = 'Sign Company - Verify Email';
   }, []);
-
-  // Countdown timer effect
-  useEffect(() => {
-    if (verified && countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (verified && countdown === 0) {
-      navigate('/login');
-    }
-  }, [verified, countdown, navigate]);
 
   useEffect(() => {
     if (!token) {
@@ -167,12 +154,6 @@ const VerifyEmail = () => {
                     </p>
                     <p className="text-gray-400 text-sm">
                       You can now log in to your account.
-                    </p>
-                  </div>
-
-                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                    <p className="text-sm text-blue-300 text-center">
-                      Redirecting to login in {countdown} second{countdown !== 1 ? 's' : ''}...
                     </p>
                   </div>
 
