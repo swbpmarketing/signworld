@@ -519,9 +519,7 @@ exports.resendVerificationEmail = async (req, res) => {
 // @access  Public
 exports.requestPasswordReset = async (req, res) => {
   try {
-    console.log('=== FORGOT PASSWORD REQUEST STARTED ===');
     const { email } = req.body;
-    console.log('Requested email:', email);
 
     if (!email) {
       return res.status(400).json({
@@ -531,7 +529,6 @@ exports.requestPasswordReset = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
-    console.log('User found:', user ? 'YES' : 'NO');
 
     if (!user) {
       // Don't reveal if user exists for security reasons
@@ -548,28 +545,17 @@ exports.requestPasswordReset = async (req, res) => {
     user.resetPasswordToken = hash;
     user.resetPasswordExpires = expiresAt;
     await user.save();
-    console.log('Reset token saved to database');
 
     // Send password reset email
-    console.log('Attempting to send email via Resend...');
-    console.log('Email service config check:');
-    console.log('- RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
-    console.log('- RESEND_API_KEY length:', process.env.RESEND_API_KEY?.length);
-    console.log('- EMAIL_FROM:', process.env.EMAIL_FROM);
-    console.log('- CLIENT_URL:', process.env.CLIENT_URL);
-
     const emailResult = await emailService.sendPasswordResetEmail({
       to: user.email,
       name: user.name,
       resetToken: token,
     });
 
-    console.log('Email result:', JSON.stringify(emailResult, null, 2));
-
     // Check if email failed to send
     if (!emailResult.success) {
-      console.error('❌ EMAIL SEND FAILED');
-      console.error('Error details:', emailResult.error);
+      console.error('Failed to send password reset email:', emailResult.error);
       // Still save the token so user can try again
       return res.status(500).json({
         success: false,
@@ -577,14 +563,12 @@ exports.requestPasswordReset = async (req, res) => {
       });
     }
 
-    console.log('✅ EMAIL SENT SUCCESSFULLY');
     res.status(200).json({
       success: true,
       message: 'If a matching email exists, a password reset link has been sent',
     });
   } catch (error) {
-    console.error('❌ FORGOT PASSWORD ERROR:', error);
-    console.error('Error stack:', error.stack);
+    console.error('Error requesting password reset:', error);
     res.status(500).json({
       success: false,
       error: error.message,
