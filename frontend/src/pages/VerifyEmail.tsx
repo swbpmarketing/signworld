@@ -10,12 +10,25 @@ const VerifyEmail = () => {
   const [verifying, setVerifying] = useState(true);
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState('');
+  const [countdown, setCountdown] = useState(5);
 
   const token = searchParams.get('token');
 
   useEffect(() => {
     document.title = 'Sign Company - Verify Email';
   }, []);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (verified && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (verified && countdown === 0) {
+      navigate('/login');
+    }
+  }, [verified, countdown, navigate]);
 
   useEffect(() => {
     if (!token) {
@@ -32,9 +45,6 @@ const VerifyEmail = () => {
         if (response.data.success) {
           setVerified(true);
           toast.success('Email verified successfully!');
-          setTimeout(() => {
-            navigate('/login');
-          }, 3000);
         }
       } catch (err: any) {
         setError(err.response?.data?.error || 'Failed to verify email. Please try again.');
@@ -139,21 +149,39 @@ const VerifyEmail = () => {
                   </p>
                 </div>
               ) : verified ? (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="flex justify-center">
-                    <CheckCircleIcon className="w-16 h-16 text-green-400" />
+                    <div className="relative">
+                      <CheckCircleIcon className="w-20 h-20 text-green-400 animate-pulse" />
+                      <div className="absolute -top-2 -right-2 bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">
+                        ✓
+                      </div>
+                    </div>
                   </div>
                   <div className="text-center">
-                    <h3 className="text-xl font-bold text-green-400 mb-2">
+                    <h3 className="text-2xl font-bold text-green-400 mb-3">
                       Email Verified!
                     </h3>
-                    <p className="text-gray-300 text-sm">
-                      Your email has been successfully verified. You can now log in to your account.
+                    <p className="text-gray-300 text-base mb-2">
+                      Your email has been successfully verified.
+                    </p>
+                    <p className="text-gray-400 text-sm">
+                      You can now log in to your account.
                     </p>
                   </div>
-                  <p className="text-xs text-gray-400 text-center">
-                    Redirecting to login page in a few seconds...
-                  </p>
+
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <p className="text-sm text-blue-300 text-center">
+                      Redirecting to login in {countdown} second{countdown !== 1 ? 's' : ''}...
+                    </p>
+                  </div>
+
+                  <Link
+                    to="/login"
+                    className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-600 hover:from-blue-700 hover:via-blue-600 hover:to-cyan-700 text-white font-bold rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 transform hover:-translate-y-0.5 text-center block"
+                  >
+                    Continue to Login
+                  </Link>
                 </div>
               ) : (
                 <div className="space-y-4">
