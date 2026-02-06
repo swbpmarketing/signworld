@@ -119,6 +119,11 @@ router.post(
 // Password reset routes
 router.post(
   '/forgot-password',
+  (req, res, next) => {
+    console.log('🔥 [ROUTE] /auth/forgot-password HIT');
+    console.log('Request body:', req.body);
+    next();
+  },
   forgotPasswordValidation,
   validate,
   requestPasswordReset
