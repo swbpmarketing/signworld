@@ -74,14 +74,8 @@ const Login = () => {
     }
   };
 
-  const onSubmit = async (data: LoginFormData, e?: React.BaseSyntheticEvent) => {
-    console.log('🎯 onSubmit called');
-
-    // CRITICAL: Prevent default form submission that causes page refresh
-    if (e) {
-      e.preventDefault();
-      console.log('✋ Default form submission prevented');
-    }
+  const onSubmit = async (data: LoginFormData) => {
+    console.log('🎯 onSubmit called with data:', { email: data.email });
 
     // Prevent multiple submissions
     if (loading) {
@@ -91,7 +85,9 @@ const Login = () => {
 
     try {
       setLoading(true);
+      console.log('🔐 Calling login()...');
       await login(data.email, data.password);
+      console.log('✅ Login successful, navigating to dashboard');
       toast.success('Welcome back!');
       navigate('/dashboard');
       setLoading(false);
@@ -188,11 +184,7 @@ const Login = () => {
             {/* Form */}
             <form
               className="space-y-5"
-              onSubmit={(e) => {
-                e.preventDefault();
-                console.log('📝 Form submit event - calling handleSubmit');
-                handleSubmit(onSubmit)(e);
-              }}
+              onSubmit={handleSubmit(onSubmit)}
             >
               {/* Email */}
               <div>
