@@ -1,7 +1,6 @@
 const User = require('../models/User');
 const SystemSettings = require('../models/SystemSettings');
 const generateToken = require('../utils/generateToken');
-const { sendWelcomeEmail } = require('../utils/emailService');
 const emailService = require('../services/emailService');
 const { generateToken: generateVerificationToken, getTokenExpiration, verifyToken, hashToken } = require('../utils/tokenGenerator');
 
@@ -141,9 +140,9 @@ exports.register = async (req, res) => {
     });
 
     // Send welcome email with credentials (non-blocking)
-    sendWelcomeEmail({
+    emailService.sendWelcomeEmailWithCredentials({
+      to: user.email,
       name: user.name,
-      email: user.email,
       password: plainPassword,
       role: user.role,
     }).catch(err => {

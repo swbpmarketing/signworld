@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const SystemSettings = require('../models/SystemSettings');
-const { sendWelcomeEmail } = require('../utils/emailService');
+const emailService = require('../services/emailService');
 
 // Import models for stats aggregation
 let Brag, ForumThread, Event, Message, Analytics;
@@ -132,9 +132,9 @@ exports.createUser = async (req, res) => {
 
     // Send welcome email with credentials
     try {
-      await sendWelcomeEmail({
+      await emailService.sendWelcomeEmailWithCredentials({
+        to: user.email,
         name: user.name,
-        email: user.email,
         password: plainPassword,
         role: user.role,
       });

@@ -58,6 +58,31 @@ class EmailService {
   }
 
   /**
+   * Send welcome email with credentials (for admin-created users)
+   */
+  async sendWelcomeEmailWithCredentials({ to, name, password, role }) {
+    try {
+      const { data, error } = await resend.emails.send({
+        from: DEFAULT_FROM,
+        to: [to],
+        subject: 'Welcome to SignWorld Dashboard - Your Account Details',
+        html: this.getWelcomeWithCredentialsTemplate(name, to, password, role),
+      });
+
+      if (error) {
+        console.error('Failed to send welcome email with credentials:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('Welcome email with credentials sent successfully:', data.id);
+      return { success: true, data };
+    } catch (error) {
+      console.error('Failed to send welcome email with credentials:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Send event reminder email
    */
   async sendEventReminder({ to, name, event, reminderTime }) {
@@ -295,6 +320,70 @@ class EmailService {
               </ul>
               <a href="${process.env.CLIENT_URL}/dashboard" class="button">Go to Dashboard</a>
               <p>If you have any questions, feel free to reach out to our support team.</p>
+              <p>Best regards,<br>The SignWorld Team</p>
+            </div>
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} SignWorld. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  getWelcomeWithCredentialsTemplate(name, email, password, role) {
+    const roleDisplay = role.charAt(0).toUpperCase() + role.slice(1);
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+            .credentials { background: #f0f4f8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+            .credentials p { margin: 10px 0; }
+            .credentials strong { color: #667eea; }
+            .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Welcome to SignWorld Dashboard!</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${name},</p>
+              <p>An account has been created for you on the SignWorld Dashboard. Below are your login credentials:</p>
+
+              <div class="credentials">
+                <h3 style="margin-top: 0; color: #667eea;">Your Account Details</h3>
+                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Password:</strong> ${password}</p>
+                <p><strong>Role:</strong> ${roleDisplay}</p>
+              </div>
+
+              <div class="warning">
+                <p><strong>⚠️ Security Reminder:</strong></p>
+                <p>For your security, please change your password after logging in for the first time.</p>
+              </div>
+
+              <a href="${process.env.CLIENT_URL}/login" class="button">Login to Dashboard</a>
+
+              <p>You now have access to:</p>
+              <ul>
+                <li>Comprehensive resource library</li>
+                <li>Event calendar and notifications</li>
+                <li>Community forum and discussions</li>
+                <li>Owner directory and networking</li>
+                <li>Real-time analytics and reports</li>
+              </ul>
+
+              <p>If you have any questions or need assistance, please don't hesitate to reach out to our support team.</p>
+
               <p>Best regards,<br>The SignWorld Team</p>
             </div>
             <div class="footer">
