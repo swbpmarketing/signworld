@@ -31,12 +31,14 @@ const Login = () => {
     document.title = 'Sign Company - Login';
   }, []);
 
-  // Redirect to dashboard if already logged in
+  // Redirect to dashboard if already logged in (check once on mount)
   useEffect(() => {
     if (user) {
+      console.log('✅ User already logged in, redirecting to dashboard');
       navigate('/dashboard', { replace: true });
     }
-  }, [user, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run once on mount
 
   // Debug: Track modal state changes
   useEffect(() => {

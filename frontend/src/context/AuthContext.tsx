@@ -70,7 +70,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Fetch fresh user data from database
       await fetchUser();
-      setTimeout(() => navigate('/dashboard'), 500); // Small delay to ensure state is updated
+
+      // DO NOT navigate here - let the calling component handle navigation
+      // This prevents automatic redirects that would unmount components and close verification modals
     } catch (error: any) {
       console.error('Login error:', error.response?.data?.error || error.message);
       const errorMessage = error.response?.data?.error || 'Login failed';
