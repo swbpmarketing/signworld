@@ -56,6 +56,7 @@ const Login = () => {
         toast.success('Verification email sent! Check your inbox.');
         console.log('🚪 Closing modal after successful send');
         setShowVerificationPrompt(false);
+        setLoading(false); // Reset loading state when closing modal
       }
     } catch (error: any) {
       console.error('❌ Failed to send verification email:', error);
@@ -66,11 +67,18 @@ const Login = () => {
   };
 
   const onSubmit = async (data: LoginFormData) => {
+    // Prevent multiple submissions
+    if (loading) {
+      console.log('⏳ Already loading, ignoring duplicate submission');
+      return;
+    }
+
     try {
       setLoading(true);
       await login(data.email, data.password);
       toast.success('Welcome back!');
       navigate('/dashboard');
+      setLoading(false);
     } catch (error: any) {
       console.error('❌ Login failed:', error.message);
 
@@ -80,11 +88,11 @@ const Login = () => {
         setUnverifiedEmail(data.email);
         setShowVerificationPrompt(true);
         console.log('Modal state set to true');
+        // Keep loading state true to prevent resubmission while modal is open
       } else {
         toast.error(error.message || 'Login failed');
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -439,6 +447,7 @@ const Login = () => {
                 onClick={() => {
                   console.log('❌ User clicked Cancel, closing modal');
                   setShowVerificationPrompt(false);
+                  setLoading(false); // Reset loading state when closing modal
                 }}
                 className="w-full px-6 py-3 bg-gray-700/50 hover:bg-gray-700 text-gray-300 font-semibold rounded-lg transition-all duration-300"
               >
