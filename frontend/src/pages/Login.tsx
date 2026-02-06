@@ -28,7 +28,12 @@ const Login = () => {
 
   // Set page title
   useEffect(() => {
+    console.log('🎬 Login component MOUNTED');
     document.title = 'Sign Company - Login';
+
+    return () => {
+      console.log('💥 Login component UNMOUNTING');
+    };
   }, []);
 
   // Redirect to dashboard if already logged in (check once on mount)
