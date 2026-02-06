@@ -547,12 +547,21 @@ exports.requestPasswordReset = async (req, res) => {
     await user.save();
 
     // Send password reset email
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
-    await emailService.sendPasswordResetEmail({
+    const emailResult = await emailService.sendPasswordResetEmail({
       to: user.email,
       name: user.name,
       resetToken: token,
     });
+
+    // Check if email failed to send
+    if (!emailResult.success) {
+      console.error('Failed to send password reset email:', emailResult.error);
+      // Still save the token so user can try again
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to send reset email. Please try again later.',
+      });
+    }
 
     res.status(200).json({
       success: true,
