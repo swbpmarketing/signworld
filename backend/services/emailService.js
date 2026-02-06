@@ -1,25 +1,10 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// Default sender email - use just email address to avoid relay issues with some SMTP providers
-const DEFAULT_FROM = process.env.SMTP_FROM_EMAIL || 'noreply@signworld.com';
+// Initialize Resend client
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Lazy initialization of transporter - create on first use to ensure environment vars are loaded
-let transporter = null;
-
-function getTransporter() {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
-  }
-  return transporter;
-}
+// Default sender email
+const DEFAULT_FROM = process.env.EMAIL_FROM || 'SignWorld <noreply@signworld.com>';
 
 class EmailService {
   /**
@@ -27,15 +12,20 @@ class EmailService {
    */
   async sendVerificationEmail({ to, name, verificationUrl }) {
     try {
-      const info = await getTransporter().sendMail({
+      const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
-        to,
+        to: [to],
         subject: 'Verify Your Email Address - Sign World Business Partners',
         html: this.getVerificationTemplate(name, verificationUrl),
       });
 
-      console.log('Verification email sent successfully:', info.messageId);
-      return { success: true, data: info };
+      if (error) {
+        console.error('Failed to send verification email:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('Verification email sent successfully:', data.id);
+      return { success: true, data };
     } catch (error) {
       console.error('Failed to send verification email:', error);
       return { success: false, error: error.message };
@@ -47,15 +37,20 @@ class EmailService {
    */
   async sendWelcomeEmail({ to, name }) {
     try {
-      const info = await getTransporter().sendMail({
+      const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
-        to,
+        to: [to],
         subject: 'Welcome to SignWorld Dashboard',
         html: this.getWelcomeTemplate(name),
       });
 
-      console.log('Welcome email sent successfully:', info.messageId);
-      return { success: true, data: info };
+      if (error) {
+        console.error('Failed to send welcome email:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('Welcome email sent successfully:', data.id);
+      return { success: true, data };
     } catch (error) {
       console.error('Failed to send welcome email:', error);
       return { success: false, error: error.message };
@@ -67,15 +62,20 @@ class EmailService {
    */
   async sendEventReminder({ to, name, event, reminderTime }) {
     try {
-      const info = await getTransporter().sendMail({
+      const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
-        to,
+        to: [to],
         subject: `Reminder: ${event.title} - ${reminderTime}`,
         html: this.getEventReminderTemplate(name, event, reminderTime),
       });
 
-      console.log('Event reminder sent successfully:', info.messageId);
-      return { success: true, data: info };
+      if (error) {
+        console.error('Failed to send event reminder:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('Event reminder sent successfully:', data.id);
+      return { success: true, data };
     } catch (error) {
       console.error('Failed to send event reminder:', error);
       return { success: false, error: error.message };
@@ -89,16 +89,21 @@ class EmailService {
     try {
       const adminEmail = process.env.ADMIN_EMAIL || 'admin@signworld.com';
 
-      const info = await getTransporter().sendMail({
+      const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
-        to: adminEmail,
+        to: [adminEmail],
         replyTo: email,
         subject: `New Contact Form Submission from ${name}`,
         html: this.getContactFormTemplate(name, email, message),
       });
 
-      console.log('Contact form email sent successfully:', info.messageId);
-      return { success: true, data: info };
+      if (error) {
+        console.error('Failed to send contact form email:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('Contact form email sent successfully:', data.id);
+      return { success: true, data };
     } catch (error) {
       console.error('Failed to send contact form email:', error);
       return { success: false, error: error.message };
@@ -112,15 +117,20 @@ class EmailService {
     try {
       const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
-      const info = await getTransporter().sendMail({
+      const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
-        to,
+        to: [to],
         subject: 'Password Reset Request - SignWorld Dashboard',
         html: this.getPasswordResetTemplate(name, resetUrl),
       });
 
-      console.log('Password reset email sent successfully:', info.messageId);
-      return { success: true, data: info };
+      if (error) {
+        console.error('Failed to send password reset email:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('Password reset email sent successfully:', data.id);
+      return { success: true, data };
     } catch (error) {
       console.error('Failed to send password reset email:', error);
       return { success: false, error: error.message };
@@ -134,15 +144,20 @@ class EmailService {
     try {
       const threadUrl = `${process.env.CLIENT_URL}/forum/thread/${thread._id}`;
 
-      const info = await getTransporter().sendMail({
+      const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
-        to,
+        to: [to],
         subject: `New reply in: ${thread.title}`,
         html: this.getForumNotificationTemplate(name, thread, post, threadUrl),
       });
 
-      console.log('Forum notification sent successfully:', info.messageId);
-      return { success: true, data: info };
+      if (error) {
+        console.error('Failed to send forum notification:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('Forum notification sent successfully:', data.id);
+      return { success: true, data };
     } catch (error) {
       console.error('Failed to send forum notification:', error);
       return { success: false, error: error.message };
@@ -154,15 +169,20 @@ class EmailService {
    */
   async sendConventionRegistrationEmail({ to, name, convention }) {
     try {
-      const info = await getTransporter().sendMail({
+      const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
-        to,
+        to: [to],
         subject: `Registration Confirmed: ${convention.title}`,
         html: this.getConventionRegistrationTemplate(name, convention),
       });
 
-      console.log('Convention registration email sent successfully:', info.messageId);
-      return { success: true, data: info };
+      if (error) {
+        console.error('Failed to send convention registration email:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('Convention registration email sent successfully:', data.id);
+      return { success: true, data };
     } catch (error) {
       console.error('Failed to send convention registration email:', error);
       return { success: false, error: error.message };
@@ -174,15 +194,20 @@ class EmailService {
    */
   async sendConventionDateChangeEmail({ to, name, convention, oldStartDate, oldEndDate }) {
     try {
-      const info = await getTransporter().sendMail({
+      const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
-        to,
+        to: [to],
         subject: `Schedule Change: ${convention.title}`,
         html: this.getConventionDateChangeTemplate(name, convention, oldStartDate, oldEndDate),
       });
 
-      console.log('Convention date change email sent successfully:', info.messageId);
-      return { success: true, data: info };
+      if (error) {
+        console.error('Failed to send convention date change email:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('Convention date change email sent successfully:', data.id);
+      return { success: true, data };
     } catch (error) {
       console.error('Failed to send convention date change email:', error);
       return { success: false, error: error.message };
