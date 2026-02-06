@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import api from '../config/api';
+import api from '../config/axios';
 
 const VerifyEmail = () => {
   const navigate = useNavigate();

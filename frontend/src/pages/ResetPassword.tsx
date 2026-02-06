@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import api from '../config/api';
+import api from '../config/axios';
 
 interface ResetPasswordFormData {
   password: string;
