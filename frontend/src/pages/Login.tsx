@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { EyeIcon, EyeSlashIcon, ChevronDownIcon, ChevronUpIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
+import api from '../config/axios';
 
 interface LoginFormData {
   email: string;
@@ -16,6 +17,9 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
+  const [showVerificationPrompt, setShowVerificationPrompt] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [sendingVerification, setSendingVerification] = useState(false);
   const {
     register,
     handleSubmit,
@@ -34,6 +38,24 @@ const Login = () => {
     }
   }, [user, navigate]);
 
+  const handleResendVerification = async () => {
+    try {
+      setSendingVerification(true);
+      const response = await api.post('/auth/resend-verification', {
+        email: unverifiedEmail,
+      });
+
+      if (response.data.success) {
+        toast.success('Verification email sent! Check your inbox.');
+        setShowVerificationPrompt(false);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to send verification email');
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
   const onSubmit = async (data: LoginFormData) => {
     try {
       setLoading(true);
@@ -42,7 +64,14 @@ const Login = () => {
       navigate('/dashboard');
     } catch (error: any) {
       console.error('❌ Login failed:', error.message);
-      toast.error(error.message || 'Login failed');
+
+      // Check if error is due to unverified email
+      if (error.emailNotVerified) {
+        setUnverifiedEmail(data.email);
+        setShowVerificationPrompt(true);
+      } else {
+        toast.error(error.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -336,6 +365,63 @@ const Login = () => {
           </div>
         </div>
       </div>
+
+      {/* Email Verification Modal */}
+      {showVerificationPrompt && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-2xl p-8 max-w-md w-full border border-yellow-500/30">
+            <div className="text-center mb-6">
+              <div className="mb-4 p-4 bg-yellow-500/10 rounded-full inline-block border border-yellow-500/30">
+                <svg className="h-12 w-12 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+                Email Verification Required
+              </h3>
+              <p className="mt-2 text-gray-300">
+                Please verify your email address before logging in.
+              </p>
+            </div>
+
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-300 font-medium">
+                We'll send a verification link to:
+              </p>
+              <p className="text-white font-semibold mt-1 break-all">
+                {unverifiedEmail}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={handleResendVerification}
+                disabled={sendingVerification}
+                className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-600 hover:from-blue-700 hover:via-blue-600 hover:to-cyan-700 text-white font-bold rounded-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5"
+              >
+                {sendingVerification ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                  </span>
+                ) : (
+                  'Send Verification Email'
+                )}
+              </button>
+
+              <button
+                onClick={() => setShowVerificationPrompt(false)}
+                className="w-full px-6 py-3 bg-gray-700/50 hover:bg-gray-700 text-gray-300 font-semibold rounded-lg transition-all duration-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes float {
