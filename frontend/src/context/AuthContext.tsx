@@ -73,7 +73,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setTimeout(() => navigate('/dashboard'), 500); // Small delay to ensure state is updated
     } catch (error: any) {
       console.error('Login error:', error.response?.data?.error || error.message);
-      throw new Error(error.response?.data?.error || 'Login failed');
+      const errorMessage = error.response?.data?.error || 'Login failed';
+      const emailNotVerified = error.response?.data?.emailNotVerified || false;
+
+      // Create error object with additional properties
+      const loginError: any = new Error(errorMessage);
+      loginError.emailNotVerified = emailNotVerified;
+      throw loginError;
     }
   };
 
