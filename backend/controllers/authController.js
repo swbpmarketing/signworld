@@ -583,6 +583,8 @@ exports.resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
 
+    console.log('Password reset attempt - token length:', token?.length, 'password length:', password?.length);
+
     if (!token || !password) {
       return res.status(400).json({
         success: false,
@@ -593,15 +595,18 @@ exports.resetPassword = async (req, res) => {
     // Hash the token to compare with stored hash
     const tokenHash = hashToken(token);
 
-    // Find user with matching token
-    const user = await User.findOne({ resetPasswordToken: tokenHash });
+    // Find user with matching token - MUST include password field
+    const user = await User.findOne({ resetPasswordToken: tokenHash }).select('+password');
 
     if (!user) {
+      console.log('No user found with reset token');
       return res.status(400).json({
         success: false,
         error: 'Invalid or expired reset token',
       });
     }
+
+    console.log('User found:', user.email);
 
     // Check if token has expired
     if (user.resetPasswordExpires < Date.now()) {
@@ -615,11 +620,16 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
+    console.log('Token valid, updating password');
+
     // Update password
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+
+    console.log('Before save - isModified(password):', user.isModified('password'));
     await user.save();
+    console.log('Password saved successfully');
 
     res.status(200).json({
       success: true,
