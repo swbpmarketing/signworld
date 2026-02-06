@@ -61,14 +61,21 @@ const Login = () => {
       setLoading(false);
     } catch (error: any) {
       console.error('❌ Login failed:', error.message);
+      console.log('🔍 Full error object:', error);
+      console.log('🔍 error.emailNotVerified:', error.emailNotVerified);
+      console.log('🔍 Type of emailNotVerified:', typeof error.emailNotVerified);
       setLoading(false);
 
       // Check if error is due to unverified email
       if (error.emailNotVerified) {
         console.log('🔒 Email not verified, redirecting to verification page');
+        const redirectUrl = `/verify-email-prompt?email=${encodeURIComponent(data.email)}`;
+        console.log('🚀 Navigating to:', redirectUrl);
         // Navigate to verification prompt page with email as query parameter
-        navigate(`/verify-email-prompt?email=${encodeURIComponent(data.email)}`);
+        navigate(redirectUrl);
+        console.log('✅ Navigate called');
       } else {
+        console.log('⚠️ Not an email verification issue, showing error toast');
         toast.error(error.message || 'Login failed');
       }
     }
