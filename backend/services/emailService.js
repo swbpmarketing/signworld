@@ -140,8 +140,17 @@ class EmailService {
    */
   async sendPasswordResetEmail({ to, name, resetToken }) {
     try {
-      const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+      console.log('📧 [EmailService] sendPasswordResetEmail called');
+      console.log('  - to:', to);
+      console.log('  - name:', name);
+      console.log('  - resetToken length:', resetToken?.length);
+      console.log('  - CLIENT_URL:', process.env.CLIENT_URL);
+      console.log('  - DEFAULT_FROM:', DEFAULT_FROM);
 
+      const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+      console.log('  - resetUrl:', resetUrl);
+
+      console.log('📤 Calling resend.emails.send...');
       const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
         to: [to],
@@ -149,15 +158,24 @@ class EmailService {
         html: this.getPasswordResetTemplate(name, resetUrl),
       });
 
+      console.log('📨 Resend API response received');
+      console.log('  - data:', JSON.stringify(data, null, 2));
+      console.log('  - error:', JSON.stringify(error, null, 2));
+
       if (error) {
-        console.error('Failed to send password reset email:', error);
-        return { success: false, error: error.message };
+        console.error('❌ [EmailService] Resend API returned an error:', error);
+        console.error('Error object type:', typeof error);
+        console.error('Error keys:', Object.keys(error));
+        return { success: false, error: error.message || JSON.stringify(error) };
       }
 
-      console.log('Password reset email sent successfully:', data.id);
+      console.log('✅ [EmailService] Password reset email sent successfully:', data.id);
       return { success: true, data };
     } catch (error) {
-      console.error('Failed to send password reset email:', error);
+      console.error('❌ [EmailService] Exception caught in sendPasswordResetEmail');
+      console.error('Error type:', error.constructor.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       return { success: false, error: error.message };
     }
   }
