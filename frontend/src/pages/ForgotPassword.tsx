@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import api from '../config/api';
+import api from '../config/axios';
 
 interface ForgotPasswordFormData {
   email: string;
