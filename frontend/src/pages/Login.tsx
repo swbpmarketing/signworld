@@ -93,9 +93,12 @@ const Login = () => {
       // Check if error is due to unverified email
       if (error.emailNotVerified) {
         console.log('🔒 Email not verified, showing verification modal');
+        console.log('📝 Setting unverifiedEmail to:', data.email);
         setUnverifiedEmail(data.email);
+        console.log('🚪 Setting showVerificationPrompt to: TRUE');
         setShowVerificationPrompt(true);
-        console.log('Modal state set to true');
+        console.log('✓ Modal state set to true, loading stays true');
+        console.log('🔍 Current state - loading:', loading, 'showVerificationPrompt: will be true on next render');
         // Keep loading state true to prevent resubmission while modal is open
       } else {
         toast.error(error.message || 'Login failed');
