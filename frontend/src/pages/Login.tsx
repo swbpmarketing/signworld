@@ -74,7 +74,15 @@ const Login = () => {
     }
   };
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: LoginFormData, e?: React.BaseSyntheticEvent) => {
+    console.log('🎯 onSubmit called');
+
+    // CRITICAL: Prevent default form submission that causes page refresh
+    if (e) {
+      e.preventDefault();
+      console.log('✋ Default form submission prevented');
+    }
+
     // Prevent multiple submissions
     if (loading) {
       console.log('⏳ Already loading, ignoring duplicate submission');
@@ -178,7 +186,14 @@ const Login = () => {
             </div>
 
             {/* Form */}
-            <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+            <form
+              className="space-y-5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                console.log('📝 Form submit event - calling handleSubmit');
+                handleSubmit(onSubmit)(e);
+              }}
+            >
               {/* Email */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
