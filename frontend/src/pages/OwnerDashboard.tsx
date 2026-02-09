@@ -5,6 +5,9 @@ import { getDashboardStats, getRecentActivity } from '../services/dashboardServi
 import { useNavigate, Link } from 'react-router-dom';
 import { useState, Fragment, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
+import { useWidgetSizes } from '../hooks/useWidgetSizes';
+import DashboardGrid from '../components/dashboard/DashboardGrid';
+import ResizableWidget from '../components/dashboard/ResizableWidget';
 import {
   CalendarIcon,
   UserGroupIcon,
@@ -27,6 +30,11 @@ const OwnerDashboard = () => {
   const navigate = useNavigate();
   const [selectedEventType, setSelectedEventType] = useState<'all' | 'rsvp' | null>(null);
   const previewedUser = getPreviewedUser();
+
+  const { sizes, setWidgetSize } = useWidgetSizes('owner', {
+    'quick-actions': 'md',
+    'recent-activity': 'md',
+  });
 
   // Fetch dashboard stats
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
@@ -309,8 +317,9 @@ const OwnerDashboard = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <DashboardGrid>
         {/* Quick Actions */}
+        <ResizableWidget widgetId="quick-actions" size={sizes['quick-actions']} onSizeChange={setWidgetSize}>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
@@ -336,8 +345,10 @@ const OwnerDashboard = () => {
             </div>
           </div>
         </div>
+        </ResizableWidget>
 
         {/* Recent Activity */}
+        <ResizableWidget widgetId="recent-activity" size={sizes['recent-activity']} onSizeChange={setWidgetSize}>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
@@ -394,7 +405,8 @@ const OwnerDashboard = () => {
             )}
           </div>
         </div>
-      </div>
+        </ResizableWidget>
+      </DashboardGrid>
 
       {/* Event List Modal */}
       {selectedEventType && (

@@ -1691,16 +1691,17 @@ const Equipment = () => {
             </p>
           </div>
           <div className="flex-shrink-0 flex items-center gap-2">
-            {/* Vendor-specific: Manage Listings button only */}
-            {(user?.role === 'vendor' || effectiveRole === 'vendor') ? (
+            {/* Manage Listings button for vendors and admins */}
+            {(user?.role === 'vendor' || effectiveRole === 'vendor' || user?.role === 'admin' || effectiveRole === 'admin') && (
               <button
                 onClick={() => navigate('/vendor-equipment')}
                 className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors font-medium inline-flex items-center"
               >
                 <PlusIcon className="h-4 w-4 mr-2" />
-                Manage My Listings
+                {(user?.role === 'admin' || effectiveRole === 'admin') ? 'Manage Listings' : 'Manage My Listings'}
               </button>
-            ) : (
+            )}
+            {user?.role !== 'vendor' && effectiveRole !== 'vendor' && (
               <>
                 <button
                   onClick={() => setShowCartDrawer(true)}

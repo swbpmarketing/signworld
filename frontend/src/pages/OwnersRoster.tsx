@@ -175,6 +175,7 @@ const OwnersRoster = () => {
     setSearchInput('');
     setSearchQuery('');
   };
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
@@ -607,6 +608,13 @@ const OwnersRoster = () => {
     }
   }).filter(Boolean) || [];
 
+  // Sort owners by name
+  const sortedOwners = [...owners].sort((a, b) => {
+    const nameA = (a.name || '').toLowerCase();
+    const nameB = (b.name || '').toLowerCase();
+    return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+  });
+
   const toggleSpecialty = (specialty: string) => {
     setSelectedSpecialties(prev =>
       prev.includes(specialty)
@@ -782,6 +790,23 @@ const OwnersRoster = () => {
                   <ChevronDownIcon className="h-4 w-4 ml-1 text-gray-400" />
                 )}
               </button>
+              <button
+                onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 text-sm font-medium text-gray-700 dark:text-gray-300"
+                title={sortOrder === 'asc' ? 'Sorted A to Z' : 'Sorted Z to A'}
+              >
+                {sortOrder === 'asc' ? (
+                  <>
+                    <ChevronUpIcon className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" />
+                    A-Z
+                  </>
+                ) : (
+                  <>
+                    <ChevronDownIcon className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" />
+                    Z-A
+                  </>
+                )}
+              </button>
               <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
                 <button
                   onClick={() => setViewMode('grid')}
@@ -868,7 +893,7 @@ const OwnersRoster = () => {
         </div>
       ) : viewMode === 'grid' ? (
         <div data-tour="owner-cards" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {owners.map((owner) => (
+          {sortedOwners.map((owner) => (
             <Link
               key={owner.id}
               to={`/owners/${owner.id}`}
@@ -920,10 +945,6 @@ const OwnersRoster = () => {
                         )}
                       </span>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">Projects</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{owner.totalProjects}</span>
                   </div>
                   {canSeeRatings(owner.id) && (
                     <div className="flex items-center justify-between text-sm">
@@ -1065,7 +1086,7 @@ const OwnersRoster = () => {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {owners.map((owner) => (
+                {sortedOwners.map((owner) => (
                   <tr key={owner.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -1114,10 +1135,6 @@ const OwnersRoster = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                        <div className="text-xs sm:text-sm">
-                          <span className="text-gray-500 dark:text-gray-400">Projects: </span>
-                          <span className="font-medium text-gray-900 dark:text-gray-100">{owner.totalProjects}</span>
-                        </div>
                         {canSeeRatings(owner.id) && (
                           <div className="flex items-center text-xs sm:text-sm">
                             <StarSolidIcon className="h-4 w-4 text-yellow-400 mr-1" />

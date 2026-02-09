@@ -259,7 +259,7 @@ const Login = () => {
 
               <div
                 className={`transition-all duration-300 ease-in-out ${
-                  showCredentials ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                  showCredentials ? 'max-h-[640px] opacity-100' : 'max-h-0 opacity-0'
                 } overflow-hidden`}
               >
                 <div className="px-4 pb-4 space-y-3">
@@ -286,6 +286,68 @@ const Login = () => {
                       <button
                         type="button"
                         onClick={() => copyToClipboard('admin123', 'Password')}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700/40 rounded"
+                        title="Copy password"
+                      >
+                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-400 hover:text-blue-400" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Pat (Admin) */}
+                  <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
+                    <p className="text-xs font-semibold text-blue-300 mb-1">Admin (Pat)</p>
+                    <div className="flex items-center justify-between group">
+                      <p className="text-xs text-gray-300">
+                        Email: <span className="font-semibold text-gray-100">pat@signcompany.com</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('pat@signcompany.com', 'Email')}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700/40 rounded"
+                        title="Copy email"
+                      >
+                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-400 hover:text-blue-400" />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between group">
+                      <p className="text-xs text-gray-300">
+                        Password: <span className="font-semibold text-gray-100">pat123</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('pat123', 'Password')}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700/40 rounded"
+                        title="Copy password"
+                      >
+                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-400 hover:text-blue-400" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Gab (Admin) */}
+                  <div className="p-3 bg-gray-800/40 rounded-lg border border-gray-700/40">
+                    <p className="text-xs font-semibold text-blue-300 mb-1">Admin (Gab)</p>
+                    <div className="flex items-center justify-between group">
+                      <p className="text-xs text-gray-300">
+                        Email: <span className="font-semibold text-gray-100">gab@signcompany.com</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('gab@signcompany.com', 'Email')}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700/40 rounded"
+                        title="Copy email"
+                      >
+                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-400 hover:text-blue-400" />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between group">
+                      <p className="text-xs text-gray-300">
+                        Password: <span className="font-semibold text-gray-100">gab123</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('gab123', 'Password')}
                         className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-700/40 rounded"
                         title="Copy password"
                       >

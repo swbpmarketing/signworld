@@ -61,6 +61,7 @@ interface BugReport {
     };
     text: string;
     createdAt: string;
+    editedAt?: string;
   }[];
   votes: string[];
   votesCount: number;
@@ -148,6 +149,9 @@ const BugReports = () => {
   const [editReport, setEditReport] = useState<NewReportForm>(initialFormState);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentText, setEditCommentText] = useState('');
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -318,6 +322,54 @@ const BugReports = () => {
     },
     onError: () => {
       toast.error('Failed to add comment');
+    },
+  });
+
+  // Edit comment mutation
+  const editCommentMutation = useMutation({
+    mutationFn: async ({ reportId, commentId, text }: { reportId: string; commentId: string; text: string }) => {
+      const response = await api.put(`/bug-reports/${reportId}/comment/${commentId}`, { text });
+      return { reportId, data: response.data };
+    },
+    onSuccess: async ({ reportId }) => {
+      queryClient.invalidateQueries({ queryKey: ['bugReports'] });
+      setEditingCommentId(null);
+      setEditCommentText('');
+      toast.success('Comment updated');
+      if (selectedReport && selectedReport._id === reportId) {
+        try {
+          const response = await api.get(`/bug-reports/${reportId}`);
+          setSelectedReport(response.data.data);
+        } catch (error) {
+          console.error('Failed to refresh report:', error);
+        }
+      }
+    },
+    onError: () => {
+      toast.error('Failed to update comment');
+    },
+  });
+
+  // Delete comment mutation
+  const deleteCommentMutation = useMutation({
+    mutationFn: async ({ reportId, commentId }: { reportId: string; commentId: string }) => {
+      const response = await api.delete(`/bug-reports/${reportId}/comment/${commentId}`);
+      return { reportId, data: response.data };
+    },
+    onSuccess: async ({ reportId }) => {
+      queryClient.invalidateQueries({ queryKey: ['bugReports'] });
+      toast.success('Comment deleted');
+      if (selectedReport && selectedReport._id === reportId) {
+        try {
+          const response = await api.get(`/bug-reports/${reportId}`);
+          setSelectedReport(response.data.data);
+        } catch (error) {
+          console.error('Failed to refresh report:', error);
+        }
+      }
+    },
+    onError: () => {
+      toast.error('Failed to delete comment');
     },
   });
 
@@ -806,9 +858,9 @@ const BugReports = () => {
     );
   };
 
-  // Non-admin view: Just the submission form inline
-  if (!isAdmin) {
-    return (
+  return (
+    <>
+    {!isAdmin ? (
       <div className="max-w-2xl mx-auto space-y-6" data-tour="bug-reports-content">
         {/* Header */}
         <div className="text-center">
@@ -999,77 +1051,143 @@ const BugReports = () => {
             </div>
           </form>
         </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="space-y-6" data-tour="bug-reports-content">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary-600/10 rounded-xl">
-            <BugAntIcon className="h-8 w-8 text-primary-500" />
+        {/* My Submissions */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            My Submissions
+          </h2>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-300 border-t-primary-600"></div>
+            </div>
+          ) : !reportsData || reportsData.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+              <ChatBubbleLeftIcon className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-500 dark:text-gray-400 text-sm">No submissions yet. Submit your first report above!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reportsData.map((report) => (
+                <div
+                  key={report._id}
+                  onClick={() => openDetailModal(report)}
+                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      {report.type === 'bug' ? (
+                        <BugAntIcon className="h-5 w-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <LightBulbIcon className="h-5 w-5 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                      )}
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {report.title}
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+                          {report.description}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${priorityConfig[report.priority].color}`}>
+                        {priorityConfig[report.priority].label}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${statusConfig[report.status].headerBg} ${statusConfig[report.status].headerText}`}>
+                        {statusConfig[report.status].label}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <ClockIcon className="h-3.5 w-3.5" />
+                      {formatDate(report.createdAt)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <ChatBubbleLeftIcon className="h-3.5 w-3.5" />
+                      {report.commentsCount} {report.commentsCount === 1 ? 'comment' : 'comments'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <ChevronUpIcon className="h-3.5 w-3.5" />
+                      {report.votesCount} {report.votesCount === 1 ? 'vote' : 'votes'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    ) : (
+      <div className="space-y-6" data-tour="bug-reports-content">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-primary-600/10 rounded-xl">
+              <BugAntIcon className="h-8 w-8 text-primary-500" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Bug Reports & Feature Requests
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400">
+                Track and manage feedback to improve the app
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Bug Reports & Feature Requests
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400">
-              Track and manage feedback to improve the app
-            </p>
+
+          <button
+            data-tour="report-bug-button"
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium"
+          >
+            <PlusIcon className="h-5 w-5" />
+            Submit Feedback
+          </button>
+        </div>
+
+        {/* Search Bar and Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div data-tour="bug-filters" className="relative flex-1 max-w-md">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by #, title, or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
           </div>
+          <button
+            data-tour="my-reports"
+            onClick={() => setShowMyReportsOnly(!showMyReportsOnly)}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+              showMyReportsOnly
+                ? 'bg-primary-600 text-white hover:bg-primary-700'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            <UserCircleIcon className="h-5 w-5" />
+            My Reports
+          </button>
         </div>
 
-        <button
-          data-tour="report-bug-button"
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Submit Feedback
-        </button>
+        {/* Kanban Board */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-primary-600"></div>
+          </div>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+            <KanbanColumn status="pending" reports={reportsByStatus.pending} />
+            <KanbanColumn status="in_progress" reports={reportsByStatus.in_progress} />
+            <KanbanColumn status="rejected" reports={reportsByStatus.rejected} />
+            <KanbanColumn status="completed" reports={reportsByStatus.completed} />
+          </div>
+        )}
       </div>
-
-      {/* Search Bar and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div data-tour="bug-filters" className="relative flex-1 max-w-md">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by #, title, or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
-        </div>
-        <button
-          data-tour="my-reports"
-          onClick={() => setShowMyReportsOnly(!showMyReportsOnly)}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-            showMyReportsOnly
-              ? 'bg-primary-600 text-white hover:bg-primary-700'
-              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-          }`}
-        >
-          <UserCircleIcon className="h-5 w-5" />
-          My Reports
-        </button>
-      </div>
-
-      {/* Kanban Board */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-primary-600"></div>
-        </div>
-      ) : (
-        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
-          <KanbanColumn status="pending" reports={reportsByStatus.pending} />
-          <KanbanColumn status="in_progress" reports={reportsByStatus.in_progress} />
-          <KanbanColumn status="rejected" reports={reportsByStatus.rejected} />
-          <KanbanColumn status="completed" reports={reportsByStatus.completed} />
-        </div>
-      )}
+    )}
 
       {/* Create Modal */}
       {showCreateModal && (
@@ -1882,24 +2000,110 @@ const BugReports = () => {
                     ) : (
                       selectedReport.comments.map((comment) => (
                         <div key={comment._id} className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-2">
-                            {comment.user.profileImage ? (
-                              <img
-                                src={comment.user.profileImage}
-                                alt={comment.user.name}
-                                className="h-6 w-6 rounded-full object-cover"
-                              />
-                            ) : (
-                              <UserCircleIcon className="h-6 w-6 text-gray-400" />
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {comment.user.profileImage ? (
+                                <img
+                                  src={comment.user.profileImage}
+                                  alt={comment.user.name}
+                                  className="h-6 w-6 rounded-full object-cover"
+                                />
+                              ) : (
+                                <UserCircleIcon className="h-6 w-6 text-gray-400" />
+                              )}
+                              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                                {comment.user.name}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {formatTimeAgo(comment.createdAt)}
+                              </span>
+                              {comment.editedAt && (
+                                <span className="text-xs text-gray-400 italic">(edited)</span>
+                              )}
+                            </div>
+                            {user && user._id === comment.user._id && (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => {
+                                    setEditingCommentId(comment._id);
+                                    setEditCommentText(comment.text);
+                                  }}
+                                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                                  title="Edit comment"
+                                >
+                                  <PencilIcon className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+                                </button>
+                                <button
+                                  onClick={() => setDeletingCommentId(comment._id)}
+                                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                                  title="Delete comment"
+                                >
+                                  <TrashIcon className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
+                                </button>
+                              </div>
                             )}
-                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                              {comment.user.name}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {formatTimeAgo(comment.createdAt)}
-                            </span>
                           </div>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">{comment.text}</p>
+                          {deletingCommentId === comment._id ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-red-600 dark:text-red-400">Delete this comment?</span>
+                              <button
+                                onClick={() => {
+                                  deleteCommentMutation.mutate({ reportId: selectedReport._id, commentId: comment._id });
+                                  setDeletingCommentId(null);
+                                }}
+                                disabled={deleteCommentMutation.isPending}
+                                className="px-2 py-0.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors disabled:opacity-50"
+                              >
+                                Delete
+                              </button>
+                              <button
+                                onClick={() => setDeletingCommentId(null)}
+                                className="px-2 py-0.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : editingCommentId === comment._id ? (
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={editCommentText}
+                                onChange={(e) => setEditCommentText(e.target.value)}
+                                className="flex-1 px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    if (editCommentText.trim()) {
+                                      editCommentMutation.mutate({ reportId: selectedReport._id, commentId: comment._id, text: editCommentText });
+                                    }
+                                  }
+                                }}
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => {
+                                  if (editCommentText.trim()) {
+                                    editCommentMutation.mutate({ reportId: selectedReport._id, commentId: comment._id, text: editCommentText });
+                                  }
+                                }}
+                                disabled={!editCommentText.trim() || editCommentMutation.isPending}
+                                className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingCommentId(null);
+                                  setEditCommentText('');
+                                }}
+                                className="px-2.5 py-1.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-700 dark:text-gray-300">{comment.text}</p>
+                          )}
                         </div>
                       ))
                     )}
@@ -1934,7 +2138,7 @@ const BugReports = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

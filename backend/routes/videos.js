@@ -107,10 +107,26 @@ router.get('/stats', async (req, res) => {
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const { category, search, limit = 20, page = 1, sort = 'newest' } = req.query;
+    const { category, search, limit = 20, page = 1, sort = 'newest', playlist } = req.query;
 
     // Build query
     const query = { isActive: true };
+
+    // Filter by playlist - fetch playlist's video IDs and filter
+    if (playlist) {
+      const Playlist = require('../models/Playlist');
+      const playlistDoc = await Playlist.findById(playlist).select('videos');
+      if (playlistDoc && playlistDoc.videos && playlistDoc.videos.length > 0) {
+        query._id = { $in: playlistDoc.videos };
+      } else {
+        // Playlist not found or empty, return empty result
+        return res.json({
+          success: true,
+          data: [],
+          pagination: { total: 0, pages: 0, page: Number(page), limit: Number(limit) }
+        });
+      }
+    }
 
     if (category && category !== 'all') {
       query.category = category;
@@ -126,6 +142,7 @@ router.get('/', async (req, res) => {
 
     // Build sort options
     let sortOption = { isFeatured: -1, publishedAt: -1 };
+    const hasCategory = category && category !== 'all';
     switch (sort) {
       case 'oldest':
         sortOption = { publishedAt: 1 };
@@ -138,7 +155,9 @@ router.get('/', async (req, res) => {
         break;
       case 'newest':
       default:
-        sortOption = { isFeatured: -1, publishedAt: -1 };
+        sortOption = hasCategory
+          ? { sortOrder: 1, isFeatured: -1, publishedAt: -1 }
+          : { isFeatured: -1, publishedAt: -1 };
     }
 
     // Execute query with pagination
@@ -167,6 +186,39 @@ router.get('/', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error fetching videos'
+    });
+  }
+});
+
+// @desc    Reorder videos within a category
+// @route   PUT /api/videos/reorder
+// @access  Private/Admin
+router.put('/reorder', protect, authorize('admin'), async (req, res) => {
+  try {
+    const { videoIds } = req.body;
+
+    if (!Array.isArray(videoIds) || videoIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'videoIds must be a non-empty array'
+      });
+    }
+
+    const bulkOps = videoIds.map((id, index) => ({
+      updateOne: {
+        filter: { _id: id },
+        update: { $set: { sortOrder: index } }
+      }
+    }));
+
+    await Video.bulkWrite(bulkOps);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error reordering videos:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error reordering videos'
     });
   }
 });

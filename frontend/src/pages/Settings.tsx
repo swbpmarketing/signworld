@@ -106,6 +106,7 @@ const Settings = () => {
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [targetRole, setTargetRole] = useState('all');
+  const [notificationMethod, setNotificationMethod] = useState<'internal' | 'email'>('internal');
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
 
   // Role permissions state
@@ -281,6 +282,7 @@ const Settings = () => {
         title: broadcastTitle,
         message: broadcastMessage,
         targetRole: targetRole,
+        notificationMethod: notificationMethod,
         type: 'announcement',
       });
 
@@ -288,6 +290,7 @@ const Settings = () => {
       setBroadcastTitle('');
       setBroadcastMessage('');
       setTargetRole('all');
+      setNotificationMethod('internal');
       queryClient.invalidateQueries({ queryKey: ['broadcast-history'] });
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to send broadcast');
@@ -877,23 +880,54 @@ const Settings = () => {
                   Send Announcement
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  Send a broadcast notification to all users or a specific role group.
+                  Send a broadcast notification to all owners or a filtered group.
                 </p>
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Target Audience
-                    </label>
-                    <select
-                      value={targetRole}
-                      onChange={(e) => setTargetRole(e.target.value)}
-                      className="w-full sm:w-48 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    >
-                      <option value="all">All Users</option>
-                      <option value="owner">Owners Only</option>
-                      <option value="vendor">Vendors Only</option>
-                      <option value="admin">Admins Only</option>
-                    </select>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Target Audience
+                      </label>
+                      <select
+                        value={targetRole}
+                        onChange={(e) => setTargetRole(e.target.value)}
+                        className="w-full sm:w-48 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="all">All Owners</option>
+                        <option value="owner">Owners Only</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Notification Method
+                      </label>
+                      <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setNotificationMethod('internal')}
+                          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                            notificationMethod === 'internal'
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          <BellIcon className="h-4 w-4" />
+                          Internal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNotificationMethod('email')}
+                          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-l border-gray-300 dark:border-gray-600 ${
+                            notificationMethod === 'email'
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          <EnvelopeIcon className="h-4 w-4" />
+                          Email
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
