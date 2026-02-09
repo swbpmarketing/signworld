@@ -591,6 +591,80 @@ router.post('/:id/comment', protect, async (req, res) => {
   }
 });
 
+// @desc    Edit comment on bug report
+// @route   PUT /api/bug-reports/:id/comment/:commentId
+// @access  Private (comment author only)
+router.put('/:id/comment/:commentId', protect, async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text || text.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Comment text is required'
+      });
+    }
+
+    const report = await BugReport.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        error: 'Bug report not found'
+      });
+    }
+
+    // Find comment
+    const comment = report.comments.id(req.params.commentId);
+
+    if (!comment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Comment not found'
+      });
+    }
+
+    // Check authorization - only comment author can edit
+    if (comment.user.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to edit this comment'
+      });
+    }
+
+    // Update comment
+    comment.text = text.trim();
+    comment.editedAt = Date.now();
+
+    await report.save();
+    await report.populate('comments.user', 'name email profileImage');
+
+    // Get the updated comment
+    const updatedComment = report.comments.id(req.params.commentId);
+
+    // Emit real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.to('bug-reports').emit('bugReport:commentEdited', {
+        reportId: report._id,
+        comment: updatedComment,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedComment,
+      message: 'Comment updated successfully'
+    });
+  } catch (error) {
+    console.error('Error editing comment:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to edit comment'
+    });
+  }
+});
+
 // @desc    Delete comment from bug report
 // @route   DELETE /api/bug-reports/:id/comment/:commentId
 // @access  Private (comment author or admin)

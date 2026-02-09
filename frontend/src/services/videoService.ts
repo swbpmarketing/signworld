@@ -48,6 +48,7 @@ export type GetVideosParams = {
   page?: number;
   limit?: number;
   sort?: string;
+  playlist?: string;
 };
 
 export type GetVideosResponse = {
@@ -81,6 +82,7 @@ export const getVideos = async (params: GetVideosParams = {}): Promise<GetVideos
   if (params.page) queryParams.append('page', params.page.toString());
   if (params.limit) queryParams.append('limit', params.limit.toString());
   if (params.sort) queryParams.append('sort', params.sort);
+  if (params.playlist) queryParams.append('playlist', params.playlist);
   const response = await api.get(`/videos?${queryParams.toString()}`);
   return response.data;
 };
@@ -158,6 +160,12 @@ export const incrementVideoView = async (id: string): Promise<{ success: boolean
   return response.data;
 };
 
+// Reorder videos within a category
+export const reorderVideos = async (videoIds: string[]): Promise<{ success: boolean }> => {
+  const response = await api.put('/videos/reorder', { videoIds });
+  return response.data;
+};
+
 export default {
   getVideos,
   getVideoStats,
@@ -168,4 +176,5 @@ export default {
   deleteVideo,
   toggleVideoLike,
   incrementVideoView,
+  reorderVideos,
 };

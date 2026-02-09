@@ -25,12 +25,31 @@ import {
   TrashIcon,
   EllipsisVerticalIcon,
   PencilIcon,
+  Bars3Icon,
+  CheckIcon,
 } from '@heroicons/react/24/outline';
 import { BookmarkIcon as BookmarkSolidIcon, PlayIcon as PlaySolidIcon, StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import CustomSelect from '../components/CustomSelect';
 import { useAuth } from '../context/AuthContext';
 import usePermissions from '../hooks/usePermissions';
-import { getVideos, getVideoStats, getVideo, createVideo, uploadVideo, updateVideo, deleteVideo, incrementVideoView } from '../services/videoService';
+import { getVideos, getVideoStats, getVideo, createVideo, uploadVideo, updateVideo, deleteVideo, incrementVideoView, reorderVideos } from '../services/videoService';
 import type { Video as VideoType, CreateVideoData } from '../services/videoService';
 import { getPlaylists } from '../services/playlistService';
 import type { Playlist } from '../services/playlistService';
@@ -151,6 +170,61 @@ const VideoOptionsMenu = ({
   );
 };
 
+/**
+ * SortableVideoItem Component - Draggable row for reorder mode
+ */
+const SortableVideoItem = ({ video, index }: { video: VideoUI; index: number }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: video._id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-4 p-3 bg-white dark:bg-gray-800 rounded-lg border ${
+        isDragging ? 'border-primary-400 shadow-lg' : 'border-gray-200 dark:border-gray-700'
+      }`}
+    >
+      <button
+        className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 touch-none"
+        {...attributes}
+        {...listeners}
+      >
+        <Bars3Icon className="h-5 w-5" />
+      </button>
+      <span className="text-sm font-mono text-gray-400 dark:text-gray-500 w-6 text-center">{index + 1}</span>
+      <img
+        src={video.thumbnail || video.thumbnailUrl || 'https://via.placeholder.com/64x48?text=Video'}
+        alt={video.title}
+        className="w-16 h-12 object-cover rounded flex-shrink-0"
+      />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{video.title}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {backendToUICategory[video.category] || video.category}
+        </p>
+      </div>
+      {video.duration && (
+        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded flex-shrink-0">
+          {video.duration}
+        </span>
+      )}
+    </div>
+  );
+};
+
 const Videos = () => {
   const { user } = useAuth();
   const { canCreate, canDelete } = usePermissions();
@@ -169,6 +243,18 @@ const Videos = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(12);
   const [showMobileCategoriesDropdown, setShowMobileCategoriesDropdown] = useState(false);
+
+  // Reorder mode state
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [reorderedVideos, setReorderedVideos] = useState<VideoUI[]>([]);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -192,7 +278,7 @@ const Videos = () => {
 
   // Fetch videos
   const { data: videosData, isLoading: videosLoading } = useQuery({
-    queryKey: ['videos', selectedCategory, searchQuery, sortBy, currentPage, itemsPerPage],
+    queryKey: ['videos', selectedCategory, searchQuery, sortBy, currentPage, itemsPerPage, selectedPlaylist?._id],
     queryFn: () => {
       // Find the backend key for the selected category
       let categoryKey = 'all';
@@ -212,6 +298,7 @@ const Videos = () => {
         sort: sortBy,
         page: currentPage,
         limit: itemsPerPage,
+        playlist: selectedPlaylist?._id,
       });
     },
   });
@@ -277,6 +364,20 @@ const Videos = () => {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to delete video');
+    },
+  });
+
+  // Reorder videos mutation
+  const reorderVideosMutation = useMutation({
+    mutationFn: reorderVideos,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
+      toast.success('Video order saved!');
+      setIsReorderMode(false);
+      setReorderedVideos([]);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to save video order');
     },
   });
 
@@ -346,9 +447,38 @@ const Videos = () => {
     setCurrentPage(1); // Reset to first page
   };
 
-  // Reset page when category or playlist changes
+  // Reorder mode handlers
+  const enterReorderMode = () => {
+    setReorderedVideos([...videos]);
+    setIsReorderMode(true);
+  };
+
+  const cancelReorderMode = () => {
+    setIsReorderMode(false);
+    setReorderedVideos([]);
+  };
+
+  const handleSaveOrder = () => {
+    const videoIds = reorderedVideos.map(v => v._id);
+    reorderVideosMutation.mutate(videoIds);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setReorderedVideos((items) => {
+        const oldIndex = items.findIndex(item => item._id === active.id);
+        const newIndex = items.findIndex(item => item._id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  // Reset page and exit reorder mode when category or playlist changes
   useEffect(() => {
     setCurrentPage(1);
+    setIsReorderMode(false);
+    setReorderedVideos([]);
   }, [selectedCategory, selectedPlaylist]);
 
   // Scroll to top when page changes
@@ -491,12 +621,8 @@ const Videos = () => {
     };
   });
 
-  // Filter by playlist if one is selected
-  const videos: VideoUI[] = selectedPlaylist
-    ? allVideos.filter(video =>
-        selectedPlaylist.videos.some(pv => pv._id === video._id)
-      )
-    : allVideos;
+  // Videos are already filtered by playlist on the backend when selectedPlaylist is set
+  const videos: VideoUI[] = allVideos;
 
   const featuredVideo = allVideos.find(v => v.isFeatured) || allVideos[0];
 
@@ -566,6 +692,15 @@ const Videos = () => {
             </p>
           </div>
           <div className="flex-shrink-0 flex gap-2">
+            {isAdmin && selectedCategory !== 'All Videos' && !searchQuery && !selectedPlaylist && (
+              <button
+                onClick={enterReorderMode}
+                className="px-2.5 py-1.5 bg-white dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium inline-flex items-center border border-gray-300 dark:border-gray-600"
+              >
+                <Bars3Icon className="h-4 w-4 mr-2" />
+                Manage Order
+              </button>
+            )}
             {canCreate && (
               <button
                 onClick={() => setShowUploadModal(true)}
@@ -977,8 +1112,65 @@ const Videos = () => {
             </div>
           )}
 
+          {/* Reorder Mode */}
+          {isReorderMode && reorderedVideos.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div>
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Drag videos to reorder them within "{selectedCategory}"
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    Changes are saved when you click "Save Order"
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={cancelReorderMode}
+                    className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveOrder}
+                    disabled={reorderVideosMutation.isPending}
+                    className="px-3 py-1.5 text-sm text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
+                  >
+                    {reorderVideosMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-b-2 border-white"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckIcon className="h-4 w-4" />
+                        Save Order
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={reorderedVideos.map(v => v._id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {reorderedVideos.map((video, index) => (
+                      <SortableVideoItem key={video._id} video={video} index={index} />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
+          )}
+
           {/* Loading State */}
-          {videosLoading && (
+          {!isReorderMode && videosLoading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
@@ -997,7 +1189,7 @@ const Videos = () => {
           )}
 
           {/* Video Grid */}
-          {!videosLoading && videos.length > 0 && (
+          {!isReorderMode && !videosLoading && videos.length > 0 && (
             <>
               <div data-tour="video-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6">
                 {videos.map((video) => (
@@ -1190,7 +1382,7 @@ const Videos = () => {
           )}
 
           {/* Empty State */}
-          {!videosLoading && videos.length === 0 && (
+          {!isReorderMode && !videosLoading && videos.length === 0 && (
             <div className="text-center py-12">
               <VideoCameraIcon className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No videos found</h3>

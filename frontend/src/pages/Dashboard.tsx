@@ -35,6 +35,9 @@ import EngagementTrendChart from '../components/analytics/EngagementTrendChart';
 import ActivityTimeline from '../components/analytics/ActivityTimeline';
 import EquipmentPopularityWidget from '../components/analytics/EquipmentPopularityWidget';
 import SatisfactionOverview from '../components/analytics/SatisfactionOverview';
+import { useWidgetSizes } from '../hooks/useWidgetSizes';
+import DashboardGrid from '../components/dashboard/DashboardGrid';
+import ResizableWidget from '../components/dashboard/ResizableWidget';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -43,6 +46,16 @@ const Dashboard = () => {
   const effectiveRole = getEffectiveRole();
   const isActualAdmin = user?.role === 'admin';
   const isAdmin = isActualAdmin && !isPreviewMode;
+
+  const { sizes, setWidgetSize } = useWidgetSizes('admin', {
+    'engagement-metrics': 'md',
+    'engagement-trend': 'md',
+    'activity-timeline': 'md',
+    'equipment-popularity': 'md',
+    'satisfaction-overview': 'md',
+    'recent-activity': 'md',
+    'quick-actions': 'md',
+  });
 
   // Get previewed user - this will be called fresh on each render
   const previewedUser = isPreviewMode && previewState.type === 'user'
@@ -480,20 +493,23 @@ const Dashboard = () => {
         <div data-tour="dashboard-charts" className="space-y-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Analytics Dashboard</h2>
 
-          {/* Row 1: Engagement Metrics + Trend Chart */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <EngagementMetricsWidget className="h-full" />
-            <div className="lg:col-span-2">
+          <DashboardGrid>
+            <ResizableWidget widgetId="engagement-metrics" size={sizes['engagement-metrics']} onSizeChange={setWidgetSize}>
+              <EngagementMetricsWidget className="h-full" />
+            </ResizableWidget>
+            <ResizableWidget widgetId="engagement-trend" size={sizes['engagement-trend']} onSizeChange={setWidgetSize}>
               <EngagementTrendChart height={320} />
-            </div>
-          </div>
-
-          {/* Row 2: Activity Timeline + Equipment Popularity + Satisfaction */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <ActivityTimeline />
-            <EquipmentPopularityWidget />
-            <SatisfactionOverview />
-          </div>
+            </ResizableWidget>
+            <ResizableWidget widgetId="activity-timeline" size={sizes['activity-timeline']} onSizeChange={setWidgetSize}>
+              <ActivityTimeline />
+            </ResizableWidget>
+            <ResizableWidget widgetId="equipment-popularity" size={sizes['equipment-popularity']} onSizeChange={setWidgetSize}>
+              <EquipmentPopularityWidget />
+            </ResizableWidget>
+            <ResizableWidget widgetId="satisfaction-overview" size={sizes['satisfaction-overview']} onSizeChange={setWidgetSize}>
+              <SatisfactionOverview />
+            </ResizableWidget>
+          </DashboardGrid>
         </div>
       )}
 
@@ -561,8 +577,9 @@ const Dashboard = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <DashboardGrid>
         {/* Recent Activity */}
+        <ResizableWidget widgetId="recent-activity" size={sizes['recent-activity']} onSizeChange={setWidgetSize}>
         <div data-tour="dashboard-recent-activity" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
@@ -620,8 +637,10 @@ const Dashboard = () => {
             )}
           </div>
         </div>
+        </ResizableWidget>
 
         {/* Quick Actions */}
+        <ResizableWidget widgetId="quick-actions" size={sizes['quick-actions']} onSizeChange={setWidgetSize}>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
@@ -654,7 +673,8 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-      </div>
+        </ResizableWidget>
+      </DashboardGrid>
     </div>
   );
 };

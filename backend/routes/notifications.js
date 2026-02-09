@@ -3,6 +3,7 @@ const router = express.Router();
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { protect, authorize } = require('../middleware/auth');
+const { sendEmail } = require('../utils/emailService');
 
 // @desc    Get all notifications for the current user
 // @route   GET /api/notifications
@@ -175,7 +176,7 @@ router.delete('/', protect, async (req, res) => {
 // @access  Private/Admin
 router.post('/broadcast', protect, authorize('admin'), async (req, res) => {
   try {
-    const { title, message, type = 'announcement', targetRole } = req.body;
+    const { title, message, type = 'announcement', targetRole, notificationMethod = 'internal' } = req.body;
 
     if (!title || !message) {
       return res.status(400).json({
@@ -184,38 +185,101 @@ router.post('/broadcast', protect, authorize('admin'), async (req, res) => {
       });
     }
 
-    // Get target users based on role filter
-    const userQuery = { isActive: true };
-    if (targetRole && targetRole !== 'all') {
-      userQuery.role = targetRole;
-    }
+    // Only target owners — "all" means all owners
+    const userQuery = { isActive: true, role: 'owner' };
 
-    const users = await User.find(userQuery).select('_id');
+    const users = await User.find(userQuery).select('_id email name');
 
     if (users.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'No users found to notify'
+        error: 'No owners found to notify'
       });
     }
 
-    // Create notifications for all target users
-    const notifications = users.map(user => ({
-      recipient: user._id,
-      sender: req.user._id,
-      type: type,
-      title: title,
-      message: message,
-      isRead: false
-    }));
+    if (notificationMethod === 'email') {
+      // Send email to each owner
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+              .header { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+              .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; }
+              .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>${title}</h1>
+              </div>
+              <div class="content">
+                <p>${message.replace(/\n/g, '<br>')}</p>
+              </div>
+              <div class="footer">
+                <p>This is a broadcast announcement from Sign Company Dashboard.</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
 
-    await Notification.insertMany(notifications);
+      let emailsSent = 0;
+      let emailsFailed = 0;
+      for (const user of users) {
+        if (user.email) {
+          const result = await sendEmail({
+            to: user.email,
+            subject: title,
+            html: emailHtml,
+            text: message,
+          });
+          if (result.success) {
+            emailsSent++;
+          } else {
+            emailsFailed++;
+          }
+        }
+      }
 
-    res.status(201).json({
-      success: true,
-      message: `Broadcast sent to ${users.length} users`,
-      recipientCount: users.length
-    });
+      // Also create internal notification records for history tracking
+      const notifications = users.map(user => ({
+        recipient: user._id,
+        sender: req.user._id,
+        type: type,
+        title: title,
+        message: message,
+        isRead: false
+      }));
+      await Notification.insertMany(notifications);
+
+      res.status(201).json({
+        success: true,
+        message: `Email broadcast sent to ${emailsSent} owners` + (emailsFailed > 0 ? ` (${emailsFailed} failed)` : ''),
+        recipientCount: emailsSent
+      });
+    } else {
+      // Internal notification only
+      const notifications = users.map(user => ({
+        recipient: user._id,
+        sender: req.user._id,
+        type: type,
+        title: title,
+        message: message,
+        isRead: false
+      }));
+
+      await Notification.insertMany(notifications);
+
+      res.status(201).json({
+        success: true,
+        message: `Broadcast sent to ${users.length} owners`,
+        recipientCount: users.length
+      });
+    }
   } catch (error) {
     console.error('Error sending broadcast notification:', error);
     res.status(500).json({

@@ -28,6 +28,9 @@ import {
   InboxIcon,
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
+import { useWidgetSizes } from '../hooks/useWidgetSizes';
+import DashboardGrid from '../components/dashboard/DashboardGrid';
+import ResizableWidget from '../components/dashboard/ResizableWidget';
 
 interface Partner {
   _id: string;
@@ -83,6 +86,14 @@ const VendorDashboard = () => {
   const { getPreviewedUser } = usePreviewMode();
   const [partner, setPartner] = useState<Partner | null>(null);
   const previewedUser = getPreviewedUser();
+
+  const { sizes, setWidgetSize } = useWidgetSizes('vendor', {
+    'profile-overview': 'md',
+    'contact-info': 'md',
+    'special-offers': 'md',
+    'recent-reviews': 'md',
+  });
+
   const [loading, setLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
@@ -419,8 +430,9 @@ const VendorDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <DashboardGrid>
         {/* Profile Overview */}
+        <ResizableWidget widgetId="profile-overview" size={sizes['profile-overview']} onSizeChange={setWidgetSize}>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
@@ -465,8 +477,10 @@ const VendorDashboard = () => {
             </div>
           </div>
         </div>
+        </ResizableWidget>
 
         {/* Contact Information */}
+        <ResizableWidget widgetId="contact-info" size={sizes['contact-info']} onSizeChange={setWidgetSize}>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Contact Information</h3>
@@ -523,11 +537,13 @@ const VendorDashboard = () => {
             </div>
           </div>
         </div>
-      </div>
+        </ResizableWidget>
+      </DashboardGrid>
 
       {/* Special Offers & Recent Reviews */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <DashboardGrid>
         {/* Special Offers */}
+        <ResizableWidget widgetId="special-offers" size={sizes['special-offers']} onSizeChange={setWidgetSize}>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
@@ -572,8 +588,10 @@ const VendorDashboard = () => {
             )}
           </div>
         </div>
+        </ResizableWidget>
 
         {/* Recent Reviews */}
+        <ResizableWidget widgetId="recent-reviews" size={sizes['recent-reviews']} onSizeChange={setWidgetSize}>
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
@@ -613,7 +631,8 @@ const VendorDashboard = () => {
             )}
           </div>
         </div>
-      </div>
+        </ResizableWidget>
+      </DashboardGrid>
 
       {/* Documents & Collateral */}
       {partner.documents && partner.documents.length > 0 && (

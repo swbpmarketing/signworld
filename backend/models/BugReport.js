@@ -66,6 +66,10 @@ const bugReportSchema = new mongoose.Schema({
       type: Date,
       default: Date.now,
     },
+    editedAt: {
+      type: Date,
+      default: null,
+    },
   }],
   votes: [{
     type: mongoose.Schema.ObjectId,
