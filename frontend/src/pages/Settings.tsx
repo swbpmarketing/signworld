@@ -21,6 +21,7 @@ import {
   UserGroupIcon,
   EyeIcon,
   AcademicCapIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 
 interface SystemSettings {
@@ -65,6 +66,141 @@ interface RolePermissions {
   vendor: RolePermission;
 }
 
+interface Announcement {
+  _id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'urgent';
+  isActive: boolean;
+  priority: number;
+  targetRoles: string[];
+  createdBy: { _id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const AnnouncementsList = () => {
+  const queryClient = useQueryClient();
+
+  const { data: announcements, isLoading } = useQuery({
+    queryKey: ['announcements-all'],
+    queryFn: async () => {
+      const res = await api.get('/announcements/all');
+      return res.data.data as Announcement[];
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Announcement> }) =>
+      api.put(`/announcements/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements-all'] });
+      queryClient.invalidateQueries({ queryKey: ['announcements-active'] });
+      toast.success('Announcement updated');
+    },
+    onError: () => toast.error('Failed to update announcement'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/announcements/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements-all'] });
+      queryClient.invalidateQueries({ queryKey: ['announcements-active'] });
+      toast.success('Announcement deleted');
+    },
+    onError: () => toast.error('Failed to delete announcement'),
+  });
+
+  const handleToggleActive = (a: Announcement) => {
+    updateMutation.mutate({ id: a._id, data: { isActive: !a.isActive } });
+  };
+
+  const typeBadge = (t: string) => {
+    if (t === 'urgent') return 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400';
+    if (t === 'warning') return 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
+    return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
+  };
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+        <BellIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+        Active Banner Announcements
+      </h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        These banners are visible to all logged-in users at the top of the page.
+      </p>
+      {isLoading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin h-8 w-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto"></div>
+        </div>
+      ) : announcements && announcements.length > 0 ? (
+        <div className="space-y-3">
+          {announcements.map((a) => (
+            <div
+              key={a._id}
+              className={`p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 ${!a.isActive ? 'opacity-60' : ''}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100">{a.title}</h4>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${typeBadge(a.type)}`}>
+                      {a.type}
+                    </span>
+                    {a.isActive ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 font-medium">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 font-medium">
+                        Inactive
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{a.message}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                    Created {new Date(a.createdAt).toLocaleDateString()} by {a.createdBy?.name || 'Unknown'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleToggleActive(a)}
+                    className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                      a.isActive
+                        ? 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
+                        : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
+                    }`}
+                  >
+                    {a.isActive ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Delete announcement "${a.title}"? This cannot be undone.`)) {
+                        deleteMutation.mutate(a._id);
+                      }
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    title="Delete"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <MegaphoneIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+          <p className="text-gray-500 dark:text-gray-400">No banner announcements yet</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Use "In-App Banner" method above to create one</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Settings = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -73,6 +209,7 @@ const Settings = () => {
   const effectiveRole = getEffectiveRole();
   // Check actual user role, not effective role (since admin settings should only show for actual admins)
   const isAdmin = user?.role === 'admin' && !isPreviewMode;
+  const isOwner = user?.role === 'owner';
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'system' | 'notifications' | 'broadcasts' | 'roles'>('profile');
   const [selectedRoleTab, setSelectedRoleTab] = useState<'owner' | 'vendor'>('owner');
@@ -105,8 +242,8 @@ const Settings = () => {
   // Broadcast form state
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
-  const [targetRole, setTargetRole] = useState('all');
   const [notificationMethod, setNotificationMethod] = useState<'internal' | 'email'>('internal');
+  const [announcementType, setAnnouncementType] = useState<'info' | 'warning' | 'urgent'>('info');
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
 
   // Role permissions state
@@ -267,7 +404,7 @@ const Settings = () => {
       const response = await api.get('/notifications/broadcasts');
       return response.data?.data || [];
     },
-    enabled: isAdmin && activeTab === 'broadcasts',
+    enabled: isOwner && activeTab === 'broadcasts',
   });
 
   const handleSendBroadcast = async () => {
@@ -278,22 +415,34 @@ const Settings = () => {
 
     setIsSendingBroadcast(true);
     try {
-      const response = await api.post('/notifications/broadcast', {
-        title: broadcastTitle,
-        message: broadcastMessage,
-        targetRole: targetRole,
-        notificationMethod: notificationMethod,
-        type: 'announcement',
-      });
-
-      toast.success(response.data.message || 'Broadcast sent successfully!');
+      if (notificationMethod === 'internal') {
+        // Create persistent banner announcement
+        await api.post('/announcements', {
+          title: broadcastTitle,
+          message: broadcastMessage,
+          type: announcementType,
+          targetRoles: ['admin', 'owner', 'vendor'],
+        });
+        toast.success('Banner announcement created!');
+        queryClient.invalidateQueries({ queryKey: ['announcements-all'] });
+        queryClient.invalidateQueries({ queryKey: ['announcements-active'] });
+      } else {
+        // Send email broadcast
+        const response = await api.post('/notifications/broadcast', {
+          title: broadcastTitle,
+          message: broadcastMessage,
+          targetRole: 'owner',
+          notificationMethod: 'email',
+          type: 'announcement',
+        });
+        toast.success(response.data.message || 'Email broadcast sent!');
+        queryClient.invalidateQueries({ queryKey: ['broadcast-history'] });
+      }
       setBroadcastTitle('');
       setBroadcastMessage('');
-      setTargetRole('all');
-      setNotificationMethod('internal');
-      queryClient.invalidateQueries({ queryKey: ['broadcast-history'] });
+      setAnnouncementType('info');
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to send broadcast');
+      toast.error(error.response?.data?.error || 'Failed to send');
     } finally {
       setIsSendingBroadcast(false);
     }
@@ -351,11 +500,11 @@ const Settings = () => {
         { id: 'system', name: 'System Configuration', icon: Cog6ToothIcon },
         { id: 'roles', name: 'Role Permissions', icon: UserGroupIcon },
         { id: 'notifications', name: 'Notification Settings', icon: BellIcon },
-        { id: 'broadcasts', name: 'Broadcasts', icon: MegaphoneIcon },
       ]
     : [
         { id: 'profile', name: 'Profile Settings', icon: UsersIcon },
         { id: 'notifications', name: 'Notification Settings', icon: BellIcon },
+        ...(isOwner ? [{ id: 'broadcasts', name: 'Broadcasts', icon: MegaphoneIcon }] : []),
       ];
 
   return (
@@ -871,7 +1020,7 @@ const Settings = () => {
           )}
 
           {/* Broadcasts Tab (Admin Only) */}
-          {activeTab === 'broadcasts' && isAdmin && (
+          {activeTab === 'broadcasts' && isOwner && (
             <div className="space-y-6">
               {/* Send Broadcast */}
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
@@ -880,26 +1029,15 @@ const Settings = () => {
                   Send Announcement
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  Send a broadcast notification to all owners or a filtered group.
+                  {notificationMethod === 'internal'
+                    ? 'Create a persistent banner announcement visible to all users.'
+                    : 'Send an email broadcast to all owners.'}
                 </p>
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Target Audience
-                      </label>
-                      <select
-                        value={targetRole}
-                        onChange={(e) => setTargetRole(e.target.value)}
-                        className="w-full sm:w-48 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      >
-                        <option value="all">All Owners</option>
-                        <option value="owner">Owners Only</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Notification Method
+                        Announcement Method
                       </label>
                       <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
                         <button
@@ -912,7 +1050,7 @@ const Settings = () => {
                           }`}
                         >
                           <BellIcon className="h-4 w-4" />
-                          Internal
+                          In-App Banner
                         </button>
                         <button
                           type="button"
@@ -928,6 +1066,22 @@ const Settings = () => {
                         </button>
                       </div>
                     </div>
+                    {notificationMethod === 'internal' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Banner Type
+                        </label>
+                        <select
+                          value={announcementType}
+                          onChange={(e) => setAnnouncementType(e.target.value as 'info' | 'warning' | 'urgent')}
+                          className="w-full sm:w-48 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        >
+                          <option value="info">Info (Blue)</option>
+                          <option value="warning">Warning (Amber)</option>
+                          <option value="urgent">Urgent (Red)</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -970,7 +1124,7 @@ const Settings = () => {
                       ) : (
                         <>
                           <PaperAirplaneIcon className="h-4 w-4" />
-                          Send Broadcast
+                          {notificationMethod === 'internal' ? 'Create Banner' : 'Send Email'}
                         </>
                       )}
                     </button>
@@ -1013,8 +1167,12 @@ const Settings = () => {
                   </div>
                 )}
               </div>
+
+              {/* Persistent Banner Announcements */}
+              <AnnouncementsList />
             </div>
           )}
+
         </div>
       </div>
     </div>

@@ -429,6 +429,8 @@ app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/equipment-stats', require('./routes/equipmentStats'));
 app.use('/api/bug-reports', require('./routes/bugReports'));
 app.use('/api/activity', require('./routes/activity'));
+app.use('/api/announcements', require('./routes/announcements'));
+app.use('/api/support-tickets', require('./routes/supportTickets'));
 
 // Handle API 404s
 app.use('/api/*', (req, res, next) => {

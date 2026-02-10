@@ -33,12 +33,14 @@ import {
   EyeIcon,
   XMarkIcon,
   BugAntIcon,
+  LifebuoyIcon,
 } from "@heroicons/react/24/outline";
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import AISearchModal from "./AISearchModal";
 import UserSelectionModal from "./UserSelectionModal";
 import { NotificationPanel } from "./NotificationPanel";
 import { useNotifications } from "../hooks/useNotifications";
+import AnnouncementBanner from "./AnnouncementBanner";
 
 const navigation: {
   name: string;
@@ -67,6 +69,7 @@ const navigation: {
   { name: "Business Profile", href: "/vendor-profile", icon: BuildingStorefrontIcon, roles: ['vendor'], permission: 'canAccessDashboard', tourId: 'nav-vendor-profile' },
   { name: "My Roster Profile", href: "/owner-profile-management", icon: UserIcon, roles: ['owner'], permission: 'canAccessDashboard', tourId: 'nav-owner-profile' },
   { name: "FAQs", href: "/faqs", icon: QuestionMarkCircleIcon, roles: ['admin', 'owner', 'vendor'], tourId: 'nav-faqs' },
+  { name: "Support", href: "/support-tickets", icon: LifebuoyIcon, roles: ['admin', 'owner'], tourId: 'nav-support' },
   { name: "Bug Reports", href: "/bug-reports", icon: BugAntIcon, roles: ['admin', 'owner', 'vendor'], tourId: 'nav-bug-reports' },
 ];
 
@@ -131,9 +134,10 @@ const Sidebar = memo(({
     return true;
   });
 
-  // Separate Bug Reports to pin at bottom
-  const mainNavigation = filteredNavigation.filter(item => item.name !== 'Bug Reports');
-  const bugReportsItem = filteredNavigation.find(item => item.name === 'Bug Reports');
+  // Separate Support & Bug Reports to pin at bottom
+  const bottomNavNames = ['Support', 'Bug Reports'];
+  const mainNavigation = filteredNavigation.filter(item => !bottomNavNames.includes(item.name));
+  const bottomNavItems = filteredNavigation.filter(item => bottomNavNames.includes(item.name));
 
   return (
     <>
@@ -204,29 +208,35 @@ const Sidebar = memo(({
             })}
           </div>
 
-          {/* Bug Reports pinned at bottom */}
-          {bugReportsItem && (
-            <div className="mt-auto pt-3 border-t border-gray-200 dark:border-gray-700">
-              <Link
-                to={bugReportsItem.href}
-                data-tour={bugReportsItem.tourId}
-                className={`group flex items-center ${!isExpanded ? 'justify-center px-3' : 'px-3'} py-2 text-sm font-medium rounded-md transition-colors ${
-                  currentPath === bugReportsItem.href
-                    ? "bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                }`}
-                onClick={onClose}
-                title={!isExpanded ? bugReportsItem.name : undefined}
-              >
-                <bugReportsItem.icon
-                  className={`${!isExpanded ? '' : 'mr-3'} h-5 w-5 flex-shrink-0 sidebar-icon transition-all duration-300 ${
-                    currentPath === bugReportsItem.href
-                      ? "text-primary-600 dark:text-primary-400"
-                      : "text-gray-400 dark:text-gray-500"
-                  }`}
-                />
-                {isExpanded && <span className="animate-fadeIn">{bugReportsItem.name}</span>}
-              </Link>
+          {/* Support & Bug Reports pinned at bottom */}
+          {bottomNavItems.length > 0 && (
+            <div className="mt-auto pt-3 border-t border-gray-200 dark:border-gray-700 space-y-0.5">
+              {bottomNavItems.map((item) => {
+                const isActive = currentPath === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    data-tour={item.tourId}
+                    className={`group flex items-center ${!isExpanded ? 'justify-center px-3' : 'px-3'} py-2 text-sm font-medium rounded-md transition-colors ${
+                      isActive
+                        ? "bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    }`}
+                    onClick={onClose}
+                    title={!isExpanded ? item.name : undefined}
+                  >
+                    <item.icon
+                      className={`${!isExpanded ? '' : 'mr-3'} h-5 w-5 flex-shrink-0 sidebar-icon transition-all duration-300 ${
+                        isActive
+                          ? "text-primary-600 dark:text-primary-400"
+                          : "text-gray-400 dark:text-gray-500"
+                      }`}
+                    />
+                    {isExpanded && <span className="animate-fadeIn">{item.name}</span>}
+                  </Link>
+                );
+              })}
             </div>
           )}
 
@@ -758,6 +768,11 @@ const Layout = () => {
             </div>
           </div>
 
+          {/* Announcement Banner - full width below top bar */}
+          <div className="px-4 sm:px-6 pt-2 pb-2">
+            <AnnouncementBanner />
+          </div>
+
           {/* User dropdown */}
           {userMenuOpen && (
             <div className="absolute right-3 sm:right-4 md:right-6 top-10 sm:top-10 mt-2 w-56 rounded-lg bg-white dark:bg-gray-800 py-1 shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 z-50">
@@ -872,6 +887,7 @@ const Layout = () => {
               )}
             </div>
           )}
+
         </header>
 
         {/* Page content */}

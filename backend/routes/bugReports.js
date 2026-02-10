@@ -534,14 +534,23 @@ router.post('/:id/vote', protect, async (req, res) => {
 // @desc    Add comment to bug report
 // @route   POST /api/bug-reports/:id/comment
 // @access  Private
-router.post('/:id/comment', protect, async (req, res) => {
+router.post('/:id/comment', protect, ...bugReportFiles, async (req, res) => {
   try {
     const { text } = req.body;
 
-    if (!text || text.trim() === '') {
+    let commentAttachments = [];
+    if (req.files && req.files.attachments) {
+      commentAttachments = req.files.attachments.map(file => ({
+        url: file.s3Url || file.location,
+        filename: file.originalname,
+        mimetype: file.mimetype,
+      }));
+    }
+
+    if ((!text || text.trim() === '') && commentAttachments.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'Comment text is required'
+        error: 'Comment text or attachments required'
       });
     }
 
@@ -557,7 +566,8 @@ router.post('/:id/comment', protect, async (req, res) => {
     // Add comment
     report.comments.push({
       user: req.user.id,
-      text: text.trim(),
+      text: text ? text.trim() : '',
+      attachments: commentAttachments,
       createdAt: Date.now()
     });
 

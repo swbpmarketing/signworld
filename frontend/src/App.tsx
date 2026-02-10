@@ -52,6 +52,7 @@ const VendorEquipment = lazy(() => import('./pages/VendorEquipment'));
 const VendorReports = lazy(() => import('./pages/VendorReports'));
 const VendorInquiries = lazy(() => import('./pages/VendorInquiries'));
 const BugReports = lazy(() => import('./pages/BugReports'));
+const SupportTickets = lazy(() => import('./pages/SupportTickets'));
 
 // Loading component for Suspense fallback
 const LoadingFallback = () => (
@@ -244,6 +245,11 @@ function AppContent() {
                   <Route path="bug-reports" element={
                     <ProtectedRoute>
                       <BugReports />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="support-tickets" element={
+                    <ProtectedRoute allowedRoles={['admin', 'owner']}>
+                      <SupportTickets />
                     </ProtectedRoute>
                   } />
                   {/* Owner-specific routes */}
