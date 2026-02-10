@@ -23,6 +23,7 @@ import {
   TrashIcon,
   EllipsisVerticalIcon,
   ExclamationTriangleIcon,
+  PhotoIcon,
 } from '@heroicons/react/24/outline';
 
 interface BugReport {
@@ -60,6 +61,11 @@ interface BugReport {
       profileImage?: string;
     };
     text: string;
+    attachments?: {
+      url: string;
+      filename: string;
+      mimetype: string;
+    }[];
     createdAt: string;
     editedAt?: string;
   }[];
@@ -149,6 +155,8 @@ const BugReports = () => {
   const [editReport, setEditReport] = useState<NewReportForm>(initialFormState);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [commentAttachments, setCommentAttachments] = useState<File[]>([]);
+  const commentFileInputRef = useRef<HTMLInputElement>(null);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
@@ -302,13 +310,19 @@ const BugReports = () => {
 
   // Add comment mutation
   const addCommentMutation = useMutation({
-    mutationFn: async ({ id, text }: { id: string; text: string }) => {
-      const response = await api.post(`/bug-reports/${id}/comment`, { text });
+    mutationFn: async ({ id, text, files }: { id: string; text: string; files: File[] }) => {
+      const formData = new FormData();
+      formData.append('text', text);
+      files.forEach(file => formData.append('attachments', file));
+      const response = await api.post(`/bug-reports/${id}/comment`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       return { id, data: response.data };
     },
     onSuccess: async ({ id }) => {
       queryClient.invalidateQueries({ queryKey: ['bugReports'] });
       setNewComment('');
+      setCommentAttachments([]);
       toast.success('Comment added');
       // Refresh the selected report to show new comment
       if (selectedReport && selectedReport._id === id) {
@@ -320,8 +334,9 @@ const BugReports = () => {
         }
       }
     },
-    onError: () => {
-      toast.error('Failed to add comment');
+    onError: (error: any) => {
+      const msg = error?.response?.data?.error || 'Failed to add comment';
+      toast.error(msg);
     },
   });
 
@@ -547,8 +562,8 @@ const BugReports = () => {
   };
 
   const handleAddComment = (reportId: string) => {
-    if (!newComment.trim()) return;
-    addCommentMutation.mutate({ id: reportId, text: newComment });
+    if (!newComment.trim() && commentAttachments.length === 0) return;
+    addCommentMutation.mutate({ id: reportId, text: newComment, files: commentAttachments });
   };
 
   const openDetailModal = (report: BugReport) => {
@@ -2102,7 +2117,30 @@ const BugReports = () => {
                               </button>
                             </div>
                           ) : (
-                            <p className="text-sm text-gray-700 dark:text-gray-300">{comment.text}</p>
+                            <>
+                              {comment.text && <p className="text-sm text-gray-700 dark:text-gray-300">{comment.text}</p>}
+                              {comment.attachments && comment.attachments.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {comment.attachments.map((att, i) => (
+                                    att.mimetype.startsWith('image/') ? (
+                                      <img
+                                        key={i}
+                                        src={att.url}
+                                        alt={att.filename}
+                                        onClick={() => {
+                                          setLightboxAttachments(comment.attachments!);
+                                          setLightboxIndex(i);
+                                          setLightboxOpen(true);
+                                        }}
+                                        className="h-20 w-20 rounded-lg object-cover border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-90 transition-opacity"
+                                      />
+                                    ) : att.mimetype.startsWith('video/') ? (
+                                      <video key={i} src={att.url} controls className="h-20 w-32 rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
+                                    ) : null
+                                  ))}
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       ))
@@ -2110,27 +2148,76 @@ const BugReports = () => {
                   </div>
 
                   {/* Add comment */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Add a comment..."
-                      className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleAddComment(selectedReport._id);
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => handleAddComment(selectedReport._id)}
-                      disabled={!newComment.trim() || addCommentMutation.isPending}
-                      className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      Send
-                    </button>
+                  <div>
+                    {commentAttachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {commentAttachments.map((file, i) => (
+                          <div key={`${file.name}-${i}`} className="relative group">
+                            {file.type.startsWith('image/') ? (
+                              <img src={URL.createObjectURL(file)} alt={file.name} className="h-14 w-14 rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
+                            ) : (
+                              <div className="h-14 w-14 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400">{file.name.split('.').pop()}</span>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setCommentAttachments(prev => prev.filter((_, idx) => idx !== i))}
+                              className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                            >
+                              <XMarkIcon className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input
+                        ref={commentFileInputRef}
+                        type="file"
+                        accept="image/*,video/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          const valid = files.filter(f => {
+                            if (!f.type.startsWith('image/') && !f.type.startsWith('video/')) { toast.error(`${f.name} is not an image or video`); return false; }
+                            if (f.size > 50 * 1024 * 1024) { toast.error(`${f.name} exceeds 50MB`); return false; }
+                            return true;
+                          });
+                          setCommentAttachments(prev => [...prev, ...valid].slice(0, 5));
+                          e.target.value = '';
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => commentFileInputRef.current?.click()}
+                        className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                        title="Attach photo"
+                      >
+                        <PhotoIcon className="h-5 w-5" />
+                      </button>
+                      <input
+                        type="text"
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleAddComment(selectedReport._id);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => handleAddComment(selectedReport._id)}
+                        disabled={(!newComment.trim() && commentAttachments.length === 0) || addCommentMutation.isPending}
+                        className="px-2.5 py-1.5 bg-primary-600 text-sm hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        Send
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

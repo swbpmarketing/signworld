@@ -132,7 +132,9 @@ const uploadFilesToS3 = async (req, res, next) => {
 
       console.log('Folder detection - URL:', url, 'Path:', path_str, 'isLibraryRoute:', isLibraryRoute, 'fieldname:', file.fieldname);
 
-      if (file.fieldname === 'attachments') {
+      if (file.fieldname === 'attachments' && (url.includes('/support-tickets') || path_str.includes('/support-tickets'))) {
+        folder = 'support-tickets';
+      } else if (file.fieldname === 'attachments') {
         folder = 'bug-reports';
       } else if (file.fieldname === 'images' || file.fieldname === 'gallery' || file.fieldname === 'logo' || file.fieldname === 'image' || file.fieldname === 'featuredImage' || file.fieldname === 'thumbnail') {
         folder = 'images';
@@ -240,6 +242,14 @@ module.exports = {
 
   // For bug reports with attachments (images and videos)
   bugReportFiles: [
+    upload.fields([
+      { name: 'attachments', maxCount: 5 }
+    ]),
+    uploadFilesToS3
+  ],
+
+  // For support tickets with attachments (images and videos)
+  supportTicketFiles: [
     upload.fields([
       { name: 'attachments', maxCount: 5 }
     ]),

@@ -29,7 +29,9 @@ const notificationSchema = new mongoose.Schema({
       'convention_registered',  // User registered for a convention
       'event_reminder',         // Event reminder
       'mention',                // Someone mentioned you
-      'system'                  // System notification
+      'system',                 // System notification
+      'support_ticket',         // New support ticket
+      'support_ticket_reply'    // Reply to support ticket
     ]
   },
   title: {
@@ -43,7 +45,7 @@ const notificationSchema = new mongoose.Schema({
   // Reference to the related entity
   referenceType: {
     type: String,
-    enum: ['Message', 'Brag', 'ForumThread', 'Equipment', 'Video', 'Event', 'Convention', 'Comment', null]
+    enum: ['Message', 'Brag', 'ForumThread', 'Equipment', 'Video', 'Event', 'Convention', 'Comment', 'SupportTicket', null]
   },
   referenceId: {
     type: mongoose.Schema.ObjectId,

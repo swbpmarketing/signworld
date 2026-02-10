@@ -60,8 +60,13 @@ const bugReportSchema = new mongoose.Schema({
     },
     text: {
       type: String,
-      required: true,
+      default: '',
     },
+    attachments: [{
+      url: String,
+      filename: String,
+      mimetype: String,
+    }],
     createdAt: {
       type: Date,
       default: Date.now,
