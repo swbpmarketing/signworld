@@ -1,3 +1,4 @@
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePreviewMode } from '../context/PreviewModeContext';
 import { useQuery } from '@tanstack/react-query';
@@ -5,7 +6,7 @@ import { getDashboardStats, getRecentActivity } from '../services/dashboardServi
 import { useNavigate, Link } from 'react-router-dom';
 import { useState, Fragment, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { useWidgetSizes } from '../hooks/useWidgetSizes';
+import { useWidgetLayout } from '../hooks/useWidgetLayout';
 import DashboardGrid from '../components/dashboard/DashboardGrid';
 import ResizableWidget from '../components/dashboard/ResizableWidget';
 import {
@@ -22,6 +23,8 @@ import {
   ShoppingBagIcon,
   BuildingOffice2Icon,
   CheckCircleIcon,
+  PencilIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 
 const OwnerDashboard = () => {
@@ -31,10 +34,18 @@ const OwnerDashboard = () => {
   const [selectedEventType, setSelectedEventType] = useState<'all' | 'rsvp' | null>(null);
   const previewedUser = getPreviewedUser();
 
-  const { sizes, setWidgetSize } = useWidgetSizes('owner', {
+  const {
+    sizes,
+    setWidgetSize,
+    order,
+    isEditMode,
+    toggleEditMode,
+    handleDragEnd,
+    resetLayout,
+  } = useWidgetLayout('owner', {
     'quick-actions': 'md',
     'recent-activity': 'md',
-  });
+  }, ['quick-actions', 'recent-activity']);
 
   // Fetch dashboard stats
   const { data: statsData, isLoading: isLoadingStats } = useQuery({
@@ -185,6 +196,26 @@ const OwnerDashboard = () => {
               )}
             </div>
             <div className="flex gap-3">
+              {isEditMode && (
+                <button
+                  onClick={resetLayout}
+                  className="inline-flex items-center px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm font-medium"
+                >
+                  <ArrowPathIcon className="h-4 w-4 mr-1.5" />
+                  Reset
+                </button>
+              )}
+              <button
+                onClick={toggleEditMode}
+                className={`inline-flex items-center px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                  isEditMode
+                    ? 'bg-white text-primary-600 hover:bg-primary-50'
+                    : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
+              >
+                <PencilIcon className="h-4 w-4 mr-1.5" />
+                {isEditMode ? 'Done' : 'Edit Layout'}
+              </button>
               <Link
                 to="/profile"
                 className="inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm font-medium"
@@ -317,95 +348,108 @@ const OwnerDashboard = () => {
       </div>
 
       {/* Main Content Grid */}
-      <DashboardGrid>
-        {/* Quick Actions */}
-        <ResizableWidget widgetId="quick-actions" size={sizes['quick-actions']} onSizeChange={setWidgetSize}>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-              <ChartBarIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
-              Quick Actions
-            </h3>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-2 gap-3">
-              {quickActions.map((action) => (
-                <button
-                  key={action.path}
-                  onClick={() => navigate(action.path)}
-                  className="flex flex-col items-center p-4 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 group text-center"
-                >
-                  <div className={`${action.color} p-3 rounded-lg mb-3`}>
-                    <action.icon className="h-5 w-5 text-white" />
+      <DashboardGrid isEditMode={isEditMode} widgetOrder={order} onDragEnd={handleDragEnd}>
+        {order.map((widgetId) => {
+          const widgetContent: Record<string, React.ReactNode> = {
+            'quick-actions': (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                    <ChartBarIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
+                    Quick Actions
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-2 gap-3">
+                    {quickActions.map((action) => (
+                      <button
+                        key={action.path}
+                        onClick={() => navigate(action.path)}
+                        className="flex flex-col items-center p-4 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 group text-center"
+                      >
+                        <div className={`${action.color} p-3 rounded-lg mb-3`}>
+                          <action.icon className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{action.label}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">{action.description}</span>
+                      </button>
+                    ))}
                   </div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{action.label}</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">{action.description}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        </ResizableWidget>
-
-        {/* Recent Activity */}
-        <ResizableWidget widgetId="recent-activity" size={sizes['recent-activity']} onSizeChange={setWidgetSize}>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-              <BellIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
-              Recent Activity
-            </h3>
-          </div>
-          <div className="p-6">
-            {isLoadingActivity ? (
-              <div className="space-y-4">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="flex items-start space-x-3">
-                    <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                      <div className="h-3 w-1/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    </div>
-                  </div>
-                ))}
+                </div>
               </div>
-            ) : activities.length === 0 ? (
-              <div className="text-center py-8">
-                <BellIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
-              </div>
-            ) : (
-              <div className="flow-root">
-                <ul className="-mb-8">
-                  {activities.map((activity, activityIdx) => (
-                    <li key={activity.id}>
-                      <div className="relative pb-8">
-                        {activityIdx !== activities.length - 1 ? (
-                          <span
-                            className="absolute top-5 left-5 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700"
-                            aria-hidden="true"
-                          />
-                        ) : null}
-                        <div className="relative flex items-start space-x-3">
-                          <div className="relative">
-                            <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                              <div className="h-2 w-2 bg-primary-600 dark:bg-primary-400 rounded-full" />
-                            </div>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.message}</p>
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{activity.time}</p>
+            ),
+            'recent-activity': (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                    <BellIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
+                    Recent Activity
+                  </h3>
+                </div>
+                <div className="p-6">
+                  {isLoadingActivity ? (
+                    <div className="space-y-4">
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} className="flex items-start space-x-3">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                            <div className="h-3 w-1/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                           </div>
                         </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                      ))}
+                    </div>
+                  ) : activities.length === 0 ? (
+                    <div className="text-center py-8">
+                      <BellIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
+                    </div>
+                  ) : (
+                    <div className="flow-root">
+                      <ul className="-mb-8">
+                        {activities.map((activity, activityIdx) => (
+                          <li key={activity.id}>
+                            <div className="relative pb-8">
+                              {activityIdx !== activities.length - 1 ? (
+                                <span className="absolute top-5 left-5 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
+                              ) : null}
+                              <div className="relative flex items-start space-x-3">
+                                <div className="relative">
+                                  <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                                    <div className="h-2 w-2 bg-primary-600 dark:bg-primary-400 rounded-full" />
+                                  </div>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.message}</p>
+                                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{activity.time}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-        </ResizableWidget>
+            ),
+          };
+
+          const content = widgetContent[widgetId];
+          if (!content) return null;
+
+          return (
+            <ResizableWidget
+              key={widgetId}
+              widgetId={widgetId}
+              size={sizes[widgetId] || 'md'}
+              onSizeChange={setWidgetSize}
+              isEditMode={isEditMode}
+            >
+              {content}
+            </ResizableWidget>
+          );
+        })}
       </DashboardGrid>
 
       {/* Event List Modal */}

@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter');
 
 const supportTicketSchema = new mongoose.Schema({
+  ticketNumber: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
   subject: {
     type: String,
     required: [true, 'Please add a subject'],
@@ -74,8 +80,8 @@ const supportTicketSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Pre-save hook: set resolvedAt/closedAt on status transitions
-supportTicketSchema.pre('save', function(next) {
+// Pre-save hook: set resolvedAt/closedAt on status transitions & auto-generate ticketNumber
+supportTicketSchema.pre('save', async function(next) {
   if (this.isModified('status')) {
     if (this.status === 'resolved' && !this.resolvedAt) {
       this.resolvedAt = Date.now();
@@ -84,6 +90,13 @@ supportTicketSchema.pre('save', function(next) {
       this.closedAt = Date.now();
     }
   }
+
+  // Auto-generate ticketNumber for new tickets
+  if (this.isNew && !this.ticketNumber) {
+    const seq = await Counter.getNextSequence('supportTicket');
+    this.ticketNumber = `TKT-${String(seq).padStart(3, '0')}`;
+  }
+
   next();
 });
 
@@ -111,5 +124,6 @@ supportTicketSchema.index({ author: 1, createdAt: -1 });
 supportTicketSchema.index({ category: 1, status: 1 });
 supportTicketSchema.index({ priority: 1 });
 supportTicketSchema.index({ subject: 'text', description: 'text' });
+supportTicketSchema.index({ ticketNumber: 1 });
 
 module.exports = mongoose.model('SupportTicket', supportTicketSchema);

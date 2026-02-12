@@ -52,6 +52,7 @@ interface TicketComment {
 
 interface SupportTicket {
   _id: string;
+  ticketNumber?: string;
   subject: string;
   description: string;
   category: 'general' | 'billing' | 'technical' | 'account' | 'equipment' | 'other';
@@ -426,7 +427,11 @@ const SupportTickets = () => {
     if (filterPriority !== 'all' && ticket.priority !== filterPriority) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      if (!ticket.subject.toLowerCase().includes(q) && !ticket.description.toLowerCase().includes(q)) return false;
+      if (
+        !ticket.subject.toLowerCase().includes(q) &&
+        !ticket.description.toLowerCase().includes(q) &&
+        !(ticket.ticketNumber && ticket.ticketNumber.toLowerCase().includes(q))
+      ) return false;
     }
     return true;
   }) || [];
@@ -810,9 +815,16 @@ const SupportTickets = () => {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                      {ticket.subject}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      {ticket.ticketNumber && (
+                        <span className="text-xs font-mono font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-1.5 py-0.5 rounded flex-shrink-0">
+                          {ticket.ticketNumber}
+                        </span>
+                      )}
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                        {ticket.subject}
+                      </h3>
+                    </div>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig[ticket.status]?.bg} ${statusConfig[ticket.status]?.text}`}>
                         {statusConfig[ticket.status]?.label}
@@ -879,9 +891,16 @@ const SupportTickets = () => {
             {/* Header */}
             <div className="flex items-start justify-between p-5 border-b border-gray-200 dark:border-gray-700">
               <div className="flex-1 min-w-0 pr-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 break-words leading-tight">
-                  {selectedTicket.subject}
-                </h2>
+                <div className="flex items-center gap-2">
+                  {selectedTicket.ticketNumber && (
+                    <span className="text-sm font-mono font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-2 py-0.5 rounded flex-shrink-0">
+                      {selectedTicket.ticketNumber}
+                    </span>
+                  )}
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 break-words leading-tight">
+                    {selectedTicket.subject}
+                  </h2>
+                </div>
                 <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[selectedTicket.status]?.bg} ${statusConfig[selectedTicket.status]?.text}`}>
                     {statusConfig[selectedTicket.status]?.label}

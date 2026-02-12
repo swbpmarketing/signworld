@@ -31,7 +31,8 @@ const notificationSchema = new mongoose.Schema({
       'mention',                // Someone mentioned you
       'system',                 // System notification
       'support_ticket',         // New support ticket
-      'support_ticket_reply'    // Reply to support ticket
+      'support_ticket_reply',   // Reply to support ticket
+      'feedback_status'         // Bug report / feature request status change
     ]
   },
   title: {
@@ -45,7 +46,7 @@ const notificationSchema = new mongoose.Schema({
   // Reference to the related entity
   referenceType: {
     type: String,
-    enum: ['Message', 'Brag', 'ForumThread', 'Equipment', 'Video', 'Event', 'Convention', 'Comment', 'SupportTicket', null]
+    enum: ['Message', 'Brag', 'ForumThread', 'Equipment', 'Video', 'Event', 'Convention', 'Comment', 'SupportTicket', 'BugReport', null]
   },
   referenceId: {
     type: mongoose.Schema.ObjectId,

@@ -188,6 +188,13 @@ exports.updateUser = async (req, res) => {
 // @access  Private/Admin
 exports.deleteUser = async (req, res) => {
   try {
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        error: 'You cannot delete your own account',
+      });
+    }
+
     const user = await User.findByIdAndDelete(req.params.id);
 
     if (!user) {

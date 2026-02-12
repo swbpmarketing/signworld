@@ -43,13 +43,14 @@ router.get('/', protect, handlePreviewMode, async (req, res) => {
       query.priority = priority;
     }
 
-    // Search in title and description
+    // Search in title, description, and taskNumber
     if (search) {
       // Escape special regex characters to prevent ReDoS attacks
       const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
         { title: { $regex: escapedSearch, $options: 'i' } },
-        { description: { $regex: escapedSearch, $options: 'i' } }
+        { description: { $regex: escapedSearch, $options: 'i' } },
+        { taskNumber: { $regex: escapedSearch, $options: 'i' } }
       ];
     }
 

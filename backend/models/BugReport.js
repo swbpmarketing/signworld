@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter');
 
 const bugReportSchema = new mongoose.Schema({
+  taskNumber: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
   title: {
     type: String,
     required: [true, 'Please add a title'],
@@ -93,11 +99,19 @@ const bugReportSchema = new mongoose.Schema({
 });
 
 // Update the updatedAt timestamp before saving
-bugReportSchema.pre('save', function(next) {
+bugReportSchema.pre('save', async function(next) {
   this.updatedAt = Date.now();
   if (this.status === 'completed' && !this.resolvedAt) {
     this.resolvedAt = Date.now();
   }
+
+  // Auto-generate taskNumber for new reports
+  if (this.isNew && !this.taskNumber) {
+    const seq = await Counter.getNextSequence('bugReport');
+    const prefix = this.type === 'feature' ? 'FR' : 'BUG';
+    this.taskNumber = `${prefix}-${String(seq).padStart(3, '0')}`;
+  }
+
   next();
 });
 
@@ -128,5 +142,6 @@ bugReportSchema.index({ author: 1, createdAt: -1 });
 bugReportSchema.index({ type: 1, status: 1 });
 bugReportSchema.index({ priority: 1 });
 bugReportSchema.index({ title: 'text', description: 'text' });
+bugReportSchema.index({ taskNumber: 1 });
 
 module.exports = mongoose.model('BugReport', bugReportSchema);
