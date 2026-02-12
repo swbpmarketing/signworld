@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePreviewMode } from '../context/PreviewModeContext';
@@ -26,9 +26,11 @@ import {
   QuestionMarkCircleIcon,
   Cog6ToothIcon,
   InboxIcon,
+  PencilIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
-import { useWidgetSizes } from '../hooks/useWidgetSizes';
+import { useWidgetLayout } from '../hooks/useWidgetLayout';
 import DashboardGrid from '../components/dashboard/DashboardGrid';
 import ResizableWidget from '../components/dashboard/ResizableWidget';
 
@@ -87,12 +89,20 @@ const VendorDashboard = () => {
   const [partner, setPartner] = useState<Partner | null>(null);
   const previewedUser = getPreviewedUser();
 
-  const { sizes, setWidgetSize } = useWidgetSizes('vendor', {
+  const {
+    sizes,
+    setWidgetSize,
+    order,
+    isEditMode,
+    toggleEditMode,
+    handleDragEnd,
+    resetLayout,
+  } = useWidgetLayout('vendor', {
     'profile-overview': 'md',
     'contact-info': 'md',
     'special-offers': 'md',
     'recent-reviews': 'md',
-  });
+  }, ['profile-overview', 'contact-info', 'special-offers', 'recent-reviews']);
 
   const [loading, setLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState(false);
@@ -348,6 +358,26 @@ const VendorDashboard = () => {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {isEditMode && (
+                <button
+                  onClick={resetLayout}
+                  className="inline-flex items-center px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm font-medium"
+                >
+                  <ArrowPathIcon className="h-4 w-4 mr-1.5" />
+                  Reset
+                </button>
+              )}
+              <button
+                onClick={toggleEditMode}
+                className={`inline-flex items-center px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${
+                  isEditMode
+                    ? 'bg-white text-primary-600 hover:bg-primary-50'
+                    : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
+              >
+                <PencilIcon className="h-4 w-4 mr-1.5" />
+                {isEditMode ? 'Done' : 'Edit Layout'}
+              </button>
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                 partner.isActive
                   ? 'bg-green-100 text-green-800'
@@ -430,208 +460,217 @@ const VendorDashboard = () => {
         </div>
       </div>
 
-      <DashboardGrid>
-        {/* Profile Overview */}
-        <ResizableWidget widgetId="profile-overview" size={sizes['profile-overview']} onSizeChange={setWidgetSize}>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-              <BuildingStorefrontIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
-              Profile Overview
-            </h3>
-            <Link to="/settings" className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
-              Edit Profile
-            </Link>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Category</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{partner.category || 'Not specified'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Country</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{partner.country || 'Not specified'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Description</p>
-                <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">{partner.description || 'No description provided'}</p>
-              </div>
-              {partner.specialties && partner.specialties.length > 0 && (
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Services</p>
-                  <div className="flex flex-wrap gap-2">
-                    {partner.specialties.slice(0, 5).map((service, index) => (
-                      <span key={index} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
-                        {service}
-                      </span>
-                    ))}
-                    {partner.specialties.length > 5 && (
-                      <span className="px-2 py-1 text-gray-500 dark:text-gray-400 text-xs">
-                        +{partner.specialties.length - 5} more
-                      </span>
+      <DashboardGrid isEditMode={isEditMode} widgetOrder={order} onDragEnd={handleDragEnd}>
+        {order.map((widgetId) => {
+          const widgetContent: Record<string, React.ReactNode> = {
+            'profile-overview': (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                    <BuildingStorefrontIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
+                    Profile Overview
+                  </h3>
+                  <Link to="/settings" className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
+                    Edit Profile
+                  </Link>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Category</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{partner.category || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Country</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{partner.country || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Description</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">{partner.description || 'No description provided'}</p>
+                    </div>
+                    {partner.specialties && partner.specialties.length > 0 && (
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Services</p>
+                        <div className="flex flex-wrap gap-2">
+                          {partner.specialties.slice(0, 5).map((service, index) => (
+                            <span key={index} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
+                              {service}
+                            </span>
+                          ))}
+                          {partner.specialties.length > 5 && (
+                            <span className="px-2 py-1 text-gray-500 dark:text-gray-400 text-xs">
+                              +{partner.specialties.length - 5} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-        </ResizableWidget>
-
-        {/* Contact Information */}
-        <ResizableWidget widgetId="contact-info" size={sizes['contact-info']} onSizeChange={setWidgetSize}>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Contact Information</h3>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {partner.contact?.contactPerson && (
-                <div className="flex items-center">
-                  <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mr-3">
-                    <span className="text-gray-600 dark:text-gray-300 font-medium">{partner.contact.contactPerson.charAt(0)}</span>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Contact Person</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{partner.contact.contactPerson}</p>
-                  </div>
-                </div>
-              )}
-              {partner.contact?.email && (
-                <div className="flex items-center">
-                  <EnvelopeIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
-                    <a href={`mailto:${partner.contact.email}`} className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
-                      {partner.contact.email}
-                    </a>
-                  </div>
-                </div>
-              )}
-              {partner.contact?.phone && (
-                <div className="flex items-center">
-                  <PhoneIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Phone</p>
-                    <a href={`tel:${partner.contact.phone}`} className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
-                      {partner.contact.phone}
-                    </a>
-                  </div>
-                </div>
-              )}
-              {partner.contact?.website && (
-                <div className="flex items-center">
-                  <GlobeAltIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Website</p>
-                    <a href={partner.contact.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
-                      Visit Website
-                    </a>
-                  </div>
-                </div>
-              )}
-              {!partner.contact?.contactPerson && !partner.contact?.email && !partner.contact?.phone && !partner.contact?.website && (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-4">No contact information provided</p>
-              )}
-            </div>
-          </div>
-        </div>
-        </ResizableWidget>
-      </DashboardGrid>
-
-      {/* Special Offers & Recent Reviews */}
-      <DashboardGrid>
-        {/* Special Offers */}
-        <ResizableWidget widgetId="special-offers" size={sizes['special-offers']} onSizeChange={setWidgetSize}>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-              <DocumentTextIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
-              Special Offers
-            </h3>
-          </div>
-          <div className="p-6">
-            {partner.specialOffers && partner.specialOffers.length > 0 ? (
-              <div className="space-y-4">
-                {partner.specialOffers.slice(0, 3).map((offer, index) => (
-                  <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">{offer.title}</h4>
-                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{offer.description}</p>
-                      </div>
-                      {offer.discountPercent && (
-                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded text-sm font-medium">
-                          {offer.discountPercent}% OFF
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      {offer.code && (
-                        <span className="px-3 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded text-sm font-mono font-medium">
-                          {offer.code}
-                        </span>
-                      )}
-                      {offer.validUntil && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                          <ClockIcon className="h-3 w-3 mr-1" />
-                          Valid until {format(new Date(offer.validUntil), 'MMM d, yyyy')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
               </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-8">No special offers yet</p>
-            )}
-          </div>
-        </div>
-        </ResizableWidget>
-
-        {/* Recent Reviews */}
-        <ResizableWidget widgetId="recent-reviews" size={sizes['recent-reviews']} onSizeChange={setWidgetSize}>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-              <StarIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
-              Recent Reviews
-            </h3>
-            <div className="flex items-center">
-              <StarIcon className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-              <span className="ml-1 text-lg font-bold text-gray-900 dark:text-gray-100">{partner.rating?.toFixed(1) || '0.0'}</span>
-              <span className="ml-1 text-sm text-gray-500 dark:text-gray-400">({partner.reviewCount || 0})</span>
-            </div>
-          </div>
-          <div className="p-6">
-            {recentReviews.length > 0 ? (
-              <div className="space-y-4">
-                {recentReviews.map((review, index) => (
-                  <div key={index} className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-0 last:pb-0">
-                    <div className="flex items-center justify-between mb-2">
+            ),
+            'contact-info': (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Contact Information</h3>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {partner.contact?.contactPerson && (
                       <div className="flex items-center">
-                        {[...Array(5)].map((_, i) => (
-                          <StarIcon
-                            key={i}
-                            className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-gray-600'}`}
-                          />
-                        ))}
+                        <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mr-3">
+                          <span className="text-gray-600 dark:text-gray-300 font-medium">{partner.contact.contactPerson.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Contact Person</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{partner.contact.contactPerson}</p>
+                        </div>
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {format(new Date(review.createdAt), 'MMM d, yyyy')}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{review.comment}</p>
+                    )}
+                    {partner.contact?.email && (
+                      <div className="flex items-center">
+                        <EnvelopeIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+                          <a href={`mailto:${partner.contact.email}`} className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
+                            {partner.contact.email}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    {partner.contact?.phone && (
+                      <div className="flex items-center">
+                        <PhoneIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Phone</p>
+                          <a href={`tel:${partner.contact.phone}`} className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
+                            {partner.contact.phone}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    {partner.contact?.website && (
+                      <div className="flex items-center">
+                        <GlobeAltIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mr-3" />
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Website</p>
+                          <a href={partner.contact.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
+                            Visit Website
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    {!partner.contact?.contactPerson && !partner.contact?.email && !partner.contact?.phone && !partner.contact?.website && (
+                      <p className="text-gray-500 dark:text-gray-400 text-center py-4">No contact information provided</p>
+                    )}
                   </div>
-                ))}
+                </div>
               </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-8">No reviews yet</p>
-            )}
-          </div>
-        </div>
-        </ResizableWidget>
+            ),
+            'special-offers': (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                    <DocumentTextIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
+                    Special Offers
+                  </h3>
+                </div>
+                <div className="p-6">
+                  {partner.specialOffers && partner.specialOffers.length > 0 ? (
+                    <div className="space-y-4">
+                      {partner.specialOffers.slice(0, 3).map((offer, index) => (
+                        <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-semibold text-gray-900 dark:text-gray-100">{offer.title}</h4>
+                              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{offer.description}</p>
+                            </div>
+                            {offer.discountPercent && (
+                              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded text-sm font-medium">
+                                {offer.discountPercent}% OFF
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-3 flex items-center justify-between">
+                            {offer.code && (
+                              <span className="px-3 py-1 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded text-sm font-mono font-medium">
+                                {offer.code}
+                              </span>
+                            )}
+                            {offer.validUntil && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                                <ClockIcon className="h-3 w-3 mr-1" />
+                                Valid until {format(new Date(offer.validUntil), 'MMM d, yyyy')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">No special offers yet</p>
+                  )}
+                </div>
+              </div>
+            ),
+            'recent-reviews': (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                    <StarIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
+                    Recent Reviews
+                  </h3>
+                  <div className="flex items-center">
+                    <StarIcon className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                    <span className="ml-1 text-lg font-bold text-gray-900 dark:text-gray-100">{partner.rating?.toFixed(1) || '0.0'}</span>
+                    <span className="ml-1 text-sm text-gray-500 dark:text-gray-400">({partner.reviewCount || 0})</span>
+                  </div>
+                </div>
+                <div className="p-6">
+                  {recentReviews.length > 0 ? (
+                    <div className="space-y-4">
+                      {recentReviews.map((review, index) => (
+                        <div key={index} className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-0 last:pb-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <StarIcon
+                                  key={i}
+                                  className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-gray-600'}`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {format(new Date(review.createdAt), 'MMM d, yyyy')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">{review.comment}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">No reviews yet</p>
+                  )}
+                </div>
+              </div>
+            ),
+          };
+
+          const content = widgetContent[widgetId];
+          if (!content) return null;
+
+          return (
+            <ResizableWidget
+              key={widgetId}
+              widgetId={widgetId}
+              size={sizes[widgetId] || 'md'}
+              onSizeChange={setWidgetSize}
+              isEditMode={isEditMode}
+            >
+              {content}
+            </ResizableWidget>
+          );
+        })}
       </DashboardGrid>
 
       {/* Documents & Collateral */}

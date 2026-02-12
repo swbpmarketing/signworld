@@ -1,7 +1,7 @@
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePreviewMode } from '../context/PreviewModeContext';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { getDashboardStats, getRecentActivity } from '../services/dashboardService';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/axios';
@@ -35,9 +35,10 @@ import EngagementTrendChart from '../components/analytics/EngagementTrendChart';
 import ActivityTimeline from '../components/analytics/ActivityTimeline';
 import EquipmentPopularityWidget from '../components/analytics/EquipmentPopularityWidget';
 import SatisfactionOverview from '../components/analytics/SatisfactionOverview';
-import { useWidgetSizes } from '../hooks/useWidgetSizes';
+import { useWidgetLayout } from '../hooks/useWidgetLayout';
 import DashboardGrid from '../components/dashboard/DashboardGrid';
 import ResizableWidget from '../components/dashboard/ResizableWidget';
+import { PencilIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -47,15 +48,46 @@ const Dashboard = () => {
   const isActualAdmin = user?.role === 'admin';
   const isAdmin = isActualAdmin && !isPreviewMode;
 
-  const { sizes, setWidgetSize } = useWidgetSizes('admin', {
-    'engagement-metrics': 'md',
-    'engagement-trend': 'md',
-    'activity-timeline': 'md',
-    'equipment-popularity': 'md',
-    'satisfaction-overview': 'md',
-    'recent-activity': 'md',
-    'quick-actions': 'md',
-  });
+  const adminDefaultSizes = {
+    'engagement-metrics': 'md' as const,
+    'engagement-trend': 'md' as const,
+    'activity-timeline': 'md' as const,
+    'equipment-popularity': 'md' as const,
+    'satisfaction-overview': 'md' as const,
+    'recent-activity': 'md' as const,
+    'quick-actions': 'md' as const,
+  };
+
+  const adminDefaultOrder = [
+    'engagement-metrics',
+    'engagement-trend',
+    'activity-timeline',
+    'equipment-popularity',
+    'satisfaction-overview',
+    'recent-activity',
+    'quick-actions',
+  ];
+
+  const nonAdminDefaultSizes = {
+    'recent-activity': 'md' as const,
+    'quick-actions': 'md' as const,
+  };
+
+  const nonAdminDefaultOrder = ['recent-activity', 'quick-actions'];
+
+  const {
+    sizes,
+    setWidgetSize,
+    order,
+    isEditMode,
+    toggleEditMode,
+    handleDragEnd,
+    resetLayout,
+  } = useWidgetLayout(
+    isAdmin ? 'admin' : 'admin-user',
+    isAdmin ? adminDefaultSizes : nonAdminDefaultSizes,
+    isAdmin ? adminDefaultOrder : nonAdminDefaultOrder
+  );
 
   // Get previewed user - this will be called fresh on each render
   const previewedUser = isPreviewMode && previewState.type === 'user'
@@ -328,6 +360,28 @@ const Dashboard = () => {
               }
             </p>
           </div>
+          <div className="flex gap-2">
+            {isEditMode && (
+              <button
+                onClick={resetLayout}
+                className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 transition-colors"
+              >
+                <ArrowPathIcon className="h-4 w-4 mr-1.5" />
+                Reset
+              </button>
+            )}
+            <button
+              onClick={toggleEditMode}
+              className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                isEditMode
+                  ? 'bg-primary-600 text-white hover:bg-primary-700'
+                  : 'bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
+              }`}
+            >
+              <PencilIcon className="h-4 w-4 mr-1.5" />
+              {isEditMode ? 'Done' : 'Edit Layout'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -488,35 +542,9 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Analytics Dashboard Widgets - Admin Only */}
-      {isAdmin && (
-        <div data-tour="dashboard-charts" className="space-y-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Analytics Dashboard</h2>
-
-          <DashboardGrid>
-            <ResizableWidget widgetId="engagement-metrics" size={sizes['engagement-metrics']} onSizeChange={setWidgetSize}>
-              <EngagementMetricsWidget className="h-full" />
-            </ResizableWidget>
-            <ResizableWidget widgetId="engagement-trend" size={sizes['engagement-trend']} onSizeChange={setWidgetSize}>
-              <EngagementTrendChart height={320} />
-            </ResizableWidget>
-            <ResizableWidget widgetId="activity-timeline" size={sizes['activity-timeline']} onSizeChange={setWidgetSize}>
-              <ActivityTimeline />
-            </ResizableWidget>
-            <ResizableWidget widgetId="equipment-popularity" size={sizes['equipment-popularity']} onSizeChange={setWidgetSize}>
-              <EquipmentPopularityWidget />
-            </ResizableWidget>
-            <ResizableWidget widgetId="satisfaction-overview" size={sizes['satisfaction-overview']} onSizeChange={setWidgetSize}>
-              <SatisfactionOverview />
-            </ResizableWidget>
-          </DashboardGrid>
-        </div>
-      )}
-
       {/* Stats Grid */}
       <div data-tour="dashboard-stats-cards" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {isLoadingStats ? (
-          // Loading skeleton with shimmer
           [...Array(4)].map((_, i) => (
             <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
               <div className="p-6">
@@ -576,104 +604,126 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Main Content Grid */}
-      <DashboardGrid>
-        {/* Recent Activity */}
-        <ResizableWidget widgetId="recent-activity" size={sizes['recent-activity']} onSizeChange={setWidgetSize}>
-        <div data-tour="dashboard-recent-activity" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-              <BellIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
-              Recent Activity
-            </h3>
-          </div>
-          <div className="p-6">
-            {isLoadingActivity ? (
-              // Loading skeleton with shimmer
-              <div className="space-y-4">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="flex items-start space-x-3">
-                    <div className="h-10 w-10 rounded-full animate-shimmer" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 w-3/4 rounded animate-shimmer" />
-                      <div className="h-3 w-1/4 rounded animate-shimmer" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : activities.length === 0 ? (
-              <div className="text-center py-8">
-                <BellIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
-              </div>
-            ) : (
-              <div className="flow-root">
-                <ul className="-mb-8">
-                  {activities.map((activity, activityIdx) => (
-                    <li key={activity.id}>
-                      <div className="relative pb-8">
-                        {activityIdx !== activities.length - 1 ? (
-                          <span
-                            className="absolute top-5 left-5 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700"
-                            aria-hidden="true"
-                          />
-                        ) : null}
-                        <div className="relative flex items-start space-x-3">
-                          <div className="relative">
-                            <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                              <div className="h-2 w-2 bg-primary-600 dark:bg-primary-400 rounded-full" />
-                            </div>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.message}</p>
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{activity.time}</p>
+      {/* Unified Draggable Widget Grid */}
+      <DashboardGrid isEditMode={isEditMode} widgetOrder={order} onDragEnd={handleDragEnd}>
+        {order.map((widgetId) => {
+          // Admin-only analytics widgets
+          if (!isAdmin && ['engagement-metrics', 'engagement-trend', 'activity-timeline', 'equipment-popularity', 'satisfaction-overview'].includes(widgetId)) {
+            return null;
+          }
+
+          const widgetContent: Record<string, React.ReactNode> = {
+            'engagement-metrics': <EngagementMetricsWidget className="h-full" />,
+            'engagement-trend': <EngagementTrendChart height={320} />,
+            'activity-timeline': <ActivityTimeline />,
+            'equipment-popularity': <EquipmentPopularityWidget />,
+            'satisfaction-overview': <SatisfactionOverview />,
+            'recent-activity': (
+              <div data-tour="dashboard-recent-activity" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                    <BellIcon className="h-5 w-5 mr-2 text-primary-600 dark:text-primary-400" />
+                    Recent Activity
+                  </h3>
+                </div>
+                <div className="p-6">
+                  {isLoadingActivity ? (
+                    <div className="space-y-4">
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} className="flex items-start space-x-3">
+                          <div className="h-10 w-10 rounded-full animate-shimmer" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 w-3/4 rounded animate-shimmer" />
+                            <div className="h-3 w-1/4 rounded animate-shimmer" />
                           </div>
                         </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                      ))}
+                    </div>
+                  ) : activities.length === 0 ? (
+                    <div className="text-center py-8">
+                      <BellIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
+                    </div>
+                  ) : (
+                    <div className="flow-root">
+                      <ul className="-mb-8">
+                        {activities.map((activity, activityIdx) => (
+                          <li key={activity.id}>
+                            <div className="relative pb-8">
+                              {activityIdx !== activities.length - 1 ? (
+                                <span className="absolute top-5 left-5 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
+                              ) : null}
+                              <div className="relative flex items-start space-x-3">
+                                <div className="relative">
+                                  <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                                    <div className="h-2 w-2 bg-primary-600 dark:bg-primary-400 rounded-full" />
+                                  </div>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.message}</p>
+                                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{activity.time}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-        </ResizableWidget>
+            ),
+            'quick-actions': (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                    <ChartBarIcon className={`h-5 w-5 mr-2 ${isAdmin ? 'text-purple-600 dark:text-purple-400' : 'text-primary-600 dark:text-primary-400'}`} />
+                    {isAdmin ? 'Admin Actions' : 'Quick Actions'}
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 gap-3">
+                    {quickActions.map((action) => (
+                      <button
+                        key={action.path}
+                        onClick={() => navigate(action.path)}
+                        className={`w-full flex items-center justify-between px-4 py-3 ${action.bg || 'bg-gray-50 dark:bg-gray-700/50'} rounded-lg transition-all duration-200 group hover-scale`}
+                      >
+                        <span className="flex items-center">
+                          <action.icon className={`h-5 w-5 mr-3 ${action.color || 'text-primary-600 dark:text-primary-400'}`} />
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{action.label}</span>
+                          {'badge' in action && action.badge > 0 && (
+                            <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-amber-500 rounded-full">
+                              {action.badge}
+                            </span>
+                          )}
+                        </span>
+                        <svg className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ),
+          };
 
-        {/* Quick Actions */}
-        <ResizableWidget widgetId="quick-actions" size={sizes['quick-actions']} onSizeChange={setWidgetSize}>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-              <ChartBarIcon className={`h-5 w-5 mr-2 ${isAdmin ? 'text-purple-600 dark:text-purple-400' : 'text-primary-600 dark:text-primary-400'}`} />
-              {isAdmin ? 'Admin Actions' : 'Quick Actions'}
-            </h3>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 gap-3">
-              {quickActions.map((action) => (
-                <button
-                  key={action.path}
-                  onClick={() => navigate(action.path)}
-                  className={`w-full flex items-center justify-between px-4 py-3 ${action.bg || 'bg-gray-50 dark:bg-gray-700/50'} rounded-lg transition-all duration-200 group hover-scale`}
-                >
-                  <span className="flex items-center">
-                    <action.icon className={`h-5 w-5 mr-3 ${action.color || 'text-primary-600 dark:text-primary-400'}`} />
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{action.label}</span>
-                    {'badge' in action && action.badge > 0 && (
-                      <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-amber-500 rounded-full">
-                        {action.badge}
-                      </span>
-                    )}
-                  </span>
-                  <svg className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        </ResizableWidget>
+          const content = widgetContent[widgetId];
+          if (!content) return null;
+
+          return (
+            <ResizableWidget
+              key={widgetId}
+              widgetId={widgetId}
+              size={sizes[widgetId] || 'md'}
+              onSizeChange={setWidgetSize}
+              isEditMode={isEditMode}
+            >
+              {content}
+            </ResizableWidget>
+          );
+        })}
       </DashboardGrid>
     </div>
   );

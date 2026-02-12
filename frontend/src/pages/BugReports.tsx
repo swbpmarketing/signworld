@@ -28,6 +28,7 @@ import {
 
 interface BugReport {
   _id: string;
+  taskNumber?: string;
   title: string;
   description: string;
   stepsToReproduce?: string;
@@ -401,7 +402,8 @@ const BugReports = () => {
     return (
       report.title.toLowerCase().includes(query) ||
       report.description.toLowerCase().includes(query) ||
-      report._id.toLowerCase().includes(query)
+      report._id.toLowerCase().includes(query) ||
+      (report.taskNumber && report.taskNumber.toLowerCase().includes(query))
     );
   }) || [];
 
@@ -768,6 +770,11 @@ const BugReports = () => {
           <span className="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium">
             {report.type === 'bug' ? 'Bug' : 'Feature'}
           </span>
+          {report.taskNumber && (
+            <span className="text-xs font-mono font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-1.5 py-0.5 rounded">
+              {report.taskNumber}
+            </span>
+          )}
         </div>
         <span className={`text-xs px-2 py-0.5 rounded-full ${priorityConfig[report.priority].color}`}>
           {priorityConfig[report.priority].label}
@@ -1097,9 +1104,16 @@ const BugReports = () => {
                         <LightBulbIcon className="h-5 w-5 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                       )}
                       <div className="min-w-0">
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {report.title}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          {report.taskNumber && (
+                            <span className="text-xs font-mono font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-1.5 py-0.5 rounded flex-shrink-0">
+                              {report.taskNumber}
+                            </span>
+                          )}
+                          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                            {report.title}
+                          </h3>
+                        </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
                           {report.description}
                         </p>
@@ -1850,9 +1864,16 @@ const BugReports = () => {
                     </button>
                   </div>
                 </div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mt-3">
-                  {selectedReport.title}
-                </h2>
+                <div className="flex items-center gap-2 mt-3">
+                  {selectedReport.taskNumber && (
+                    <span className="text-sm font-mono font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-2 py-0.5 rounded">
+                      {selectedReport.taskNumber}
+                    </span>
+                  )}
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {selectedReport.title}
+                  </h2>
+                </div>
               </div>
 
               {/* Content */}

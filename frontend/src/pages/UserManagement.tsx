@@ -19,6 +19,7 @@ import {
   ClipboardDocumentCheckIcon,
 } from '@heroicons/react/24/outline';
 import api from '../config/axios';
+import { useAuth } from '../context/AuthContext';
 import CustomSelect from '../components/CustomSelect';
 import EmptyState from '../components/EmptyState';
 import SearchHighlight from '../components/SearchHighlight';
@@ -41,6 +42,7 @@ interface User {
 }
 
 const UserManagement = () => {
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -262,9 +264,16 @@ const UserManagement = () => {
 
   // Bulk action handlers
   const handleBulkDelete = () => {
-    if (window.confirm(`Are you sure you want to delete ${selectedUsers.length} user(s)? This action cannot be undone.`)) {
-      bulkDeleteMutation.mutate(selectedUsers);
+    const filtered = selectedUsers.filter(id => id !== currentUser?._id);
+    if (filtered.length === 0) {
+      toast.error('You cannot delete your own account');
+      return;
     }
+    if (filtered.length < selectedUsers.length) {
+      toast.error('Your own account was excluded from the selection');
+      setSelectedUsers(filtered);
+    }
+    setDeleteConfirm({ type: 'bulk', count: filtered.length });
   };
 
   const handleBulkActivate = () => {
@@ -277,6 +286,7 @@ const UserManagement = () => {
 
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [bulkRole, setBulkRole] = useState<'admin' | 'owner' | 'vendor'>('vendor');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'single' | 'bulk'; userId?: string; count?: number } | null>(null);
 
   const handleBulkChangeRole = () => {
     bulkUpdateRoleMutation.mutate({ userIds: selectedUsers, role: bulkRole });
@@ -311,9 +321,21 @@ const UserManagement = () => {
 
   const handleDeleteUser = () => {
     if (!selectedUser) return;
-    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      deleteUserMutation.mutate(selectedUser._id);
+    if (selectedUser._id === currentUser?._id) {
+      toast.error('You cannot delete your own account');
+      return;
     }
+    setDeleteConfirm({ type: 'single', userId: selectedUser._id });
+  };
+
+  const confirmDelete = () => {
+    if (!deleteConfirm) return;
+    if (deleteConfirm.type === 'single' && deleteConfirm.userId) {
+      deleteUserMutation.mutate(deleteConfirm.userId);
+    } else if (deleteConfirm.type === 'bulk') {
+      bulkDeleteMutation.mutate(selectedUsers.filter(id => id !== currentUser?._id));
+    }
+    setDeleteConfirm(null);
   };
 
   const handleCloseUserDetails = () => {
@@ -1270,6 +1292,7 @@ const UserManagement = () => {
                 </div>
 
                 <div className="flex-shrink-0 bg-white dark:bg-gray-800 p-4 sm:p-5 md:p-6 flex flex-col-reverse sm:flex-row justify-end gap-3 border-t border-gray-200 dark:border-gray-700">
+                  {selectedUser._id !== currentUser?._id && (
                   <button
                     onClick={handleDeleteUser}
                     disabled={deleteUserMutation.isPending}
@@ -1278,6 +1301,7 @@ const UserManagement = () => {
                     <TrashIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                     {deleteUserMutation.isPending ? 'Deleting...' : 'Delete User'}
                   </button>
+                  )}
                   <button
                     onClick={handleEditUser}
                     className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 sm:py-3 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors shadow-sm"
@@ -1288,6 +1312,63 @@ const UserManagement = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-[60] flex items-center justify-center p-4"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100vh',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0,
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: 'hidden'
+          } as React.CSSProperties}
+        >
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full">
+            <div className="p-6 text-center">
+              <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+                <TrashIcon className="h-7 w-7 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                {deleteConfirm.type === 'bulk'
+                  ? `Delete ${deleteConfirm.count} User${(deleteConfirm.count || 0) > 1 ? 's' : ''}?`
+                  : 'Delete User?'}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {deleteConfirm.type === 'bulk'
+                  ? `Are you sure you want to delete ${deleteConfirm.count} selected user(s)? This action cannot be undone.`
+                  : 'Are you sure you want to delete this user? This action cannot be undone.'}
+              </p>
+            </div>
+
+            <div className="flex gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleteUserMutation.isPending || bulkDeleteMutation.isPending}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 active:bg-red-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
+                {deleteUserMutation.isPending || bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}
