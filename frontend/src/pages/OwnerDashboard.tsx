@@ -158,21 +158,39 @@ const OwnerDashboard = () => {
       description: 'View upcoming convention schedules and events',
       icon: BuildingOffice2Icon,
       href: '/convention',
-      color: 'from-blue-600 to-indigo-600',
+      darkGradient: 'from-blue-600 to-indigo-600',
+      lightBg: 'bg-blue-50',
+      lightBorder: 'border-blue-200',
+      iconColor: 'text-blue-600 dark:text-white',
+      titleColor: 'text-blue-900 dark:text-white',
+      descColor: 'text-blue-700/70 dark:text-white/80',
+      exploreColor: 'text-blue-700 dark:text-white',
     },
     {
       title: 'Equipment Marketplace',
       description: 'Browse equipment, create wishlists, and inquire',
       icon: ShoppingBagIcon,
       href: '/equipment',
-      color: 'from-green-600 to-teal-600',
+      darkGradient: 'from-green-600 to-teal-600',
+      lightBg: 'bg-green-50',
+      lightBorder: 'border-green-200',
+      iconColor: 'text-green-600 dark:text-white',
+      titleColor: 'text-green-900 dark:text-white',
+      descColor: 'text-green-700/70 dark:text-white/80',
+      exploreColor: 'text-green-700 dark:text-white',
     },
     {
       title: 'Partner Directory',
       description: 'Find trusted vendors and service providers',
       icon: UserGroupIcon,
       href: '/partners',
-      color: 'from-purple-600 to-pink-600',
+      darkGradient: 'from-purple-600 to-pink-600',
+      lightBg: 'bg-purple-50',
+      lightBorder: 'border-purple-200',
+      iconColor: 'text-purple-600 dark:text-white',
+      titleColor: 'text-purple-900 dark:text-white',
+      descColor: 'text-purple-700/70 dark:text-white/80',
+      exploreColor: 'text-purple-700 dark:text-white',
     },
   ];
 
@@ -329,14 +347,14 @@ const OwnerDashboard = () => {
           <Link
             key={section.title}
             to={section.href}
-            className="relative overflow-hidden rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 group"
+            className={`relative overflow-hidden rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 group ${section.lightBg} ${section.lightBorder} border dark:border-transparent`}
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${section.color} opacity-90 group-hover:opacity-100 transition-opacity`} />
-            <div className="relative p-6 text-white">
-              <section.icon className="h-10 w-10 mb-4 opacity-80" />
-              <h3 className="text-lg font-semibold">{section.title}</h3>
-              <p className="mt-1 text-sm text-white/80">{section.description}</p>
-              <div className="mt-4 flex items-center text-sm font-medium">
+            <div className={`absolute inset-0 bg-gradient-to-br ${section.darkGradient} opacity-0 dark:opacity-90 dark:group-hover:opacity-100 transition-opacity`} />
+            <div className="relative p-6">
+              <section.icon className={`h-10 w-10 mb-4 ${section.iconColor} opacity-80`} />
+              <h3 className={`text-lg font-semibold ${section.titleColor}`}>{section.title}</h3>
+              <p className={`mt-1 text-sm ${section.descColor}`}>{section.description}</p>
+              <div className={`mt-4 flex items-center text-sm font-medium ${section.exploreColor}`}>
                 <span>Explore</span>
                 <svg className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

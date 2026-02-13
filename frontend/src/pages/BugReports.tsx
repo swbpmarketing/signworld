@@ -25,6 +25,8 @@ import {
   ExclamationTriangleIcon,
   PhotoIcon,
 } from '@heroicons/react/24/outline';
+import MentionInput from '../components/ui/MentionInput';
+import MentionText from '../components/ui/MentionText';
 
 interface BugReport {
   _id: string;
@@ -2101,12 +2103,11 @@ const BugReports = () => {
                             </div>
                           ) : editingCommentId === comment._id ? (
                             <div className="flex gap-2">
-                              <input
-                                type="text"
+                              <MentionInput
                                 value={editCommentText}
-                                onChange={(e) => setEditCommentText(e.target.value)}
+                                onChange={setEditCommentText}
                                 className="flex-1 px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                onKeyPress={(e) => {
+                                onKeyDown={(e) => {
                                   if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
                                     if (editCommentText.trim()) {
@@ -2139,7 +2140,7 @@ const BugReports = () => {
                             </div>
                           ) : (
                             <>
-                              {comment.text && <p className="text-sm text-gray-700 dark:text-gray-300">{comment.text}</p>}
+                              {comment.text && <MentionText text={comment.text} className="text-sm text-gray-700 dark:text-gray-300" />}
                               {comment.attachments && comment.attachments.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mt-2">
                                   {comment.attachments.map((att, i) => (
@@ -2218,13 +2219,12 @@ const BugReports = () => {
                       >
                         <PhotoIcon className="h-5 w-5" />
                       </button>
-                      <input
-                        type="text"
+                      <MentionInput
                         value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
+                        onChange={setNewComment}
                         placeholder="Add a comment..."
                         className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
                             handleAddComment(selectedReport._id);

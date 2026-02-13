@@ -24,7 +24,10 @@ import {
   ChevronUpIcon,
   TicketIcon,
   PhotoIcon,
+  ArrowUpTrayIcon,
 } from '@heroicons/react/24/outline';
+import MentionInput from '../components/ui/MentionInput';
+import MentionText from '../components/ui/MentionText';
 
 // --- Types ---
 
@@ -55,9 +58,13 @@ interface SupportTicket {
   ticketNumber?: string;
   subject: string;
   description: string;
-  category: 'general' | 'billing' | 'technical' | 'account' | 'equipment' | 'other';
+  category: 'general' | 'billing' | 'technical' | 'account' | 'equipment' | 'business' | 'other';
   status: 'open' | 'in_progress' | 'awaiting_response' | 'resolved' | 'closed';
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  companyName?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   author: {
     _id: string;
     name: string;
@@ -96,6 +103,15 @@ interface NewTicketForm {
   priority: string;
 }
 
+interface ServiceRequestForm {
+  companyName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  areaOfAssistance: string;
+  details: string;
+}
+
 // --- Config ---
 
 const statusConfig: Record<string, { label: string; color: string; borderColor: string; bg: string; text: string; activeBg: string }> = {
@@ -117,6 +133,7 @@ const categoryConfig: Record<string, { label: string; icon: string }> = {
   general: { label: 'General', icon: '📋' },
   billing: { label: 'Billing', icon: '💳' },
   technical: { label: 'Technical', icon: '🔧' },
+  business: { label: 'Business', icon: '💼' },
   account: { label: 'Account', icon: '👤' },
   equipment: { label: 'Equipment', icon: '🖨️' },
   other: { label: 'Other', icon: '📝' },
@@ -127,6 +144,15 @@ const initialFormState: NewTicketForm = {
   description: '',
   category: 'general',
   priority: 'medium',
+};
+
+const initialServiceRequestForm: ServiceRequestForm = {
+  companyName: '',
+  contactName: '',
+  contactEmail: '',
+  contactPhone: '',
+  areaOfAssistance: '',
+  details: '',
 };
 
 // --- Helpers ---
@@ -189,6 +215,8 @@ const SupportTickets = () => {
   const [ticketAttachments, setTicketAttachments] = useState<File[]>([]);
   const [replyAttachments, setReplyAttachments] = useState<File[]>([]);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [serviceRequest, setServiceRequest] = useState<ServiceRequestForm>(initialServiceRequestForm);
+  const [isDragOver, setIsDragOver] = useState(false);
   const ticketFileInputRef = useRef<HTMLInputElement>(null);
   const replyFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -237,6 +265,35 @@ const SupportTickets = () => {
     },
     onError: () => {
       toast.error('Failed to create support ticket');
+    },
+  });
+
+  const createServiceRequestMutation = useMutation({
+    mutationFn: async (data: { form: ServiceRequestForm; files: File[] }) => {
+      const formData = new FormData();
+      formData.append('companyName', data.form.companyName);
+      formData.append('contactName', data.form.contactName);
+      formData.append('contactEmail', data.form.contactEmail);
+      formData.append('contactPhone', data.form.contactPhone);
+      formData.append('category', data.form.areaOfAssistance);
+      formData.append('description', data.form.details);
+      formData.append('priority', 'medium');
+      data.files.forEach(file => formData.append('attachments', file));
+      const response = await api.post('/support-tickets', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supportTickets'] });
+      queryClient.invalidateQueries({ queryKey: ['supportTicketStats'] });
+      setShowCreateForm(false);
+      setServiceRequest(initialServiceRequestForm);
+      setTicketAttachments([]);
+      toast.success('Service request submitted! We\'ll get back to you soon.');
+    },
+    onError: () => {
+      toast.error('Failed to submit service request');
     },
   });
 
@@ -368,6 +425,30 @@ const SupportTickets = () => {
     createMutation.mutate({ form: newTicket, files: ticketAttachments });
   }, [newTicket, ticketAttachments, createMutation]);
 
+  const handleSubmitServiceRequest = useCallback(() => {
+    if (!serviceRequest.companyName.trim()) {
+      toast.error('Please enter your company name');
+      return;
+    }
+    if (!serviceRequest.contactName.trim()) {
+      toast.error('Please enter your name');
+      return;
+    }
+    if (!serviceRequest.contactEmail.trim()) {
+      toast.error('Please enter your email');
+      return;
+    }
+    if (!serviceRequest.contactPhone.trim()) {
+      toast.error('Please enter your phone number');
+      return;
+    }
+    if (!serviceRequest.areaOfAssistance) {
+      toast.error('Please select an area of assistance');
+      return;
+    }
+    createServiceRequestMutation.mutate({ form: serviceRequest, files: ticketAttachments });
+  }, [serviceRequest, ticketAttachments, createServiceRequestMutation]);
+
   const handleSendReply = useCallback((ticketId: string) => {
     if (!replyText.trim() && replyAttachments.length === 0) return;
     addCommentMutation.mutate({ id: ticketId, text: replyText, files: replyAttachments });
@@ -412,12 +493,22 @@ const SupportTickets = () => {
     }
   }, [searchParams, ticketsData, showDetailModal, openTicketDetail]);
 
-  // Scroll to form when opened
+  // Auto-populate service request form with user data and scroll to form when opened
   useEffect(() => {
-    if (showCreateForm && formRef.current) {
-      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (showCreateForm) {
+      if (user && !isAdmin) {
+        setServiceRequest(prev => ({
+          ...prev,
+          contactName: prev.contactName || user.name || '',
+          contactEmail: prev.contactEmail || user.email || '',
+          companyName: prev.companyName || (user as any).company || '',
+        }));
+      }
+      if (formRef.current) {
+        formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
-  }, [showCreateForm]);
+  }, [showCreateForm, user, isAdmin]);
 
   // --- Filter ---
 
@@ -457,6 +548,30 @@ const SupportTickets = () => {
       setReplyAttachments(prev => [...prev, ...validFiles].slice(0, 5));
     }
     e.target.value = '';
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const files = Array.from(e.dataTransfer.files);
+    const validFiles = files.filter(file => {
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error(`${file.name} exceeds 50MB limit`);
+        return false;
+      }
+      return true;
+    });
+    setTicketAttachments(prev => [...prev, ...validFiles].slice(0, 5));
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
   }, []);
 
   const renderAttachmentPreviews = (files: File[], onRemove: (index: number) => void) => {
@@ -676,22 +791,173 @@ const SupportTickets = () => {
           ) : null}
         </div>
 
-        {/* Owner: Inline Create Ticket Form */}
+        {/* Owner: Inline Service Request Form */}
         {!isAdmin && showCreateForm && (
-          <div ref={formRef} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary-100 dark:bg-primary-800/40 rounded-lg">
-                  <TicketIcon className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+          <div ref={formRef} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden max-w-2xl mx-auto">
+            {/* Header with Logo */}
+            <div className="px-8 pt-8 pb-6">
+              <img src="/logo.png" alt="Signworld Business Partners" className="h-12 mb-6" />
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Assistance / Service Request</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Please fill out the form below to receive assistance from the Signworld Team.</p>
+            </div>
+
+            <div className="px-8 pb-8 space-y-6">
+              {/* Company Name */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1.5">
+                  Company Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={serviceRequest.companyName}
+                  onChange={(e) => setServiceRequest({ ...serviceRequest, companyName: e.target.value })}
+                  maxLength={255}
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-right mt-1">{serviceRequest.companyName.length}/255</p>
+              </div>
+
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1.5">
+                  What is your name? <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={serviceRequest.contactName}
+                  onChange={(e) => setServiceRequest({ ...serviceRequest, contactName: e.target.value })}
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1.5">
+                  What is your email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={serviceRequest.contactEmail}
+                  onChange={(e) => setServiceRequest({ ...serviceRequest, contactEmail: e.target.value })}
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1.5">
+                  What is your phone number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={serviceRequest.contactPhone}
+                  onChange={(e) => setServiceRequest({ ...serviceRequest, contactPhone: e.target.value })}
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Area of Assistance */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-0.5">
+                  Area of Assistance <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-blue-500 dark:text-blue-400 mb-1.5">Where do you need help today?</p>
+                <select
+                  value={serviceRequest.areaOfAssistance}
+                  onChange={(e) => setServiceRequest({ ...serviceRequest, areaOfAssistance: e.target.value })}
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">Select...</option>
+                  <option value="technical">Technical Support</option>
+                  <option value="business">Business Support</option>
+                </select>
+              </div>
+
+              {/* Details */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-0.5">
+                  Please provide details of the assistance you need
+                </label>
+                <p className="text-xs text-blue-500 dark:text-blue-400 mb-1.5">Please provide more detail of the request</p>
+                <textarea
+                  value={serviceRequest.details}
+                  onChange={(e) => setServiceRequest({ ...serviceRequest, details: e.target.value })}
+                  maxLength={2000}
+                  rows={5}
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                />
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-right mt-1">{serviceRequest.details.length}/2000</p>
+              </div>
+
+              {/* File Upload - Drag and Drop */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-0.5">
+                  Add relevant attachment
+                </label>
+                <p className="text-xs text-blue-500 dark:text-blue-400 mb-2">Please provide any necessary documents that will help in providing you with assistance.</p>
+                <input
+                  ref={ticketFileInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleFileSelect(e, 'ticket')}
+                />
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onClick={() => ticketFileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                    isDragOver
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                  }`}
+                >
+                  <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+                  <p className="text-sm">
+                    <span className="text-primary-600 dark:text-primary-400 font-medium cursor-pointer hover:underline">Choose a file to upload</span>
+                    <span className="text-gray-500 dark:text-gray-400"> or drag and drop here</span>
+                  </p>
                 </div>
-                <div>
-                  <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Submit a Support Ticket</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Fill out the form below and we'll get back to you as soon as possible.</p>
+                {renderAttachmentPreviews(ticketAttachments, (i) => setTicketAttachments(prev => prev.filter((_, idx) => idx !== i)))}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  Our team typically responds within 24 hours
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCreateForm(false);
+                      setServiceRequest(initialServiceRequestForm);
+                      setTicketAttachments([]);
+                    }}
+                    className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitServiceRequest}
+                    disabled={createServiceRequestMutation.isPending || !serviceRequest.companyName.trim() || !serviceRequest.contactName.trim() || !serviceRequest.contactEmail.trim() || !serviceRequest.contactPhone.trim() || !serviceRequest.areaOfAssistance}
+                    className="px-6 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm inline-flex items-center gap-2"
+                  >
+                    {createServiceRequestMutation.isPending ? (
+                      <>
+                        <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <PaperAirplaneIcon className="h-4 w-4" />
+                        Submit Request
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-            </div>
-            <div className="p-6">
-              {renderTicketForm(true)}
             </div>
           </div>
         )}
@@ -991,6 +1257,14 @@ const SupportTickets = () => {
                     <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(selectedTicket.createdAt)}</span>
                   </div>
                 </div>
+                {/* Show contact info if service request fields exist */}
+                {(selectedTicket.companyName || selectedTicket.contactPhone) && (
+                  <div className="mb-3 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                    {selectedTicket.companyName && <p><span className="font-medium text-gray-600 dark:text-gray-300">Company:</span> {selectedTicket.companyName}</p>}
+                    {selectedTicket.contactPhone && <p><span className="font-medium text-gray-600 dark:text-gray-300">Phone:</span> {selectedTicket.contactPhone}</p>}
+                    {selectedTicket.contactEmail && <p><span className="font-medium text-gray-600 dark:text-gray-300">Email:</span> {selectedTicket.contactEmail}</p>}
+                  </div>
+                )}
                 <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{selectedTicket.description}</p>
                 {renderSavedAttachments(selectedTicket.attachments)}
               </div>
@@ -1041,10 +1315,9 @@ const SupportTickets = () => {
                           >
                             {editingCommentId === comment._id ? (
                               <div className="flex gap-2">
-                                <input
-                                  type="text"
+                                <MentionInput
                                   value={editCommentText}
-                                  onChange={(e) => setEditCommentText(e.target.value)}
+                                  onChange={setEditCommentText}
                                   className="flex-1 px-2.5 py-1.5 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey && editCommentText.trim()) {
@@ -1094,7 +1367,7 @@ const SupportTickets = () => {
                               </div>
                             ) : (
                               <>
-                                {comment.text && <p className="text-sm whitespace-pre-wrap leading-relaxed">{comment.text}</p>}
+                                {comment.text && <MentionText text={comment.text} className="text-sm whitespace-pre-wrap leading-relaxed" />}
                                 {renderSavedAttachments(comment.attachments, true)}
                               </>
                             )}
@@ -1164,9 +1437,9 @@ const SupportTickets = () => {
                   >
                     <PhotoIcon className="h-5 w-5" />
                   </button>
-                  <textarea
+                  <MentionInput
                     value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
+                    onChange={setReplyText}
                     placeholder="Type your reply..."
                     rows={2}
                     className="flex-1 px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"

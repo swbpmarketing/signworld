@@ -36,9 +36,24 @@ import ActivityTimeline from '../components/analytics/ActivityTimeline';
 import EquipmentPopularityWidget from '../components/analytics/EquipmentPopularityWidget';
 import SatisfactionOverview from '../components/analytics/SatisfactionOverview';
 import { useWidgetLayout } from '../hooks/useWidgetLayout';
+import { useCardOrder } from '../hooks/useCardOrder';
 import DashboardGrid from '../components/dashboard/DashboardGrid';
 import ResizableWidget from '../components/dashboard/ResizableWidget';
+import SortableCard from '../components/dashboard/SortableCard';
 import { PencilIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -82,12 +97,50 @@ const Dashboard = () => {
     isEditMode,
     toggleEditMode,
     handleDragEnd,
-    resetLayout,
+    resetLayout: resetWidgetLayout,
   } = useWidgetLayout(
     isAdmin ? 'admin' : 'admin-user',
     isAdmin ? adminDefaultSizes : nonAdminDefaultSizes,
     isAdmin ? adminDefaultOrder : nonAdminDefaultOrder
   );
+
+  // Platform overview card IDs (admin only)
+  const platformCardIds = [
+    'platform-upcoming-events',
+    'platform-forum-threads',
+    'platform-library-resources',
+    'platform-equipment-listings',
+    'platform-recent-activity',
+    'platform-success-stories',
+    'platform-pending-reviews',
+    'platform-system-alerts',
+  ];
+
+  // Stats card IDs (all users)
+  const statsCardIds = ['stat-0', 'stat-1', 'stat-2', 'stat-3'];
+
+  const {
+    order: platformOrder,
+    handleDragEnd: handlePlatformDragEnd,
+    resetOrder: resetPlatformOrder,
+  } = useCardOrder('admin-platform-cards', platformCardIds);
+
+  const {
+    order: statsOrder,
+    handleDragEnd: handleStatsDragEnd,
+    resetOrder: resetStatsOrder,
+  } = useCardOrder(isAdmin ? 'admin-stats-cards' : 'user-stats-cards', statsCardIds);
+
+  const cardSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const resetLayout = () => {
+    resetWidgetLayout();
+    resetPlatformOrder();
+    resetStatsOrder();
+  };
 
   // Get previewed user - this will be called fresh on each render
   const previewedUser = isPreviewMode && previewState.type === 'user'
@@ -239,6 +292,7 @@ const Dashboard = () => {
   // For regular users and preview mode, show user-specific events instead of total owners
   const stats = statsData ? [
     {
+      id: 'stat-0',
       name: isAdmin ? 'Total Owners' : 'My Events',
       value: isAdmin ? statsData.owners.total.toString() : (statsData.myRsvps?.total || 0).toString(),
       icon: isAdmin ? UserGroupIcon : CalendarIcon,
@@ -248,6 +302,7 @@ const Dashboard = () => {
       description: isAdmin ? 'View all registered owners' : 'View your registered events'
     },
     {
+      id: 'stat-1',
       name: isAdmin ? 'Upcoming Events' : 'Available Events',
       value: statsData.events.total.toString(),
       icon: CalendarIcon,
@@ -257,6 +312,7 @@ const Dashboard = () => {
       description: 'Browse and manage events'
     },
     {
+      id: 'stat-2',
       name: 'Library Files',
       value: statsData.library.total.toString(),
       icon: DocumentDuplicateIcon,
@@ -266,6 +322,7 @@ const Dashboard = () => {
       description: 'Access downloadable resources'
     },
     {
+      id: 'stat-3',
       name: 'Video Lessons',
       value: statsData.videos.total.toString(),
       icon: VideoCameraIcon,
@@ -386,223 +443,267 @@ const Dashboard = () => {
       </div>
 
       {/* Platform Overview Stats */}
-      {isAdmin && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <div
-            onClick={() => !isLoadingAdminStats && navigate('/calendar')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <CalendarIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                {isLoadingAdminStats ? (
-                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
-                ) : (
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.totalEvents || 0}</p>
-                )}
-                <p className="text-xs text-gray-500 dark:text-gray-400">Upcoming Events</p>
+      {isAdmin && (() => {
+        const platformCards: Record<string, React.ReactNode> = {
+          'platform-upcoming-events': (
+            <div
+              onClick={() => !isLoadingAdminStats && navigate('/calendar')}
+              className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <CalendarIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  {isLoadingAdminStats ? (
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.totalEvents || 0}</p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Upcoming Events</p>
+                </div>
               </div>
             </div>
-          </div>
+          ),
+          'platform-forum-threads': (
+            <div
+              onClick={() => !isLoadingAdminStats && navigate('/forum')}
+              className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                  <ChatBubbleLeftRightIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  {isLoadingAdminStats ? (
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.forumThreads || 0}</p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Forum Threads (30d)</p>
+                </div>
+              </div>
+            </div>
+          ),
+          'platform-library-resources': (
+            <div
+              onClick={() => !isLoadingAdminStats && navigate('/library')}
+              className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                  <FolderIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  {isLoadingAdminStats ? (
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.libraryResources || 0}</p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Library Resources</p>
+                </div>
+              </div>
+            </div>
+          ),
+          'platform-equipment-listings': (
+            <div
+              onClick={() => !isLoadingAdminStats && navigate('/equipment')}
+              className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                  <ShoppingBagIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  {isLoadingAdminStats ? (
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.equipmentListings || 0}</p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Equipment Listings</p>
+                </div>
+              </div>
+            </div>
+          ),
+          'platform-recent-activity': (
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                  <SparklesIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                </div>
+                <div>
+                  {isLoadingAdminStats ? (
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.recentActivity || 0}</p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Recent Activity (24h)</p>
+                </div>
+              </div>
+            </div>
+          ),
+          'platform-success-stories': (
+            <div
+              onClick={() => !isLoadingAdminStats && navigate('/brags')}
+              className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                  <NewspaperIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  {isLoadingAdminStats ? (
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.successStories || 0}</p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Success Stories</p>
+                </div>
+              </div>
+            </div>
+          ),
+          'platform-pending-reviews': (
+            <div
+              onClick={() => !isLoadingAdminStats && navigate('/pending-approval')}
+              className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 shadow-sm cursor-pointer hover-lift ${
+                !isLoadingAdminStats && (adminStats?.pendingReviews || 0) > 0
+                  ? 'border-amber-400 dark:border-amber-500'
+                  : 'border-gray-200 dark:border-gray-700'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${!isLoadingAdminStats && (adminStats?.pendingReviews || 0) > 0 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                  <DocumentCheckIcon className={`h-5 w-5 ${!isLoadingAdminStats && (adminStats?.pendingReviews || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-400'}`} />
+                </div>
+                <div>
+                  {isLoadingAdminStats ? (
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.pendingReviews || 0}</p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Pending Reviews</p>
+                </div>
+              </div>
+            </div>
+          ),
+          'platform-system-alerts': (
+            <div
+              onClick={() => !isLoadingAdminStats && navigate('/bug-reports')}
+              className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 shadow-sm cursor-pointer hover-lift ${
+                !isLoadingAdminStats && (adminStats?.systemAlerts || 0) > 0
+                  ? 'border-red-400 dark:border-red-500'
+                  : 'border-gray-200 dark:border-gray-700'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${!isLoadingAdminStats && (adminStats?.systemAlerts || 0) > 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                  <BugAntIcon className={`h-5 w-5 ${!isLoadingAdminStats && (adminStats?.systemAlerts || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`} />
+                </div>
+                <div>
+                  {isLoadingAdminStats ? (
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.systemAlerts || 0}</p>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400">System Alerts</p>
+                </div>
+              </div>
+            </div>
+          ),
+        };
 
-          <div
-            onClick={() => !isLoadingAdminStats && navigate('/forum')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                <ChatBubbleLeftRightIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div>
-                {isLoadingAdminStats ? (
-                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
-                ) : (
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.forumThreads || 0}</p>
-                )}
-                <p className="text-xs text-gray-500 dark:text-gray-400">Forum Threads (30d)</p>
-              </div>
-            </div>
+        const gridContent = (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {platformOrder.map((cardId) => (
+              <SortableCard key={cardId} cardId={cardId} isEditMode={isEditMode}>
+                {platformCards[cardId]}
+              </SortableCard>
+            ))}
           </div>
+        );
 
-          <div
-            onClick={() => !isLoadingAdminStats && navigate('/library')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <FolderIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                {isLoadingAdminStats ? (
-                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
-                ) : (
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.libraryResources || 0}</p>
-                )}
-                <p className="text-xs text-gray-500 dark:text-gray-400">Library Resources</p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => !isLoadingAdminStats && navigate('/equipment')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <ShoppingBagIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                {isLoadingAdminStats ? (
-                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
-                ) : (
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.equipmentListings || 0}</p>
-                )}
-                <p className="text-xs text-gray-500 dark:text-gray-400">Equipment Listings</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                <SparklesIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              </div>
-              <div>
-                {isLoadingAdminStats ? (
-                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
-                ) : (
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.recentActivity || 0}</p>
-                )}
-                <p className="text-xs text-gray-500 dark:text-gray-400">Recent Activity (24h)</p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => !isLoadingAdminStats && navigate('/brags')}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover-lift">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                <NewspaperIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                {isLoadingAdminStats ? (
-                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
-                ) : (
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.successStories || 0}</p>
-                )}
-                <p className="text-xs text-gray-500 dark:text-gray-400">Success Stories</p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => !isLoadingAdminStats && navigate('/pending-approval')}
-            className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 shadow-sm cursor-pointer hover-lift ${
-              !isLoadingAdminStats && (adminStats?.pendingReviews || 0) > 0
-                ? 'border-amber-400 dark:border-amber-500'
-                : 'border-gray-200 dark:border-gray-700'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${!isLoadingAdminStats && (adminStats?.pendingReviews || 0) > 0 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                <DocumentCheckIcon className={`h-5 w-5 ${!isLoadingAdminStats && (adminStats?.pendingReviews || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-400'}`} />
-              </div>
-              <div>
-                {isLoadingAdminStats ? (
-                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
-                ) : (
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.pendingReviews || 0}</p>
-                )}
-                <p className="text-xs text-gray-500 dark:text-gray-400">Pending Reviews</p>
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => !isLoadingAdminStats && navigate('/bug-reports')}
-            className={`bg-white dark:bg-gray-800 rounded-xl p-4 border-2 shadow-sm cursor-pointer hover-lift ${
-              !isLoadingAdminStats && (adminStats?.systemAlerts || 0) > 0
-                ? 'border-red-400 dark:border-red-500'
-                : 'border-gray-200 dark:border-gray-700'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${!isLoadingAdminStats && (adminStats?.systemAlerts || 0) > 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                <BugAntIcon className={`h-5 w-5 ${!isLoadingAdminStats && (adminStats?.systemAlerts || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`} />
-              </div>
-              <div>
-                {isLoadingAdminStats ? (
-                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-shimmer"></div>
-                ) : (
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{adminStats?.systemAlerts || 0}</p>
-                )}
-                <p className="text-xs text-gray-500 dark:text-gray-400">System Alerts</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        return isEditMode ? (
+          <DndContext sensors={cardSensors} collisionDetection={closestCenter} onDragEnd={handlePlatformDragEnd}>
+            <SortableContext items={platformOrder} strategy={rectSortingStrategy}>
+              {gridContent}
+            </SortableContext>
+          </DndContext>
+        ) : gridContent;
+      })()}
 
       {/* Stats Grid */}
-      <div data-tour="dashboard-stats-cards" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {isLoadingStats ? (
-          [...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-              <div className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 space-y-3">
-                    <div className="h-4 w-24 rounded animate-shimmer" />
-                    <div className="h-8 w-16 rounded animate-shimmer" />
-                  </div>
-                  <div className="h-12 w-12 rounded-lg animate-shimmer" />
-                </div>
-              </div>
-            </div>
-          ))
-        ) : (
-          stats.map((stat) => (
-            <button
-              key={stat.name}
-              onClick={() => navigate(stat.path)}
-              className="w-full text-left bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover-lift cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary-200 dark:hover:border-primary-800 focus-ring group"
-              title={stat.description}
-              aria-label={`${stat.name}: ${stat.value}. ${stat.description}`}
-            >
-              <div className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                      {stat.name}
-                    </p>
-                    <div className="mt-2 flex items-baseline space-x-2">
-                      <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          stat.changeType === 'positive'
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
-                            : stat.changeType === 'negative'
-                            ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
-                        }`}
-                        aria-label={`${stat.changeType === 'positive' ? 'Increased' : stat.changeType === 'negative' ? 'Decreased' : 'No change'} by ${stat.change}`}
-                      >
-                        {stat.changeType === 'positive' && <ArrowUpIcon className="h-3 w-3" aria-hidden="true" />}
-                        {stat.changeType === 'negative' && <ArrowDownIcon className="h-3 w-3" aria-hidden="true" />}
-                        {stat.changeType === 'neutral' && <MinusIcon className="h-3 w-3" aria-hidden="true" />}
-                        <span>{stat.change}</span>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <div className="p-3 bg-primary-50 dark:bg-primary-900/30 rounded-lg group-hover:bg-primary-100 dark:group-hover:bg-primary-900/50 transition-colors">
-                      <stat.icon className="h-6 w-6 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+      {(() => {
+        const statsGrid = (
+          <div data-tour="dashboard-stats-cards" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {isLoadingStats ? (
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 space-y-3">
+                        <div className="h-4 w-24 rounded animate-shimmer" />
+                        <div className="h-8 w-16 rounded animate-shimmer" />
+                      </div>
+                      <div className="h-12 w-12 rounded-lg animate-shimmer" />
                     </div>
                   </div>
                 </div>
-              </div>
-            </button>
-          ))
-        )}
-      </div>
+              ))
+            ) : (
+              statsOrder.map((statId) => {
+                const stat = stats.find((s) => s.id === statId);
+                if (!stat) return null;
+                return (
+                  <SortableCard key={stat.id} cardId={stat.id} isEditMode={isEditMode}>
+                    <button
+                      onClick={() => navigate(stat.path)}
+                      className="w-full text-left bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover-lift cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary-200 dark:hover:border-primary-800 focus-ring group"
+                      title={stat.description}
+                      aria-label={`${stat.name}: ${stat.value}. ${stat.description}`}
+                    >
+                      <div className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                              {stat.name}
+                            </p>
+                            <div className="mt-2 flex items-baseline space-x-2">
+                              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</p>
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  stat.changeType === 'positive'
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+                                    : stat.changeType === 'negative'
+                                    ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                                }`}
+                                aria-label={`${stat.changeType === 'positive' ? 'Increased' : stat.changeType === 'negative' ? 'Decreased' : 'No change'} by ${stat.change}`}
+                              >
+                                {stat.changeType === 'positive' && <ArrowUpIcon className="h-3 w-3" aria-hidden="true" />}
+                                {stat.changeType === 'negative' && <ArrowDownIcon className="h-3 w-3" aria-hidden="true" />}
+                                {stat.changeType === 'neutral' && <MinusIcon className="h-3 w-3" aria-hidden="true" />}
+                                <span>{stat.change}</span>
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0">
+                            <div className="p-3 bg-primary-50 dark:bg-primary-900/30 rounded-lg group-hover:bg-primary-100 dark:group-hover:bg-primary-900/50 transition-colors">
+                              <stat.icon className="h-6 w-6 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </SortableCard>
+                );
+              })
+            )}
+          </div>
+        );
+
+        return isEditMode ? (
+          <DndContext sensors={cardSensors} collisionDetection={closestCenter} onDragEnd={handleStatsDragEnd}>
+            <SortableContext items={statsOrder} strategy={rectSortingStrategy}>
+              {statsGrid}
+            </SortableContext>
+          </DndContext>
+        ) : statsGrid;
+      })()}
 
       {/* Unified Draggable Widget Grid */}
       <DashboardGrid isEditMode={isEditMode} widgetOrder={order} onDragEnd={handleDragEnd}>

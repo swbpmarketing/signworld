@@ -19,6 +19,26 @@ router.use(protect);
 // Owner stats route (must be before /:id route) - restricted to admin and owner roles
 router.get('/owner-stats', authorize('admin', 'owner'), handlePreviewMode, getOwnerStats);
 
+// Search users for @mention autocomplete (must be before /:id route)
+router.get('/search/mention', async (req, res) => {
+  try {
+    const { q = '', limit = 10 } = req.query;
+    const User = require('../models/User');
+    const query = { isActive: true, _id: { $ne: req.user.id } };
+    if (q.trim()) {
+      query.name = { $regex: q.trim(), $options: 'i' };
+    }
+    const users = await User.find(query)
+      .select('name profileImage role')
+      .limit(parseInt(limit))
+      .sort({ name: 1 });
+    res.json({ success: true, data: users });
+  } catch (error) {
+    console.error('Error searching users for mention:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 // Search users for preview modal (must be before /:id route)
 router.get('/search/preview', authorize('admin'), async (req, res) => {
   try {

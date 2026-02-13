@@ -16,6 +16,24 @@ const supportTicketSchema = new mongoose.Schema({
   description: {
     type: String,
     required: [true, 'Please add a description'],
+    maxlength: [2000, 'Description cannot be more than 2000 characters'],
+  },
+  companyName: {
+    type: String,
+    trim: true,
+    maxlength: [255, 'Company name cannot be more than 255 characters'],
+  },
+  contactName: {
+    type: String,
+    trim: true,
+  },
+  contactEmail: {
+    type: String,
+    trim: true,
+  },
+  contactPhone: {
+    type: String,
+    trim: true,
   },
   attachments: [{
     url: String,
@@ -24,7 +42,7 @@ const supportTicketSchema = new mongoose.Schema({
   }],
   category: {
     type: String,
-    enum: ['general', 'billing', 'technical', 'account', 'equipment', 'other'],
+    enum: ['general', 'billing', 'technical', 'account', 'equipment', 'business', 'other'],
     default: 'general',
   },
   status: {
