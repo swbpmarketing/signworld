@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const SystemSettings = require('../models/SystemSettings');
 const emailService = require('../services/emailService');
+const { generateToken: generateVerificationToken, getTokenExpiration } = require('../utils/tokenGenerator');
 
 // Import models for stats aggregation
 let Brag, ForumThread, Event, Message, Analytics;
@@ -130,6 +131,12 @@ exports.createUser = async (req, res) => {
     // Populate createdBy field before returning
     await user.populate('createdBy', 'name email');
 
+    // Generate password reset token for the change-password link in the welcome email
+    const { token: resetTokenPlain, hash: resetTokenHash } = generateVerificationToken();
+    user.resetPasswordToken = resetTokenHash;
+    user.resetPasswordExpires = getTokenExpiration(1440); // 24 hours for new accounts
+    await user.save();
+
     // Send welcome email with credentials
     try {
       await emailService.sendWelcomeEmailWithCredentials({
@@ -137,6 +144,7 @@ exports.createUser = async (req, res) => {
         name: user.name,
         password: plainPassword,
         role: user.role,
+        resetToken: resetTokenPlain,
       });
     } catch (emailError) {
       // Don't fail the request if email fails

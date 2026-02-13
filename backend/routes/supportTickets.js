@@ -5,6 +5,7 @@ const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { protect, authorize } = require('../middleware/auth');
 const { supportTicketFiles } = require('../middleware/upload');
+const parseMentions = require('../utils/parseMentions');
 
 // @desc    Get all support tickets with filtering
 // @route   GET /api/support-tickets
@@ -182,12 +183,16 @@ router.get('/:id', protect, async (req, res) => {
 // @access  Private
 router.post('/', protect, ...supportTicketFiles, async (req, res) => {
   try {
-    const { subject, description, category, priority } = req.body;
+    const { subject, description, category, priority, companyName, contactName, contactEmail, contactPhone } = req.body;
 
-    if (!subject || !description) {
+    // Support both legacy (subject+description) and new form (companyName+description via service request)
+    const finalSubject = subject || (companyName ? `${category === 'technical' ? 'Technical' : category === 'business' ? 'Business' : 'General'} Support Request - ${companyName}` : 'Support Request');
+    const finalDescription = description;
+
+    if (!finalDescription) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide subject and description'
+        error: 'Please provide a description'
       });
     }
 
@@ -201,13 +206,17 @@ router.post('/', protect, ...supportTicketFiles, async (req, res) => {
     }
 
     const ticket = await SupportTicket.create({
-      subject,
-      description,
+      subject: finalSubject,
+      description: finalDescription,
       category: category || 'general',
       priority: priority || 'medium',
       author: req.user.id,
       status: 'open',
       attachments,
+      companyName: companyName || undefined,
+      contactName: contactName || undefined,
+      contactEmail: contactEmail || undefined,
+      contactPhone: contactPhone || undefined,
     });
 
     await ticket.populate('author', 'name email role company profileImage');
@@ -223,7 +232,7 @@ router.post('/', protect, ...supportTicketFiles, async (req, res) => {
             sender: req.user.id,
             type: 'support_ticket',
             title: 'New Support Ticket',
-            message: `${req.user.name} submitted a support ticket: "${subject}"`,
+            message: `${req.user.name} submitted a support ticket: "${finalSubject}"`,
             referenceType: 'SupportTicket',
             referenceId: ticket._id,
             link: `/support-tickets?view=${ticket._id}`,
@@ -511,6 +520,31 @@ router.post('/:id/comment', protect, ...supportTicketFiles, async (req, res) => 
       }
     } catch (notifError) {
       console.error('Error creating reply notification:', notifError);
+    }
+
+    // Send mention notifications (skip users who already got a reply notification)
+    try {
+      const alreadyNotified = new Set();
+      if (isAdminReply && ticket.author._id.toString() !== req.user.id) {
+        alreadyNotified.add(ticket.author._id.toString());
+      }
+      const mentionedIds = parseMentions(text);
+      for (const userId of mentionedIds) {
+        if (userId === req.user.id) continue;
+        if (alreadyNotified.has(userId)) continue;
+        await Notification.createAndEmit(io, {
+          recipient: userId,
+          sender: req.user.id,
+          type: 'mention',
+          title: 'Mentioned in Support Ticket',
+          message: `${req.user.name} mentioned you in a comment on support ticket: "${ticket.subject}"`,
+          referenceType: 'SupportTicket',
+          referenceId: ticket._id,
+          link: `/support-tickets?view=${ticket._id}`,
+        });
+      }
+    } catch (mentionError) {
+      console.error('Error creating mention notifications:', mentionError);
     }
 
     res.status(201).json({

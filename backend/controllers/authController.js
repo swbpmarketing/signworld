@@ -139,12 +139,19 @@ exports.register = async (req, res) => {
       emailVerified: true, // Admin-registered users skip email verification
     });
 
+    // Generate password reset token so the welcome email includes a change-password link
+    const { token: resetTokenPlain, hash: resetTokenHash } = generateVerificationToken();
+    user.resetPasswordToken = resetTokenHash;
+    user.resetPasswordExpires = getTokenExpiration(1440); // 24 hours for new accounts
+    await user.save();
+
     // Send welcome email with credentials (non-blocking)
     emailService.sendWelcomeEmailWithCredentials({
       to: user.email,
       name: user.name,
       password: plainPassword,
       role: user.role,
+      resetToken: resetTokenPlain,
     }).catch(err => {
       console.error('Failed to send welcome email:', err);
       // Don't fail the registration if email fails

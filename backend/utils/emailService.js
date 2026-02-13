@@ -46,7 +46,9 @@ const sendEmail = async (options) => {
 
 // Send welcome email with credentials
 const sendWelcomeEmail = async (userData) => {
-  const { name, email, password, role } = userData;
+  const { name, email, password, role, resetToken } = userData;
+  const roleDisplay = role.charAt(0).toUpperCase() + role.slice(1);
+  const resetUrl = resetToken ? `${process.env.CLIENT_URL}/reset-password?token=${resetToken}` : null;
 
   const html = `
     <!DOCTYPE html>
@@ -81,6 +83,7 @@ const sendWelcomeEmail = async (userData) => {
             padding: 20px;
             border-radius: 8px;
             margin: 20px 0;
+            border-left: 4px solid #667eea;
           }
           .credentials p {
             margin: 10px 0;
@@ -88,14 +91,33 @@ const sendWelcomeEmail = async (userData) => {
           .credentials strong {
             color: #667eea;
           }
-          .button {
+          .button-primary {
             display: inline-block;
-            padding: 12px 30px;
+            padding: 14px 32px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            color: #ffffff;
             text-decoration: none;
             border-radius: 5px;
-            margin-top: 20px;
+            margin: 10px 0;
+            font-weight: bold;
+            font-size: 16px;
+          }
+          .button-secondary {
+            display: inline-block;
+            padding: 10px 24px;
+            background: #6b7280;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 14px;
+          }
+          .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
           }
           .footer {
             text-align: center;
@@ -108,28 +130,49 @@ const sendWelcomeEmail = async (userData) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>Welcome to Sign Company Dashboard!</h1>
+            <h1>Welcome to SignWorld Dashboard!</h1>
           </div>
           <div class="content">
             <p>Hi ${name},</p>
-            <p>Your account has been created successfully. You now have access to the Sign Company Dashboard with the role of <strong>${role}</strong>.</p>
+            <p>An account has been created for you on the SignWorld Dashboard. Below are your login credentials:</p>
 
             <div class="credentials">
-              <h3>Your Login Credentials:</h3>
+              <h3 style="margin-top: 0; color: #667eea;">Your Account Details</h3>
               <p><strong>Email:</strong> ${email}</p>
               <p><strong>Password:</strong> ${password}</p>
+              <p><strong>Role:</strong> ${roleDisplay}</p>
             </div>
 
-            <p><strong>Important:</strong> For security reasons, we recommend changing your password after your first login.</p>
+            <div class="warning">
+              <p><strong>⚠️ Security Reminder:</strong></p>
+              <p>For your security, please change your password right away using the button below.${resetUrl ? ' This link expires in 24 hours.' : ''}</p>
+            </div>
 
-            <a href="${process.env.FRONTEND_URL}/login" class="button">Login to Dashboard</a>
+            ${resetUrl ? `
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="${resetUrl}" class="button-primary">Change Your Password</a>
+            </div>
+            ` : ''}
 
-            <p style="margin-top: 30px;">If you have any questions or need assistance, please don't hesitate to contact your administrator.</p>
+            <div style="text-align: center; margin: 15px 0;">
+              <a href="${process.env.CLIENT_URL}/login" class="button-secondary">Login to Dashboard</a>
+            </div>
 
-            <p>Best regards,<br>Sign Company Dashboard Team</p>
+            <p>You now have access to:</p>
+            <ul>
+              <li>Comprehensive resource library</li>
+              <li>Event calendar and notifications</li>
+              <li>Community forum and discussions</li>
+              <li>Owner directory and networking</li>
+              <li>Real-time analytics and reports</li>
+            </ul>
+
+            <p>If you have any questions or need assistance, please don't hesitate to reach out to our support team.</p>
+
+            <p>Best regards,<br>The SignWorld Team</p>
           </div>
           <div class="footer">
-            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>&copy; ${new Date().getFullYear()} SignWorld. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -137,29 +180,30 @@ const sendWelcomeEmail = async (userData) => {
   `;
 
   const text = `
-Welcome to Sign Company Dashboard!
+Welcome to SignWorld Dashboard!
 
 Hi ${name},
 
-Your account has been created successfully. You now have access to the Sign Company Dashboard with the role of ${role}.
+An account has been created for you on the SignWorld Dashboard with the role of ${roleDisplay}.
 
 Your Login Credentials:
 Email: ${email}
 Password: ${password}
 
-Important: For security reasons, we recommend changing your password after your first login.
+IMPORTANT: For security reasons, please change your password right away.
+${resetUrl ? `Change your password here (expires in 24 hours): ${resetUrl}` : ''}
 
-Login at: ${process.env.FRONTEND_URL}/login
+Login at: ${process.env.CLIENT_URL}/login
 
 If you have any questions or need assistance, please don't hesitate to contact your administrator.
 
 Best regards,
-Sign Company Dashboard Team
+The SignWorld Team
   `;
 
   return await sendEmail({
     to: email,
-    subject: 'Welcome to Sign Company Dashboard - Your Account Details',
+    subject: 'Welcome to SignWorld Dashboard - Your Account Details',
     html,
     text,
   });

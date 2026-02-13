@@ -4,6 +4,7 @@ const BugReport = require('../models/BugReport');
 const Notification = require('../models/Notification');
 const { protect, authorize, optionalProtect, handlePreviewMode } = require('../middleware/auth');
 const { bugReportFiles } = require('../middleware/upload');
+const parseMentions = require('../utils/parseMentions');
 
 // @desc    Get all bug reports with filtering
 // @route   GET /api/bug-reports
@@ -586,6 +587,26 @@ router.post('/:id/comment', protect, ...bugReportFiles, async (req, res) => {
         comment: newComment,
         commentsCount: report.comments.length
       });
+    }
+
+    // Send mention notifications
+    try {
+      const mentionedIds = parseMentions(text);
+      for (const userId of mentionedIds) {
+        if (userId === req.user.id) continue;
+        await Notification.createAndEmit(io, {
+          recipient: userId,
+          sender: req.user.id,
+          type: 'mention',
+          title: 'Mentioned in Bug Report',
+          message: `${req.user.name} mentioned you in a comment on bug report: "${report.title}"`,
+          referenceType: 'BugReport',
+          referenceId: report._id,
+          link: `/bug-reports?view=${report._id}`,
+        });
+      }
+    } catch (mentionError) {
+      console.error('Error creating mention notifications:', mentionError);
     }
 
     res.status(201).json({

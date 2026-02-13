@@ -6,6 +6,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Default sender email
 const DEFAULT_FROM = process.env.EMAIL_FROM || 'SignWorld <noreply@signworld.com>';
 
+// Frontend URL for email links (strip trailing slash)
+const FRONTEND = (process.env.FRONTEND_URL || process.env.CLIENT_URL || '').replace(/\/+$/, '');
+
 class EmailService {
   /**
    * Send email verification email
@@ -60,13 +63,15 @@ class EmailService {
   /**
    * Send welcome email with credentials (for admin-created users)
    */
-  async sendWelcomeEmailWithCredentials({ to, name, password, role }) {
+  async sendWelcomeEmailWithCredentials({ to, name, password, role, resetToken }) {
     try {
+      const resetUrl = resetToken ? `${FRONTEND}/reset-password?token=${resetToken}` : null;
+
       const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
         to: [to],
         subject: 'Welcome to SignWorld Dashboard - Your Account Details',
-        html: this.getWelcomeWithCredentialsTemplate(name, to, password, role),
+        html: this.getWelcomeWithCredentialsTemplate(name, to, password, role, resetUrl),
       });
 
       if (error) {
@@ -140,7 +145,7 @@ class EmailService {
    */
   async sendPasswordResetEmail({ to, name, resetToken }) {
     try {
-      const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
+      const resetUrl = `${FRONTEND}/reset-password?token=${resetToken}`;
 
       const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
@@ -167,7 +172,7 @@ class EmailService {
    */
   async sendForumNotification({ to, name, thread, post }) {
     try {
-      const threadUrl = `${process.env.CLIENT_URL}/forum/thread/${thread._id}`;
+      const threadUrl = `${FRONTEND}/forum/thread/${thread._id}`;
 
       const { data, error } = await resend.emails.send({
         from: DEFAULT_FROM,
@@ -318,7 +323,7 @@ class EmailService {
                 <li>Owner directory and networking</li>
                 <li>Real-time analytics and reports</li>
               </ul>
-              <a href="${process.env.CLIENT_URL}/dashboard" class="button">Go to Dashboard</a>
+              <a href="${FRONTEND}/dashboard" class="button">Go to Dashboard</a>
               <p>If you have any questions, feel free to reach out to our support team.</p>
               <p>Best regards,<br>The SignWorld Team</p>
             </div>
@@ -331,7 +336,7 @@ class EmailService {
     `;
   }
 
-  getWelcomeWithCredentialsTemplate(name, email, password, role) {
+  getWelcomeWithCredentialsTemplate(name, email, password, role, resetUrl) {
     const roleDisplay = role.charAt(0).toUpperCase() + role.slice(1);
     return `
       <!DOCTYPE html>
@@ -345,7 +350,8 @@ class EmailService {
             .credentials { background: #f0f4f8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
             .credentials p { margin: 10px 0; }
             .credentials strong { color: #667eea; }
-            .button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .button-primary { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 5px; margin: 10px 0; font-weight: bold; font-size: 16px; }
+            .button-secondary { display: inline-block; background: #6b7280; color: #ffffff; padding: 10px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; font-size: 14px; }
             .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
             .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
           </style>
@@ -368,10 +374,18 @@ class EmailService {
 
               <div class="warning">
                 <p><strong>⚠️ Security Reminder:</strong></p>
-                <p>For your security, please change your password after logging in for the first time.</p>
+                <p>For your security, please change your password right away using the button below.${resetUrl ? ' This link expires in 24 hours.' : ''}</p>
               </div>
 
-              <a href="${process.env.CLIENT_URL}/login" class="button">Login to Dashboard</a>
+              ${resetUrl ? `
+              <div style="text-align: center; margin: 25px 0;">
+                <a href="${resetUrl}" class="button-primary">Change Your Password</a>
+              </div>
+              ` : ''}
+
+              <div style="text-align: center; margin: 15px 0;">
+                <a href="${FRONTEND}/login" class="button-secondary">Login to Dashboard</a>
+              </div>
 
               <p>You now have access to:</p>
               <ul>
@@ -433,7 +447,7 @@ class EmailService {
                 ${event.location ? `<p><strong>Location:</strong> ${event.location}</p>` : ''}
                 ${event.description ? `<p><strong>Description:</strong> ${event.description}</p>` : ''}
               </div>
-              <a href="${process.env.CLIENT_URL}/calendar" class="button">View Calendar</a>
+              <a href="${FRONTEND}/calendar" class="button">View Calendar</a>
               <p>See you there!</p>
               <p>Best regards,<br>The SignWorld Team</p>
             </div>
@@ -564,7 +578,7 @@ class EmailService {
   }
 
   getConventionRegistrationTemplate(name, convention) {
-    const convUrl = `${process.env.CLIENT_URL}/conventions/${convention._id}`;
+    const convUrl = `${FRONTEND}/conventions/${convention._id}`;
     const startDate = new Date(convention.startDate).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -622,7 +636,7 @@ class EmailService {
   }
 
   getConventionDateChangeTemplate(name, convention, oldStartDate, oldEndDate) {
-    const convUrl = `${process.env.CLIENT_URL}/conventions/${convention._id}`;
+    const convUrl = `${FRONTEND}/conventions/${convention._id}`;
     const newStartDate = new Date(convention.startDate).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
