@@ -47,6 +47,7 @@ export type Partner = {
   specialOffers: SpecialOffer[];
   documents: { title: string; fileUrl: string; fileType: string }[];
   reviews: PartnerReview[];
+  roles: string[];
   rating: number;
   reviewCount: number;
   isActive: boolean;
@@ -156,4 +157,22 @@ export const addPartnerReview = async (id: string, rating: number, comment?: str
   return response.data;
 };
 
-export default { getPartners, getPartnerStats, getPartnerCategories, getPartner, getMyProfile, createPartner, updatePartner, deletePartner, addPartnerReview };
+// Get owner's linked partners
+export const getLinkedPartners = async (): Promise<{ success: boolean; data: Partner[] }> => {
+  const response = await api.get('/partners/linked');
+  return response.data;
+};
+
+// Link a partner
+export const linkPartner = async (id: string): Promise<{ success: boolean; data: { linkedPartners: string[] } }> => {
+  const response = await api.post(`/partners/${id}/link`);
+  return response.data;
+};
+
+// Unlink a partner
+export const unlinkPartner = async (id: string): Promise<{ success: boolean; data: { linkedPartners: string[] } }> => {
+  const response = await api.delete(`/partners/${id}/link`);
+  return response.data;
+};
+
+export default { getPartners, getPartnerStats, getPartnerCategories, getPartner, getMyProfile, createPartner, updatePartner, deletePartner, addPartnerReview, getLinkedPartners, linkPartner, unlinkPartner };

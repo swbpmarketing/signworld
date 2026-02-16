@@ -211,7 +211,7 @@ const Settings = () => {
   const isAdmin = user?.role === 'admin' && !isPreviewMode;
   const isOwner = user?.role === 'owner';
   const [isSendingTest, setIsSendingTest] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'system' | 'notifications' | 'broadcasts' | 'roles'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'system' | 'notifications' | 'broadcasts' | 'announcements' | 'roles'>('profile');
   const [selectedRoleTab, setSelectedRoleTab] = useState<'owner' | 'vendor'>('owner');
 
   // Product tour hook
@@ -245,6 +245,13 @@ const Settings = () => {
   const [notificationMethod, setNotificationMethod] = useState<'internal' | 'email'>('internal');
   const [announcementType, setAnnouncementType] = useState<'info' | 'warning' | 'urgent'>('info');
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
+  const [targetRole, setTargetRole] = useState<'all' | 'owner' | 'vendor'>('all');
+
+  // Owner broadcast form state
+  const [ownerBroadcastTitle, setOwnerBroadcastTitle] = useState('');
+  const [ownerBroadcastMessage, setOwnerBroadcastMessage] = useState('');
+  const [ownerBroadcastMethod, setOwnerBroadcastMethod] = useState<'internal' | 'email'>('internal');
+  const [isSendingOwnerBroadcast, setIsSendingOwnerBroadcast] = useState(false);
 
   // Role permissions state
   const defaultRolePermissions: RolePermissions = {
@@ -397,11 +404,32 @@ const Settings = () => {
     },
   });
 
-  // Fetch broadcast history
+  // Fetch broadcast history (admin - for announcements tab)
   const { data: broadcastHistory } = useQuery({
     queryKey: ['broadcast-history'],
     queryFn: async () => {
       const response = await api.get('/notifications/broadcasts');
+      return response.data?.data || [];
+    },
+    enabled: isAdmin && activeTab === 'announcements',
+  });
+
+  // Fetch linked partners count (owner - for broadcasts tab)
+  const { data: linkedPartnersData } = useQuery({
+    queryKey: ['linkedPartners'],
+    queryFn: async () => {
+      const response = await api.get('/partners/linked');
+      return response.data?.data || [];
+    },
+    enabled: isOwner && activeTab === 'broadcasts',
+  });
+  const linkedPartnerCount = linkedPartnersData?.length || 0;
+
+  // Fetch owner broadcast history
+  const { data: ownerBroadcastHistory } = useQuery({
+    queryKey: ['owner-broadcast-history'],
+    queryFn: async () => {
+      const response = await api.get('/notifications/owner-broadcasts');
       return response.data?.data || [];
     },
     enabled: isOwner && activeTab === 'broadcasts',
@@ -417,11 +445,16 @@ const Settings = () => {
     try {
       if (notificationMethod === 'internal') {
         // Create persistent banner announcement
+        const roleTargets = targetRole === 'all'
+          ? ['admin', 'owner', 'vendor']
+          : targetRole === 'owner'
+          ? ['admin', 'owner']
+          : ['admin', 'vendor'];
         await api.post('/announcements', {
           title: broadcastTitle,
           message: broadcastMessage,
           type: announcementType,
-          targetRoles: ['admin', 'owner', 'vendor'],
+          targetRoles: roleTargets,
         });
         toast.success('Banner announcement created!');
         queryClient.invalidateQueries({ queryKey: ['announcements-all'] });
@@ -431,7 +464,7 @@ const Settings = () => {
         const response = await api.post('/notifications/broadcast', {
           title: broadcastTitle,
           message: broadcastMessage,
-          targetRole: 'owner',
+          targetRole: targetRole,
           notificationMethod: 'email',
           type: 'announcement',
         });
@@ -441,10 +474,35 @@ const Settings = () => {
       setBroadcastTitle('');
       setBroadcastMessage('');
       setAnnouncementType('info');
+      setTargetRole('all');
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to send');
     } finally {
       setIsSendingBroadcast(false);
+    }
+  };
+
+  const handleSendOwnerBroadcast = async () => {
+    if (!ownerBroadcastTitle.trim() || !ownerBroadcastMessage.trim()) {
+      toast.error('Please enter both title and message');
+      return;
+    }
+
+    setIsSendingOwnerBroadcast(true);
+    try {
+      const response = await api.post('/notifications/owner-broadcast', {
+        title: ownerBroadcastTitle,
+        message: ownerBroadcastMessage,
+        notificationMethod: ownerBroadcastMethod,
+      });
+      toast.success(response.data.message || 'Broadcast sent to vendor partners!');
+      setOwnerBroadcastTitle('');
+      setOwnerBroadcastMessage('');
+      queryClient.invalidateQueries({ queryKey: ['owner-broadcast-history'] });
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to send broadcast');
+    } finally {
+      setIsSendingOwnerBroadcast(false);
     }
   };
 
@@ -500,6 +558,7 @@ const Settings = () => {
         { id: 'system', name: 'System Configuration', icon: Cog6ToothIcon },
         { id: 'roles', name: 'Role Permissions', icon: UserGroupIcon },
         { id: 'notifications', name: 'Notification Settings', icon: BellIcon },
+        { id: 'announcements', name: 'Announcements', icon: MegaphoneIcon },
       ]
     : [
         { id: 'profile', name: 'Profile Settings', icon: UsersIcon },
@@ -1019,10 +1078,10 @@ const Settings = () => {
             </div>
           )}
 
-          {/* Broadcasts Tab (Admin Only) */}
-          {activeTab === 'broadcasts' && isOwner && (
+          {/* Announcements Tab (Admin Only) */}
+          {activeTab === 'announcements' && isAdmin && (
             <div className="space-y-6">
-              {/* Send Broadcast */}
+              {/* Send Announcement */}
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
                   <MegaphoneIcon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
@@ -1030,11 +1089,11 @@ const Settings = () => {
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                   {notificationMethod === 'internal'
-                    ? 'Create a persistent banner announcement visible to all users.'
-                    : 'Send an email broadcast to all owners.'}
+                    ? 'Create a persistent banner announcement visible to users.'
+                    : 'Send an email broadcast to users by role.'}
                 </p>
                 <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Announcement Method
@@ -1065,6 +1124,20 @@ const Settings = () => {
                           Email
                         </button>
                       </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Target Audience
+                      </label>
+                      <select
+                        value={targetRole}
+                        onChange={(e) => setTargetRole(e.target.value as 'all' | 'owner' | 'vendor')}
+                        className="w-full sm:w-48 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="all">All Users</option>
+                        <option value="owner">Owners Only</option>
+                        <option value="vendor">Vendors Only</option>
+                      </select>
                     </div>
                     {notificationMethod === 'internal' && (
                       <div>
@@ -1132,11 +1205,11 @@ const Settings = () => {
                 </div>
               </div>
 
-              {/* Broadcast History */}
+              {/* Email Broadcast History */}
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
                   <DocumentTextIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  Recent Broadcasts
+                  Recent Email Broadcasts
                 </h3>
                 {broadcastHistory && broadcastHistory.length > 0 ? (
                   <div className="space-y-3">
@@ -1163,13 +1236,169 @@ const Settings = () => {
                 ) : (
                   <div className="text-center py-8">
                     <MegaphoneIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-500 dark:text-gray-400">No broadcasts sent yet</p>
+                    <p className="text-gray-500 dark:text-gray-400">No email broadcasts sent yet</p>
                   </div>
                 )}
               </div>
 
               {/* Persistent Banner Announcements */}
               <AnnouncementsList />
+            </div>
+          )}
+
+          {/* Broadcasts Tab (Owner Only - send to linked vendors) */}
+          {activeTab === 'broadcasts' && isOwner && (
+            <div className="space-y-6">
+              {/* Send Broadcast to Linked Vendors */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+                  <MegaphoneIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+                  Broadcast to Vendor Partners
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  Send a message to your linked vendor partners.
+                  {linkedPartnerCount > 0 ? (
+                    <span className="ml-1 font-medium text-primary-600 dark:text-primary-400">
+                      Will be sent to {linkedPartnerCount} linked vendor partner{linkedPartnerCount !== 1 ? 's' : ''}.
+                    </span>
+                  ) : (
+                    <span className="ml-1 text-amber-600 dark:text-amber-400">
+                      You have no linked partners yet.
+                    </span>
+                  )}
+                </p>
+
+                {linkedPartnerCount === 0 ? (
+                  <div className="text-center py-8">
+                    <MegaphoneIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                      Link vendor partners from the Partners page to broadcast to them.
+                    </p>
+                    <button
+                      onClick={() => navigate('/partners')}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg text-sm transition-colors"
+                    >
+                      Go to Partners
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Delivery Method
+                      </label>
+                      <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setOwnerBroadcastMethod('internal')}
+                          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                            ownerBroadcastMethod === 'internal'
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          <BellIcon className="h-4 w-4" />
+                          In-App Notification
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOwnerBroadcastMethod('email')}
+                          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-l border-gray-300 dark:border-gray-600 ${
+                            ownerBroadcastMethod === 'email'
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          <EnvelopeIcon className="h-4 w-4" />
+                          Email
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Title
+                      </label>
+                      <input
+                        type="text"
+                        value={ownerBroadcastTitle}
+                        onChange={(e) => setOwnerBroadcastTitle(e.target.value)}
+                        placeholder="Enter broadcast title..."
+                        className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Message
+                      </label>
+                      <textarea
+                        value={ownerBroadcastMessage}
+                        onChange={(e) => setOwnerBroadcastMessage(e.target.value)}
+                        placeholder="Enter your message to vendor partners..."
+                        rows={4}
+                        className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleSendOwnerBroadcast}
+                        disabled={isSendingOwnerBroadcast || !ownerBroadcastTitle.trim() || !ownerBroadcastMessage.trim()}
+                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSendingOwnerBroadcast ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <PaperAirplaneIcon className="h-4 w-4" />
+                            Send Broadcast
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Owner Broadcast History */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+                  <DocumentTextIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  Broadcast History
+                </h3>
+                {ownerBroadcastHistory && ownerBroadcastHistory.length > 0 ? (
+                  <div className="space-y-3">
+                    {ownerBroadcastHistory.map((broadcast: any, index: number) => (
+                      <div
+                        key={index}
+                        className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">{broadcast.title}</h4>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{broadcast.message}</p>
+                          </div>
+                          <span className="ml-4 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 px-2 py-1 rounded-full whitespace-nowrap">
+                            {broadcast.recipientCount} vendor{broadcast.recipientCount !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                          Sent {new Date(broadcast.createdAt).toLocaleDateString()} at {new Date(broadcast.createdAt).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <MegaphoneIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400">No broadcasts sent yet</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

@@ -617,27 +617,29 @@ router.delete('/:id', protect, async (req, res) => {
 // @access  Private
 router.post('/:id/like', protect, async (req, res) => {
   try {
-    const brag = await Brag.findById(req.params.id);
+    const userId = req.user.id;
+
+    // Atomic like: only adds if user not already in array
+    let brag = await Brag.findOneAndUpdate(
+      { _id: req.params.id, likes: { $ne: userId } },
+      { $addToSet: { likes: userId } },
+      { new: true }
+    );
+    let isLiked = true;
 
     if (!brag) {
-      return res.status(404).json({
-        success: false,
-        error: 'Success story not found'
-      });
+      // User already liked — atomic unlike
+      brag = await Brag.findOneAndUpdate(
+        { _id: req.params.id },
+        { $pull: { likes: userId } },
+        { new: true }
+      );
+      isLiked = false;
     }
 
-    // Check if already liked
-    const likeIndex = brag.likes.indexOf(req.user.id);
-
-    if (likeIndex > -1) {
-      // Unlike
-      brag.likes.splice(likeIndex, 1);
-    } else {
-      // Like
-      brag.likes.push(req.user.id);
+    if (!brag) {
+      return res.status(404).json({ success: false, error: 'Success story not found' });
     }
-
-    await brag.save();
 
     // Emit real-time like update
     const io = req.app.get('io');
@@ -645,18 +647,18 @@ router.post('/:id/like', protect, async (req, res) => {
       io.to('brags').emit('brag:like', {
         storyId: brag._id,
         likesCount: brag.likes.length,
-        userId: req.user.id,
-        isLiked: likeIndex === -1
+        userId,
+        isLiked
       });
     }
 
     // Create notification for post author when someone likes their post (only if liking, not unliking)
-    if (likeIndex === -1 && brag.author.toString() !== req.user.id) {
+    if (isLiked && brag.author.toString() !== userId) {
       try {
         const likerName = req.user.name || req.user.firstName || 'Someone';
         await Notification.createAndEmit(io, {
           recipient: brag.author,
-          sender: req.user.id,
+          sender: userId,
           type: 'like',
           title: 'New Like',
           message: `${likerName} liked your success story "${brag.title}"`,
@@ -673,9 +675,9 @@ router.post('/:id/like', protect, async (req, res) => {
       success: true,
       data: {
         likes: brag.likes.length,
-        isLiked: likeIndex === -1
+        isLiked
       },
-      message: likeIndex > -1 ? 'Story unliked' : 'Story liked'
+      message: isLiked ? 'Story liked' : 'Story unliked'
     });
   } catch (error) {
     console.error('Error toggling like:', error);

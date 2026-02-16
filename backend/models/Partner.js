@@ -35,7 +35,7 @@ const partnerSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: [true, 'Please add a description'],
+    default: '',
   },
   logo: {
     type: String,
@@ -122,6 +122,10 @@ const partnerSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  roles: [{
+    type: String,
+    trim: true,
+  }],
   sortOrder: {
     type: Number,
     default: 0,

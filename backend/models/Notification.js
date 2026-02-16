@@ -32,7 +32,9 @@ const notificationSchema = new mongoose.Schema({
       'system',                 // System notification
       'support_ticket',         // New support ticket
       'support_ticket_reply',   // Reply to support ticket
-      'feedback_status'         // Bug report / feature request status change
+      'feedback_status',        // Bug report / feature request status change
+      'announcement',           // Admin broadcast announcement
+      'owner_broadcast'         // Owner broadcast to linked vendors
     ]
   },
   title: {

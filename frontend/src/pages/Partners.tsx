@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import usePermissions from '../hooks/usePermissions';
@@ -27,6 +27,7 @@ import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
+  LinkIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon, CheckBadgeIcon as CheckBadgeSolidIcon } from '@heroicons/react/24/solid';
 import CustomSelect from '../components/CustomSelect';
@@ -39,6 +40,9 @@ import {
   updatePartner,
   deletePartner,
   addPartnerReview,
+  getLinkedPartners,
+  linkPartner,
+  unlinkPartner,
 } from '../services/partnerService';
 import type { Partner, PartnerCategory, PartnerStats } from '../services/partnerService';
 
@@ -134,6 +138,47 @@ const Partners = () => {
     queryKey: ['partnerCategories', showPreferredOnly],
     queryFn: () => getPartnerCategories(showPreferredOnly),
   });
+
+  // Fetch linked partner IDs (owners only)
+  const isOwner = user?.role === 'owner';
+  const { data: linkedPartnersData } = useQuery({
+    queryKey: ['linkedPartners'],
+    queryFn: getLinkedPartners,
+    enabled: isOwner,
+  });
+  const linkedPartnerIds = new Set(
+    (linkedPartnersData?.data || []).map((p) => p._id)
+  );
+
+  const linkMutation = useMutation({
+    mutationFn: linkPartner,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['linkedPartners'] });
+      toast.success('Partner linked!');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to link partner');
+    },
+  });
+
+  const unlinkMutation = useMutation({
+    mutationFn: unlinkPartner,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['linkedPartners'] });
+      toast.success('Partner unlinked');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to unlink partner');
+    },
+  });
+
+  const handleToggleLink = (partnerId: string) => {
+    if (linkedPartnerIds.has(partnerId)) {
+      unlinkMutation.mutate(partnerId);
+    } else {
+      linkMutation.mutate(partnerId);
+    }
+  };
 
   // Helper to check if user can see ratings on Partners page
   // Owners and admins can see vendor ratings, vendors cannot
@@ -731,6 +776,18 @@ const Partners = () => {
                             {partner.category}
                             {partner.yearEstablished && ` - Est. ${partner.yearEstablished}`}
                           </p>
+                          {partner.roles && partner.roles.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {partner.roles.map((role) => (
+                                <span
+                                  key={role}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400"
+                                >
+                                  {role}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {/* Ratings only visible to owners and admins, not vendors */}
                           {canSeeVendorRatings && (
                             <div className="flex items-center mt-1">
@@ -751,11 +808,26 @@ const Partners = () => {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex flex-col items-end gap-2">
                         <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
                           {partner.discount}
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center sm:text-right">{partner.locations} locations</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 text-center sm:text-right">{partner.locations} locations</p>
+                        {isOwner && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleToggleLink(partner._id); }}
+                            disabled={linkMutation.isPending || unlinkMutation.isPending}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 ${
+                              linkedPartnerIds.has(partner._id)
+                                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900/50'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                            }`}
+                            title={linkedPartnerIds.has(partner._id) ? 'Unlink partner' : 'Link partner'}
+                          >
+                            <LinkIcon className="h-3.5 w-3.5" />
+                            {linkedPartnerIds.has(partner._id) ? 'Linked' : 'Link'}
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -860,6 +932,18 @@ const Partners = () => {
                         )}
                       </h3>
                       <p className="text-primary-100 text-sm">{selectedPartner.category}</p>
+                      {selectedPartner.roles && selectedPartner.roles.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {selectedPartner.roles.map((role) => (
+                            <span
+                              key={role}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-white/20 text-white"
+                            >
+                              {role}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button

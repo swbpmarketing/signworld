@@ -22,7 +22,7 @@ router.get('/', protect, async (req, res) => {
 // @route   GET /api/announcements/all
 // @desc    Get all announcements including inactive (admin only)
 // @access  Private/Admin
-router.get('/all', protect, authorize('owner'), async (req, res) => {
+router.get('/all', protect, authorize('admin'), async (req, res) => {
   try {
     const announcements = await Announcement.find()
       .sort({ createdAt: -1 })
@@ -38,7 +38,7 @@ router.get('/all', protect, authorize('owner'), async (req, res) => {
 // @route   POST /api/announcements
 // @desc    Create announcement
 // @access  Private/Admin
-router.post('/', protect, authorize('owner'), async (req, res) => {
+router.post('/', protect, authorize('admin'), async (req, res) => {
   try {
     const { title, message, type, priority, targetRoles } = req.body;
 
@@ -63,7 +63,7 @@ router.post('/', protect, authorize('owner'), async (req, res) => {
 // @route   PUT /api/announcements/:id
 // @desc    Update announcement
 // @access  Private/Admin
-router.put('/:id', protect, authorize('owner'), async (req, res) => {
+router.put('/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const { title, message, type, isActive, priority, targetRoles } = req.body;
 
@@ -92,7 +92,7 @@ router.put('/:id', protect, authorize('owner'), async (req, res) => {
 // @route   DELETE /api/announcements/:id
 // @desc    Delete announcement
 // @access  Private/Admin
-router.delete('/:id', protect, authorize('owner'), async (req, res) => {
+router.delete('/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const announcement = await Announcement.findById(req.params.id);
     if (!announcement) {

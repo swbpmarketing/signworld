@@ -644,31 +644,29 @@ router.delete('/:threadId/replies/:replyId', protect, async (req, res) => {
 // @access  Private
 router.post('/:id/like', protect, async (req, res) => {
   try {
-    const thread = await ForumThread.findById(req.params.id);
+    const userId = req.user._id;
+
+    // Atomic like: only adds if user not already in array
+    let thread = await ForumThread.findOneAndUpdate(
+      { _id: req.params.id, likes: { $ne: userId } },
+      { $addToSet: { likes: userId } },
+      { new: true }
+    );
+    let isLiked = true;
 
     if (!thread) {
-      return res.status(404).json({
-        success: false,
-        error: 'Thread not found'
-      });
+      // User already liked — atomic unlike
+      thread = await ForumThread.findOneAndUpdate(
+        { _id: req.params.id },
+        { $pull: { likes: userId } },
+        { new: true }
+      );
+      isLiked = false;
     }
 
-    // Check if thread has a likes array (add if missing)
-    if (!thread.likes) {
-      thread.likes = [];
+    if (!thread) {
+      return res.status(404).json({ success: false, error: 'Thread not found' });
     }
-
-    const likeIndex = thread.likes.indexOf(req.user._id);
-
-    if (likeIndex > -1) {
-      // Unlike - remove user from likes
-      thread.likes.splice(likeIndex, 1);
-    } else {
-      // Like - add user to likes
-      thread.likes.push(req.user._id);
-    }
-
-    await thread.save();
 
     // Emit real-time event for thread like
     const io = req.app.get('io');
@@ -676,12 +674,10 @@ router.post('/:id/like', protect, async (req, res) => {
       const likeData = {
         threadId: req.params.id,
         likesCount: thread.likes.length,
-        userId: req.user._id.toString(),
-        isLiked: likeIndex === -1
+        userId: userId.toString(),
+        isLiked
       };
-      // Emit to thread room for detail page
       io.to(`thread:${req.params.id}`).emit('thread:like', likeData);
-      // Also emit to forum room for listing page
       io.to('forum').emit('thread:like', likeData);
     }
 
@@ -689,7 +685,7 @@ router.post('/:id/like', protect, async (req, res) => {
       success: true,
       data: {
         likes: thread.likes.length,
-        isLiked: likeIndex === -1
+        isLiked
       }
     });
   } catch (error) {
@@ -706,45 +702,42 @@ router.post('/:id/like', protect, async (req, res) => {
 // @access  Private
 router.post('/:threadId/replies/:replyId/like', protect, async (req, res) => {
   try {
-    const thread = await ForumThread.findById(req.params.threadId);
+    const userId = req.user._id;
+    const { threadId, replyId } = req.params;
+
+    // Atomic like: only adds if user not already in reply's likes
+    let thread = await ForumThread.findOneAndUpdate(
+      { _id: threadId, replies: { $elemMatch: { _id: replyId, likes: { $ne: userId } } } },
+      { $addToSet: { 'replies.$.likes': userId } },
+      { new: true }
+    );
+    let isLiked = true;
 
     if (!thread) {
-      return res.status(404).json({
-        success: false,
-        error: 'Thread not found'
-      });
+      // User already liked — atomic unlike
+      thread = await ForumThread.findOneAndUpdate(
+        { _id: threadId, 'replies._id': replyId },
+        { $pull: { 'replies.$.likes': userId } },
+        { new: true }
+      );
+      isLiked = false;
     }
 
-    const reply = thread.replies.id(req.params.replyId);
-
-    if (!reply) {
-      return res.status(404).json({
-        success: false,
-        error: 'Reply not found'
-      });
+    if (!thread) {
+      return res.status(404).json({ success: false, error: 'Thread or reply not found' });
     }
 
-    const likeIndex = reply.likes.indexOf(req.user._id);
-
-    if (likeIndex > -1) {
-      // Unlike
-      reply.likes.splice(likeIndex, 1);
-    } else {
-      // Like
-      reply.likes.push(req.user._id);
-    }
-
-    await thread.save();
+    const reply = thread.replies.id(replyId);
 
     // Emit real-time event for reply like
     const io = req.app.get('io');
     if (io) {
-      io.to(`thread:${req.params.threadId}`).emit('reply:like', {
-        threadId: req.params.threadId,
-        replyId: req.params.replyId,
+      io.to(`thread:${threadId}`).emit('reply:like', {
+        threadId,
+        replyId,
         likesCount: reply.likes.length,
-        userId: req.user._id.toString(),
-        isLiked: likeIndex === -1
+        userId: userId.toString(),
+        isLiked
       });
     }
 
@@ -752,7 +745,7 @@ router.post('/:threadId/replies/:replyId/like', protect, async (req, res) => {
       success: true,
       data: {
         likes: reply.likes.length,
-        isLiked: likeIndex === -1
+        isLiked
       }
     });
   } catch (error) {

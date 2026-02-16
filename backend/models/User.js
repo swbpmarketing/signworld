@@ -156,6 +156,11 @@ const userSchema = new mongoose.Schema({
     canAccessPartners: { type: Boolean },
   },
   // Equipment cart and wishlist - stores equipment IDs with quantities
+  // Linked vendor partners (for owner-to-vendor communication)
+  linkedPartners: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Partner',
+  }],
   equipmentCart: [{
     equipmentId: {
       type: mongoose.Schema.Types.ObjectId,

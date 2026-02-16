@@ -483,27 +483,29 @@ router.delete('/:id', protect, async (req, res) => {
 // @access  Private
 router.post('/:id/vote', protect, async (req, res) => {
   try {
-    const report = await BugReport.findById(req.params.id);
+    const userId = req.user._id;
+
+    // Atomic vote: only adds if user not already in array
+    let report = await BugReport.findOneAndUpdate(
+      { _id: req.params.id, votes: { $ne: userId } },
+      { $addToSet: { votes: userId } },
+      { new: true }
+    );
+    let hasVoted = true;
 
     if (!report) {
-      return res.status(404).json({
-        success: false,
-        error: 'Bug report not found'
-      });
+      // User already voted — atomic unvote
+      report = await BugReport.findOneAndUpdate(
+        { _id: req.params.id },
+        { $pull: { votes: userId } },
+        { new: true }
+      );
+      hasVoted = false;
     }
 
-    // Check if already voted (compare as strings since votes are ObjectIds)
-    const voteIndex = report.votes.findIndex(v => v.toString() === req.user.id);
-
-    if (voteIndex > -1) {
-      // Remove vote
-      report.votes.splice(voteIndex, 1);
-    } else {
-      // Add vote (store as ObjectId for consistency)
-      report.votes.push(req.user._id);
+    if (!report) {
+      return res.status(404).json({ success: false, error: 'Bug report not found' });
     }
-
-    await report.save();
 
     // Emit real-time update
     const io = req.app.get('io');
@@ -511,8 +513,8 @@ router.post('/:id/vote', protect, async (req, res) => {
       io.to('bug-reports').emit('bugReport:vote', {
         reportId: report._id,
         votesCount: report.votes.length,
-        userId: req.user.id,
-        hasVoted: voteIndex === -1
+        userId: userId.toString(),
+        hasVoted
       });
     }
 
@@ -520,9 +522,9 @@ router.post('/:id/vote', protect, async (req, res) => {
       success: true,
       data: {
         votesCount: report.votes.length,
-        hasVoted: voteIndex === -1
+        hasVoted
       },
-      message: voteIndex > -1 ? 'Vote removed' : 'Vote added'
+      message: hasVoted ? 'Vote added' : 'Vote removed'
     });
   } catch (error) {
     console.error('Error toggling vote:', error);

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const Partner = require('../models/Partner');
+const User = require('../models/User');
 const upload = require('../middleware/upload');
 
 // @route   GET /api/partners/stats
@@ -262,6 +263,66 @@ router.post('/:id/view', async (req, res) => {
     await partner.save();
 
     res.json({ success: true, data: { views: partner.profileViews } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Server Error' });
+  }
+});
+
+// @route   GET /api/partners/linked
+// @desc    Get owner's linked partners list
+// @access  Private (Owner)
+router.get('/linked', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).populate('linkedPartners');
+    res.json({
+      success: true,
+      data: user.linkedPartners || [],
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Server Error' });
+  }
+});
+
+// @route   POST /api/partners/:id/link
+// @desc    Owner links a vendor partner
+// @access  Private
+router.post('/:id/link', protect, async (req, res) => {
+  try {
+    const partner = await Partner.findById(req.params.id);
+    if (!partner || !partner.isActive) {
+      return res.status(404).json({ success: false, error: 'Partner not found or inactive' });
+    }
+
+    const user = await User.findById(req.user.id);
+    const alreadyLinked = user.linkedPartners && user.linkedPartners.some(
+      (p) => p.toString() === req.params.id
+    );
+    if (alreadyLinked) {
+      return res.status(400).json({ success: false, error: 'Partner already linked' });
+    }
+
+    user.linkedPartners = user.linkedPartners || [];
+    user.linkedPartners.push(partner._id);
+    await user.save();
+
+    res.json({ success: true, data: { linkedPartners: user.linkedPartners } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Server Error' });
+  }
+});
+
+// @route   DELETE /api/partners/:id/link
+// @desc    Owner unlinks a vendor partner
+// @access  Private
+router.delete('/:id/link', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    user.linkedPartners = (user.linkedPartners || []).filter(
+      (p) => p.toString() !== req.params.id
+    );
+    await user.save();
+
+    res.json({ success: true, data: { linkedPartners: user.linkedPartners } });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message || 'Server Error' });
   }

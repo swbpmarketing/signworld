@@ -577,31 +577,35 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
 // @access  Private
 router.post('/:id/like', protect, async (req, res) => {
   try {
-    const video = await Video.findById(req.params.id);
+    const userId = req.user.id;
+
+    // Atomic like: only adds if user not already in array
+    let video = await Video.findOneAndUpdate(
+      { _id: req.params.id, likes: { $ne: userId } },
+      { $addToSet: { likes: userId } },
+      { new: true }
+    );
+    let isLiked = true;
 
     if (!video) {
-      return res.status(404).json({
-        success: false,
-        error: 'Video not found'
-      });
+      // User already liked — atomic unlike
+      video = await Video.findOneAndUpdate(
+        { _id: req.params.id },
+        { $pull: { likes: userId } },
+        { new: true }
+      );
+      isLiked = false;
     }
 
-    const userId = req.user.id;
-    const likeIndex = video.likes.indexOf(userId);
-
-    if (likeIndex > -1) {
-      video.likes.splice(likeIndex, 1);
-    } else {
-      video.likes.push(userId);
+    if (!video) {
+      return res.status(404).json({ success: false, error: 'Video not found' });
     }
-
-    await video.save();
 
     res.json({
       success: true,
       data: {
         likes: video.likes.length,
-        isLiked: likeIndex === -1
+        isLiked
       }
     });
   } catch (error) {
