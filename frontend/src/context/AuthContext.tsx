@@ -62,20 +62,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, password: string) => {
-    console.log('🔐 AuthContext.login() called for:', email);
     try {
-      console.log('📡 Sending login request to backend...');
       const response = await api.post('/auth/login', { email, password });
-      console.log('✅ Login API response received:', response.status);
       const { token } = response.data;
 
       localStorage.setItem('token', token);
-      console.log('💾 Token saved to localStorage');
 
       // Fetch fresh user data from database
-      console.log('👤 Fetching user data...');
       await fetchUser();
-      console.log('✅ User data fetched successfully');
 
       // DO NOT navigate here - let the calling component handle navigation
       // This prevents automatic redirects that would unmount components and close verification modals
@@ -83,12 +77,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('❌ AuthContext.login() error:', error.response?.status, error.response?.data);
       const errorMessage = error.response?.data?.error || 'Login failed';
       const emailNotVerified = error.response?.data?.emailNotVerified || false;
-      console.log('🚫 emailNotVerified flag:', emailNotVerified);
 
       // Create error object with additional properties
       const loginError: any = new Error(errorMessage);
       loginError.emailNotVerified = emailNotVerified;
-      console.log('🔙 Throwing error back to Login component');
       throw loginError;
     }
   };

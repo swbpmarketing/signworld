@@ -24,23 +24,18 @@ export const useProductTour = (userId?: string) => {
    */
   const hasCompletedTour = useCallback((): boolean => {
     if (!userId) {
-      console.log('[ProductTour] hasCompletedTour: no userId, returning true');
       return true; // Don't show tour if no user
     }
 
     try {
       const completedData = localStorage.getItem(TOUR_STORAGE_KEY);
       if (!completedData) {
-        console.log('[ProductTour] hasCompletedTour: no data in localStorage, returning false');
         return false;
       }
 
       const parsed = JSON.parse(completedData);
-      const completed = parsed[userId] === TOUR_VERSION;
-      console.log('[ProductTour] hasCompletedTour for user:', userId, 'Completed:', completed, 'Data:', parsed);
-
       // Check if this specific user has completed the current version
-      return completed;
+      return parsed[userId] === TOUR_VERSION;
     } catch (error) {
       console.error('Error checking tour completion:', error);
       return false;
@@ -51,10 +46,7 @@ export const useProductTour = (userId?: string) => {
    * Mark tour as completed for current user
    */
   const completeTour = useCallback(() => {
-    if (!userId) {
-      console.log('[ProductTour] completeTour called but no userId');
-      return;
-    }
+    if (!userId) return;
 
     try {
       const completedData = localStorage.getItem(TOUR_STORAGE_KEY);
@@ -64,7 +56,6 @@ export const useProductTour = (userId?: string) => {
       parsed[userId] = TOUR_VERSION;
 
       localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(parsed));
-      console.log('[ProductTour] Tour marked as completed for user:', userId, 'Data:', parsed);
 
       setTourState({
         run: false,
@@ -133,12 +124,10 @@ export const useProductTour = (userId?: string) => {
   useEffect(() => {
     // DISABLED: Do not auto-start product tour
     // Users can manually trigger it from Settings
-    console.log('[ProductTour] Auto-start is DISABLED. Tour will not start automatically.');
     return;
 
     // Don't run if no userId
     if (!userId) {
-      console.log('[ProductTour] Auto-start: no userId, skipping');
       return;
     }
 
@@ -146,10 +135,7 @@ export const useProductTour = (userId?: string) => {
     const sessionInitKey = `${TOUR_SESSION_KEY}_${userId}`;
     const alreadyInitializedInSession = sessionStorage.getItem(sessionInitKey) === 'true';
 
-    console.log('[ProductTour] Auto-start check - hasInitialized:', hasInitialized.current, 'alreadyInitializedInSession:', alreadyInitializedInSession);
-
     if (hasInitialized.current || alreadyInitializedInSession) {
-      console.log('[ProductTour] Already initialized this session, skipping auto-start');
       return;
     }
 
@@ -160,14 +146,10 @@ export const useProductTour = (userId?: string) => {
     // Small delay to ensure the page is fully loaded
     const timer = setTimeout(() => {
       const completed = hasCompletedTour();
-      console.log('[ProductTour] Auto-start: Tour completed?', completed);
 
       // Only auto-start for NEW users who haven't completed the tour yet
       if (!completed) {
-        console.log('[ProductTour] NEW USER detected - Starting tour automatically (first login)');
         startTour();
-      } else {
-        console.log('[ProductTour] RETURNING USER - Tour already completed, not auto-starting');
       }
     }, 1000); // 1 second delay after login
 

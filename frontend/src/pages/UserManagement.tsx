@@ -17,6 +17,8 @@ import {
   BuildingStorefrontIcon,
   UserIcon,
   ClipboardDocumentCheckIcon,
+  BarsArrowDownIcon,
+  BarsArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import api from '../config/axios';
 import { useAuth } from '../context/AuthContext';
@@ -54,6 +56,7 @@ const UserManagement = () => {
   // User Management should only list approved users. Pending registrations live in `/new-users`.
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [showFilters, setShowFilters] = useState(false);
+  const [nameSort, setNameSort] = useState<'' | 'asc' | 'desc'>('');
 
   // Update URL when filters change
   useEffect(() => {
@@ -77,10 +80,11 @@ const UserManagement = () => {
   const handleClearFilters = () => {
     setRoleFilter('all');
     setStatusFilter('active');
+    setNameSort('');
     setPage(1);
   };
 
-  const hasActiveFilters = roleFilter !== 'all' || statusFilter !== 'active';
+  const hasActiveFilters = roleFilter !== 'all' || statusFilter !== 'active' || nameSort !== '';
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -104,7 +108,7 @@ const UserManagement = () => {
 
   // Fetch all users
   const { data, isLoading, error } = useQuery({
-    queryKey: ['users', page, searchQuery, roleFilter, statusFilter],
+    queryKey: ['users', page, searchQuery, roleFilter, statusFilter, nameSort],
     queryFn: async () => {
       const params: Record<string, any> = { page, limit, search: searchQuery };
       if (roleFilter !== 'all') params.role = roleFilter;
@@ -113,6 +117,9 @@ const UserManagement = () => {
         params.isActive = true;
       } else if (statusFilter === 'inactive') {
         params.isActive = false;
+      }
+      if (nameSort) {
+        params.sort = nameSort === 'asc' ? 'name_asc' : 'name_desc';
       }
       const response = await api.get('/users', { params });
       return response.data;
@@ -572,6 +579,27 @@ const UserManagement = () => {
               <span className="hidden sm:inline">Search</span>
             </button>
           </form>
+          <button
+            onClick={() => {
+              setNameSort(prev => prev === '' ? 'asc' : prev === 'asc' ? 'desc' : '');
+              setPage(1);
+            }}
+            className={`px-3 py-2 sm:py-3 rounded-lg font-medium text-sm border transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
+              nameSort
+                ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300'
+                : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+            }`}
+            title={nameSort === 'asc' ? 'Sorted A → Z (click for Z → A)' : nameSort === 'desc' ? 'Sorted Z → A (click to clear)' : 'Sort by name'}
+          >
+            {nameSort === 'desc' ? (
+              <BarsArrowUpIcon className="h-5 w-5" />
+            ) : (
+              <BarsArrowDownIcon className="h-5 w-5" />
+            )}
+            <span className="hidden sm:inline">
+              {nameSort === 'asc' ? 'A → Z' : nameSort === 'desc' ? 'Z → A' : 'Name'}
+            </span>
+          </button>
         </div>
 
         {/* Active Filters Display */}
@@ -598,6 +626,14 @@ const UserManagement = () => {
               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
                 Status: {statusFilter}
                 <button onClick={() => setStatusFilter('all')} className="hover:text-green-900 dark:hover:text-green-100">
+                  <XMarkIcon className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            )}
+            {nameSort && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-medium">
+                Sort: {nameSort === 'asc' ? 'A → Z' : 'Z → A'}
+                <button onClick={() => setNameSort('')} className="hover:text-indigo-900 dark:hover:text-indigo-100">
                   <XMarkIcon className="h-3.5 w-3.5" />
                 </button>
               </span>
@@ -681,6 +717,13 @@ const UserManagement = () => {
               label="Status"
               value={statusFilter}
               onRemove={() => setStatusFilter('active')}
+            />
+          )}
+          {nameSort && (
+            <FilterChip
+              label="Sort"
+              value={nameSort === 'asc' ? 'A → Z' : 'Z → A'}
+              onRemove={() => setNameSort('')}
             />
           )}
           <button

@@ -19,7 +19,6 @@ import {
   MegaphoneIcon,
   PaperAirplaneIcon,
   UserGroupIcon,
-  EyeIcon,
   AcademicCapIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
@@ -421,7 +420,7 @@ const Settings = () => {
       const response = await api.get('/partners/linked');
       return response.data?.data || [];
     },
-    enabled: isOwner && activeTab === 'broadcasts',
+    enabled: isOwner,
   });
   const linkedPartnerCount = linkedPartnersData?.length || 0;
 
@@ -432,7 +431,7 @@ const Settings = () => {
       const response = await api.get('/notifications/owner-broadcasts');
       return response.data?.data || [];
     },
-    enabled: isOwner && activeTab === 'broadcasts',
+    enabled: isOwner,
   });
 
   const handleSendBroadcast = async () => {
@@ -645,8 +644,8 @@ const Settings = () => {
                 </div>
               </div>
 
-              {/* Email Test Section - Only for admin and super_admin */}
-              {(effectiveRole === 'admin' || effectiveRole === 'super_admin') && (
+              {/* Email Test Section - Only for admin */}
+              {effectiveRole === 'admin' && (
                 <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>

@@ -150,12 +150,12 @@ const sendWelcomeEmail = async (userData) => {
 
             ${resetUrl ? `
             <div style="text-align: center; margin: 25px 0;">
-              <a href="${resetUrl}" class="button-primary">Change Your Password</a>
+              <a href="${resetUrl}" class="button-primary" style="display:inline-block; background-color:#667eea; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#ffffff !important; padding:14px 32px; text-decoration:none; border-radius:5px; font-weight:bold; font-size:16px;">Change Your Password</a>
             </div>
             ` : ''}
 
             <div style="text-align: center; margin: 15px 0;">
-              <a href="${process.env.CLIENT_URL}/login" class="button-secondary">Login to Dashboard</a>
+              <a href="${process.env.CLIENT_URL}/login" class="button-secondary" style="display:inline-block; background-color:#6b7280; color:#ffffff !important; padding:10px 24px; text-decoration:none; border-radius:5px; font-size:14px;">Login to Dashboard</a>
             </div>
 
             <p>You now have access to:</p>

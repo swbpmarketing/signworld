@@ -16,8 +16,8 @@ const router = express.Router();
 // All routes require authentication
 router.use(protect);
 
-// Owner stats route (must be before /:id route) - restricted to admin and owner roles
-router.get('/owner-stats', authorize('admin', 'owner'), handlePreviewMode, getOwnerStats);
+// Owner stats route (must be before /:id route)
+router.get('/owner-stats', authorize('admin', 'owner', 'vendor'), handlePreviewMode, getOwnerStats);
 
 // Search users for @mention autocomplete (must be before /:id route)
 router.get('/search/mention', async (req, res) => {

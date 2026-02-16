@@ -4,7 +4,7 @@ const Notification = require('../models/Notification');
 const User = require('../models/User');
 const Partner = require('../models/Partner');
 const { protect, authorize } = require('../middleware/auth');
-const { sendEmail } = require('../utils/emailService');
+const emailService = require('../services/emailService');
 
 // @desc    Get all notifications for the current user
 // @route   GET /api/notifications
@@ -209,26 +209,52 @@ router.post('/broadcast', protect, authorize('admin'), async (req, res) => {
         <!DOCTYPE html>
         <html>
           <head>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
-              .header { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-              .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; }
-              .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-            </style>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>${title}</h1>
-              </div>
-              <div class="content">
-                <p>${message.replace(/\n/g, '<br>')}</p>
-              </div>
-              <div class="footer">
-                <p>This is a broadcast announcement from Sign Company Dashboard.</p>
-              </div>
-            </div>
+          <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+              <tr>
+                <td align="center">
+                  <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
+                    <!-- Header -->
+                    <tr>
+                      <td style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); padding: 40px 30px; text-align: center;">
+                        <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">${title}</h1>
+                        <p style="margin: 8px 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Announcement from SignWorld Business Partners</p>
+                      </td>
+                    </tr>
+                    <!-- Body -->
+                    <tr>
+                      <td style="padding: 36px 30px;">
+                        <div style="color: #374151; font-size: 15px; line-height: 1.7;">
+                          ${message.replace(/\n/g, '<br>')}
+                        </div>
+                      </td>
+                    </tr>
+                    <!-- CTA -->
+                    <tr>
+                      <td style="padding: 0 30px 36px;" align="center">
+                        <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: #ffffff; padding: 14px 36px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">Go to Dashboard</a>
+                      </td>
+                    </tr>
+                    <!-- Divider -->
+                    <tr>
+                      <td style="padding: 0 30px;">
+                        <div style="border-top: 1px solid #e5e7eb;"></div>
+                      </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding: 24px 30px; text-align: center;">
+                        <p style="margin: 0; color: #9ca3af; font-size: 13px;">&copy; ${new Date().getFullYear()} SignWorld Business Partners. All rights reserved.</p>
+                        <p style="margin: 6px 0 0; color: #9ca3af; font-size: 12px;">This is an announcement from the SignWorld Dashboard.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
           </body>
         </html>
       `;
@@ -237,7 +263,7 @@ router.post('/broadcast', protect, authorize('admin'), async (req, res) => {
       let emailsFailed = 0;
       for (const user of users) {
         if (user.email) {
-          const result = await sendEmail({
+          const result = await emailService.sendEmail({
             to: user.email,
             subject: title,
             html: emailHtml,
@@ -399,31 +425,69 @@ router.post('/owner-broadcast', protect, async (req, res) => {
     }
 
     if (notificationMethod === 'email') {
+      const senderName = req.user.name || 'an owner';
       const emailHtml = `
         <!DOCTYPE html>
         <html>
           <head>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
-              .header { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-              .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; }
-              .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-            </style>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>${title}</h1>
-              </div>
-              <div class="content">
-                <p>Message from <strong>${req.user.name || 'an owner'}</strong>:</p>
-                <p>${message.replace(/\n/g, '<br>')}</p>
-              </div>
-              <div class="footer">
-                <p>This message was sent via Sign Company Dashboard.</p>
-              </div>
-            </div>
+          <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+              <tr>
+                <td align="center">
+                  <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
+                    <!-- Header -->
+                    <tr>
+                      <td style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); padding: 40px 30px; text-align: center;">
+                        <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">${title}</h1>
+                        <p style="margin: 8px 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Broadcast from SignWorld Business Partners</p>
+                      </td>
+                    </tr>
+                    <!-- Sender Info -->
+                    <tr>
+                      <td style="padding: 28px 30px 0;">
+                        <table cellpadding="0" cellspacing="0" style="width: 100%; background-color: #eff6ff; border-radius: 8px; border-left: 4px solid #2563eb;">
+                          <tr>
+                            <td style="padding: 14px 18px;">
+                              <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">Message from ${senderName}</p>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <!-- Body -->
+                    <tr>
+                      <td style="padding: 24px 30px 36px;">
+                        <div style="color: #374151; font-size: 15px; line-height: 1.7;">
+                          ${message.replace(/\n/g, '<br>')}
+                        </div>
+                      </td>
+                    </tr>
+                    <!-- CTA -->
+                    <tr>
+                      <td style="padding: 0 30px 36px;" align="center">
+                        <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 14px 36px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">Go to Dashboard</a>
+                      </td>
+                    </tr>
+                    <!-- Divider -->
+                    <tr>
+                      <td style="padding: 0 30px;">
+                        <div style="border-top: 1px solid #e5e7eb;"></div>
+                      </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding: 24px 30px; text-align: center;">
+                        <p style="margin: 0; color: #9ca3af; font-size: 13px;">&copy; ${new Date().getFullYear()} SignWorld Business Partners. All rights reserved.</p>
+                        <p style="margin: 6px 0 0; color: #9ca3af; font-size: 12px;">This broadcast was sent via the SignWorld Dashboard.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
           </body>
         </html>
       `;
@@ -432,7 +496,7 @@ router.post('/owner-broadcast', protect, async (req, res) => {
       let emailsFailed = 0;
       for (const vendor of vendorUsers) {
         if (vendor.email) {
-          const result = await sendEmail({
+          const result = await emailService.sendEmail({
             to: vendor.email,
             subject: title,
             html: emailHtml,

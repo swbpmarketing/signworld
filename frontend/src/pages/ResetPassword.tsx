@@ -219,7 +219,7 @@ const ResetPassword = () => {
             ) : (
               <>
                 {/* Form */}
-                <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+                <form className="space-y-5 mb-4" onSubmit={handleSubmit(onSubmit)}>
                   {/* Password */}
                   <div>
                     <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">

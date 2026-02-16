@@ -571,8 +571,6 @@ const BugReports = () => {
   };
 
   const openDetailModal = (report: BugReport) => {
-    console.log('Opening detail modal for report:', report._id);
-    console.log('isDragging:', isDragging);
     setSelectedReport(report);
     setShowDetailModal(true);
     setShowActionsMenu(false);
@@ -750,11 +748,9 @@ const BugReports = () => {
       }`}
       onClick={() => {
         const timeSinceDragEnd = Date.now() - dragEndTime.current;
-        console.log('Card clicked, isDragging:', isDragging, 'dragHappened:', dragHappened.current, 'timeSinceDragEnd:', timeSinceDragEnd);
 
         // Block click only if it happens within 100ms of drag end
         if (dragEndTime.current > 0 && timeSinceDragEnd < 100) {
-          console.log('Blocked - click too soon after drag');
           return;
         }
 

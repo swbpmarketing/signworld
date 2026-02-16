@@ -11,6 +11,29 @@ const FRONTEND = (process.env.FRONTEND_URL || process.env.CLIENT_URL || '').repl
 
 class EmailService {
   /**
+   * Generic send email (replaces old nodemailer sendEmail)
+   */
+  async sendEmail({ to, subject, html, text }) {
+    try {
+      const { data, error } = await resend.emails.send({
+        from: DEFAULT_FROM,
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        html: html || undefined,
+        text: text || undefined,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, messageId: data.id };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Send email verification email
    */
   async sendVerificationEmail({ to, name, verificationUrl }) {
@@ -379,12 +402,12 @@ class EmailService {
 
               ${resetUrl ? `
               <div style="text-align: center; margin: 25px 0;">
-                <a href="${resetUrl}" class="button-primary">Change Your Password</a>
+                <a href="${resetUrl}" class="button-primary" style="display:inline-block; background-color:#667eea; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#ffffff !important; padding:14px 32px; text-decoration:none; border-radius:5px; font-weight:bold; font-size:16px;">Change Your Password</a>
               </div>
               ` : ''}
 
               <div style="text-align: center; margin: 15px 0;">
-                <a href="${FRONTEND}/login" class="button-secondary">Login to Dashboard</a>
+                <a href="${FRONTEND}/login" class="button-secondary" style="display:inline-block; background-color:#6b7280; color:#ffffff !important; padding:10px 24px; text-decoration:none; border-radius:5px; font-size:14px;">Login to Dashboard</a>
               </div>
 
               <p>You now have access to:</p>

@@ -13,16 +13,12 @@ const VerifyEmailPrompt = () => {
   const email = searchParams.get('email');
 
   useEffect(() => {
-    console.log('📧 VerifyEmailPrompt component mounted');
-    console.log('📧 Email from query params:', email);
-    console.log('📧 Full search params:', searchParams.toString());
     document.title = 'Sign Company - Email Verification Required';
-  }, [email, searchParams]);
+  }, []);
 
   // Redirect to login if no email provided (after a delay to allow user to see error)
   useEffect(() => {
     if (!email) {
-      console.warn('⚠️ No email provided in query params');
       toast.error('No email provided. Redirecting to login...');
       const timer = setTimeout(() => {
         navigate('/login');
@@ -36,11 +32,9 @@ const VerifyEmailPrompt = () => {
 
     try {
       setSendingVerification(true);
-      console.log('📤 Sending verification email to:', email);
       const response = await api.post('/auth/resend-verification', { email });
 
       if (response.data.success) {
-        console.log('✅ Verification email sent successfully');
         toast.success('Verification email sent! Check your inbox.');
         setEmailSent(true);
       }

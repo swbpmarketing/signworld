@@ -26,11 +26,11 @@ try {
 // @access  Private
 exports.getUsers = async (req, res) => {
   try {
-    const { role, isActive, specialties, state, search, page = 1, limit = 20 } = req.query;
+    const { role, isActive, specialties, state, search, sort, page = 1, limit = 20 } = req.query;
 
     // Build query
     const query = {};
-    
+
     if (role) query.role = role;
     if (isActive !== undefined) query.isActive = isActive === 'true';
     if (specialties) query.specialties = { $in: specialties.split(',') };
@@ -43,12 +43,17 @@ exports.getUsers = async (req, res) => {
       ];
     }
 
+    // Determine sort order
+    let sortOrder = { createdAt: -1 };
+    if (sort === 'name_asc') sortOrder = { name: 1 };
+    else if (sort === 'name_desc') sortOrder = { name: -1 };
+
     const users = await User.find(query)
       .select('-password')
       .populate('createdBy', 'name email')
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
+      .sort(sortOrder);
 
     const count = await User.countDocuments(query);
 

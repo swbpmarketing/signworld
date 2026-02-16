@@ -1146,7 +1146,7 @@ const Brags = () => {
                           className="w-full h-full object-cover"
                         />
                         {/* Edit/Delete buttons for own stories */}
-                        {canEditItem('successStories', story.author._id) && (
+                        {story.author && canEditItem('successStories', story.author._id) && (
                           <div className="absolute top-2 right-2 flex gap-2">
                             <button
                               onClick={(e) => {
@@ -1183,12 +1183,12 @@ const Brags = () => {
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
-                            {getInitials(story.author.name)}
+                            {getInitials(story.author?.name || 'Unknown')}
                           </div>
                           <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{story.author.name}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{story.author?.name || 'Unknown User'}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {story.author.location || 'Location'} • {formatDate(story.createdAt)}
+                              {story.author?.location || 'Location'} • {formatDate(story.createdAt)}
                             </p>
                           </div>
                         </div>
@@ -1199,7 +1199,7 @@ const Brags = () => {
                             </span>
                           )}
                           {/* Edit/Delete buttons for own stories (no featured image) */}
-                          {!story.featuredImage && canEditItem('successStories', story.author._id) && (
+                          {!story.featuredImage && story.author && canEditItem('successStories', story.author._id) && (
                             <div className="flex gap-1">
                               <button
                                 onClick={(e) => {
@@ -2012,12 +2012,12 @@ const Brags = () => {
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
-                            {getInitials(story.author.name)}
+                            {getInitials(story.author?.name || 'Unknown')}
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">{story.author.name}</p>
+                            <p className="font-medium text-gray-900 dark:text-gray-100">{story.author?.name || 'Unknown User'}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {story.author.email} • {formatDate(story.createdAt)}
+                              {story.author?.email || 'No email'} • {formatDate(story.createdAt)}
                             </p>
                           </div>
                         </div>

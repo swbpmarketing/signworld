@@ -24,58 +24,35 @@ const Login = () => {
 
   // Set page title
   useEffect(() => {
-    console.log('🎬 Login component MOUNTED');
     document.title = 'Sign Company - Login';
-
-    return () => {
-      console.log('💥 Login component UNMOUNTING');
-    };
   }, []);
 
   // Redirect to dashboard if already logged in (check once on mount)
   useEffect(() => {
-    console.log('🔄 Login mount effect running, user:', user ? 'exists' : 'null');
     if (user) {
-      console.log('✅ User already logged in on mount, redirecting to dashboard');
       navigate('/dashboard', { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps - only run once on mount
 
   const onSubmit = async (data: LoginFormData) => {
-    console.log('🎯 onSubmit called with data:', { email: data.email });
-
     // Prevent multiple submissions
-    if (loading) {
-      console.log('⏳ Already loading, ignoring duplicate submission');
-      return;
-    }
+    if (loading) return;
 
     try {
       setLoading(true);
-      console.log('🔐 Calling login()...');
       await login(data.email, data.password);
-      console.log('✅ Login successful, navigating to dashboard');
       toast.success('Welcome back!');
       navigate('/dashboard');
       setLoading(false);
     } catch (error: any) {
-      console.error('❌ Login failed:', error.message);
-      console.log('🔍 Full error object:', error);
-      console.log('🔍 error.emailNotVerified:', error.emailNotVerified);
-      console.log('🔍 Type of emailNotVerified:', typeof error.emailNotVerified);
       setLoading(false);
 
       // Check if error is due to unverified email
       if (error.emailNotVerified) {
-        console.log('🔒 Email not verified, redirecting to verification page');
         const redirectUrl = `/verify-email-prompt?email=${encodeURIComponent(data.email)}`;
-        console.log('🚀 Navigating to:', redirectUrl);
-        // Navigate to verification prompt page with email as query parameter
         navigate(redirectUrl);
-        console.log('✅ Navigate called');
       } else {
-        console.log('⚠️ Not an email verification issue, showing error toast');
         toast.error(error.message || 'Login failed');
       }
     }

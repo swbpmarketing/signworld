@@ -34,12 +34,10 @@ api.interceptors.response.use(
       // Don't redirect if it's an email verification error
       // Let the calling component handle this case
       if (error.response?.data?.emailNotVerified) {
-        console.log('🔍 Axios interceptor: Email verification error detected, not redirecting');
         return Promise.reject(error);
       }
 
       // Token expired or invalid - redirect to login
-      console.log('🔍 Axios interceptor: 401 error, redirecting to login');
       localStorage.removeItem('token');
       window.location.href = '/login';
     }

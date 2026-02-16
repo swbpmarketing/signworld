@@ -930,21 +930,23 @@ router.post('/cart', protect, handlePreviewMode, blockPreviewWrites, async (req,
       });
     }
 
-    const user = await User.findById(req.user._id);
+    const cartItems = items.map(item => ({
+      equipmentId: item.equipmentId || item.equipment?._id,
+      quantity: item.quantity || 1
+    }));
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { equipmentCart: cartItems },
+      { new: true, runValidators: false }
+    );
+
     if (!user) {
       return res.status(404).json({
         success: false,
         error: 'User not found'
       });
     }
-
-    // Update cart with new items
-    user.equipmentCart = items.map(item => ({
-      equipmentId: item.equipmentId || item.equipment?._id,
-      quantity: item.quantity || 1
-    }));
-
-    await user.save();
 
     res.json({
       success: true,
@@ -974,20 +976,22 @@ router.post('/wishlist', protect, handlePreviewMode, blockPreviewWrites, async (
       });
     }
 
-    const user = await User.findById(req.user._id);
+    const wishlistItems = items.map(equipmentId => ({
+      equipmentId
+    }));
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { equipmentWishlist: wishlistItems },
+      { new: true, runValidators: false }
+    );
+
     if (!user) {
       return res.status(404).json({
         success: false,
         error: 'User not found'
       });
     }
-
-    // Update wishlist with new items
-    user.equipmentWishlist = items.map(equipmentId => ({
-      equipmentId
-    }));
-
-    await user.save();
 
     res.json({
       success: true,
