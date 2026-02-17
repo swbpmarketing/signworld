@@ -2,6 +2,7 @@
  * Migration script: WordPress Success Stories → Brags collection
  *
  * Reads the WP export XLSX, deletes existing brags, and inserts WP posts as brags.
+ * Maps dc:creator → WP author email → DB user. Creates missing users as needed.
  *
  * Usage: node backend/scripts/migrate-wp-brags.js
  */
@@ -10,6 +11,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const mongoose = require('mongoose');
 const XLSX = require('xlsx');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 const Brag = require('../models/Brag');
 const User = require('../models/User');
@@ -20,15 +22,12 @@ const XLSX_PATH = path.join(__dirname, '..', '..', 'partners data', 'signworldow
 function htmlToText(html) {
   if (!html) return '';
   let text = html
-    // Convert <br> and block elements to newlines
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<\/div>/gi, '\n')
     .replace(/<\/li>/gi, '\n')
     .replace(/<\/h[1-6]>/gi, '\n\n')
-    // Remove all remaining tags
     .replace(/<[^>]+>/g, '')
-    // Decode HTML entities
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -42,7 +41,6 @@ function htmlToText(html) {
     .replace(/&#8220;/g, '"')
     .replace(/&#8221;/g, '"')
     .replace(/&hellip;/g, '…')
-    // Clean up whitespace
     .replace(/\r\n/g, '\n')
     .replace(/[ \t]+/g, ' ')
     .replace(/\n /g, '\n')
@@ -60,7 +58,6 @@ function extractAllImages(html) {
   let match;
   while ((match = regex.exec(html)) !== null) {
     const url = match[1];
-    // Try to get a larger version by stripping WP size suffixes (e.g. -300x200)
     const fullUrl = url.replace(/-\d+x\d+(\.\w+)$/, '$1');
     images.push({ url: fullUrl, caption: '' });
   }
@@ -77,18 +74,8 @@ function mapCategoryToTag(category) {
   if (cat.includes('customer') || cat.includes('service')) return ['customer-service'];
   if (cat.includes('operations') || cat.includes('channel letters') || cat.includes('monument')) return ['operations'];
   if (cat.includes('community') || cat.includes('twin cities') || cat.includes('huntington')) return ['community'];
-  // Default: Success Story / Brag / Uncategorized → sales (most are revenue/deal stories)
   if (cat.includes('success') || cat.includes('brag')) return ['sales', 'growth'];
   return ['other'];
-}
-
-/** Map WP post status to Brag status */
-function mapStatus(wpStatus) {
-  switch (wpStatus) {
-    case 'publish': return 'approved';
-    case 'pending': return 'pending';
-    default: return 'approved'; // drafts → approved so they're visible
-  }
 }
 
 async function migrate() {
@@ -96,13 +83,13 @@ async function migrate() {
   await mongoose.connect(process.env.MONGODB_URI);
   console.log('Connected.');
 
-  // Find admin user to use as author
+  // Find admin user as fallback author
   const admin = await User.findOne({ role: 'admin' }).select('_id');
   if (!admin) {
     console.error('No admin user found. Aborting.');
     process.exit(1);
   }
-  console.log('Using admin user as author:', admin._id.toString());
+  console.log('Fallback admin author:', admin._id.toString());
 
   // Read XLSX
   console.log('\nReading WordPress export...');
@@ -110,19 +97,67 @@ async function migrate() {
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws);
 
+  // Build WP login → author info mapping from author rows
+  const loginToWpAuthor = {};
+  rows.forEach(r => {
+    if (r['wp:author_login'] && r['wp:author_email']) {
+      loginToWpAuthor[r['wp:author_login']] = {
+        email: r['wp:author_email'].toLowerCase(),
+        name: r['wp:author_display_name'] || r['wp:author_login'],
+        firstName: r['wp:author_first_name'] || '',
+        lastName: r['wp:author_last_name'] || '',
+      };
+    }
+  });
+  console.log('WP author logins found:', Object.keys(loginToWpAuthor).length);
+
+  // Resolve each WP author to a DB user (find or create)
+  const emailToDbUser = {};
+  const defaultPassword = await bcrypt.hash('SignworldMigrated2026!', 10);
+
+  for (const [login, wpAuthor] of Object.entries(loginToWpAuthor)) {
+    // Case-insensitive email lookup
+    let dbUser = await User.findOne({
+      email: { $regex: new RegExp(`^${wpAuthor.email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    }).select('_id name email');
+
+    if (!dbUser) {
+      // Create user
+      console.log(`  Creating user for WP author "${login}": ${wpAuthor.email} (${wpAuthor.name})`);
+      dbUser = await User.create({
+        name: wpAuthor.name,
+        email: wpAuthor.email,
+        password: defaultPassword,
+        role: 'admin',
+        isApproved: true,
+      });
+    }
+    emailToDbUser[wpAuthor.email] = dbUser._id;
+    console.log(`  ${login} -> ${wpAuthor.email} -> ${dbUser._id}`);
+  }
+
+  // Build login → DB user ID map
+  const loginToDbUserId = {};
+  for (const [login, wpAuthor] of Object.entries(loginToWpAuthor)) {
+    loginToDbUserId[login] = emailToDbUser[wpAuthor.email];
+  }
+
   // Filter to actual posts with title + content
   const wpPosts = rows.filter(r =>
     r['wp:post_type'] === 'post' &&
     r['title_1'] &&
     r['content:encoded']
   );
-  console.log(`Found ${wpPosts.length} WordPress posts to migrate.`);
+  console.log(`\nFound ${wpPosts.length} WordPress posts to migrate.`);
 
   // Delete existing brags
   const deleteResult = await Brag.deleteMany({});
   console.log(`Deleted ${deleteResult.deletedCount} existing brags.`);
 
   // Build brag documents
+  let authorMatched = 0;
+  let authorFallback = 0;
+
   const brags = wpPosts.map(post => {
     const rawContent = post['content:encoded'] || '';
     const images = extractAllImages(rawContent);
@@ -133,10 +168,20 @@ async function migrate() {
       ? new Date(wpDate.replace(' ', 'T') + 'Z')
       : new Date();
 
+    // Resolve author
+    const creator = post['dc:creator'];
+    let authorId = creator ? loginToDbUserId[creator] : null;
+    if (authorId) {
+      authorMatched++;
+    } else {
+      authorFallback++;
+      authorId = admin._id;
+    }
+
     return {
       title: (post['title_1'] || 'Untitled').substring(0, 100),
       content: cleanContent || 'No content available.',
-      author: admin._id,
+      author: authorId,
       tags: mapCategoryToTag(post['category']),
       featuredImage: featuredImage || undefined,
       images: images,
@@ -157,14 +202,14 @@ async function migrate() {
   console.log(`Successfully inserted ${inserted.length} brags.`);
 
   // Summary
+  console.log(`\nAuthor stats: ${authorMatched} matched to real users, ${authorFallback} fell back to admin`);
   const tagCounts = {};
   brags.forEach(b => b.tags.forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; }));
-  console.log('\nTag distribution:', tagCounts);
+  console.log('Tag distribution:', tagCounts);
   console.log('With featured images:', brags.filter(b => b.featuredImage).length);
   const totalImages = brags.reduce((sum, b) => sum + b.images.length, 0);
   console.log('Total gallery images:', totalImages);
   console.log('Posts with multiple images:', brags.filter(b => b.images.length > 1).length);
-  console.log('Date range:', brags[brags.length - 1].createdAt.toISOString().slice(0, 10), '→', brags[0].createdAt.toISOString().slice(0, 10));
 
   await mongoose.disconnect();
   console.log('\nDone! Migration complete.');
