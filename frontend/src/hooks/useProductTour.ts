@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { PageTourKey } from '../config/tourSteps';
 
 const TOUR_STORAGE_KEY = 'productTourCompleted';
-const TOUR_SESSION_KEY = 'productTourSessionInit';
-const TOUR_VERSION = '1.0'; // Increment this to show tour again after major updates
+const TOUR_ENABLED_KEY = 'productTourEnabled';
+const TOUR_VERSION = '2.0';
 
 interface TourState {
   run: boolean;
@@ -15,29 +16,67 @@ export const useProductTour = (userId?: string) => {
     stepIndex: 0,
   });
 
-  // Track if we've already checked tour on mount to prevent multiple checks
-  // Using both ref AND sessionStorage to handle component remounts
-  const hasInitialized = useRef(false);
+  const [activePageKey, setActivePageKey] = useState<PageTourKey | null>(null);
+
+  // Reactive tour-enabled state (fixes the bug where toggle didn't visually update)
+  const [tourEnabled, setTourEnabledState] = useState<boolean>(() => {
+    if (!userId) return false;
+    try {
+      const data = localStorage.getItem(TOUR_ENABLED_KEY);
+      if (!data) return true;
+      const parsed = JSON.parse(data);
+      return parsed[userId] !== false;
+    } catch {
+      return true;
+    }
+  });
+
+  // Re-sync tourEnabled when userId changes
+  useEffect(() => {
+    if (!userId) {
+      setTourEnabledState(false);
+      return;
+    }
+    try {
+      const data = localStorage.getItem(TOUR_ENABLED_KEY);
+      if (!data) {
+        setTourEnabledState(true);
+        return;
+      }
+      const parsed = JSON.parse(data);
+      setTourEnabledState(parsed[userId] !== false);
+    } catch {
+      setTourEnabledState(true);
+    }
+  }, [userId]);
 
   /**
-   * Check if user has completed the tour
+   * Toggle tour on/off — updates both React state and localStorage
+   */
+  const setTourEnabled = useCallback((enabled: boolean) => {
+    if (!userId) return;
+    setTourEnabledState(enabled);
+    try {
+      const data = localStorage.getItem(TOUR_ENABLED_KEY);
+      const parsed = data ? JSON.parse(data) : {};
+      parsed[userId] = enabled;
+      localStorage.setItem(TOUR_ENABLED_KEY, JSON.stringify(parsed));
+    } catch (error) {
+      console.error('Error saving tour enabled state:', error);
+    }
+  }, [userId]);
+
+  /**
+   * Check if user has completed the welcome tour
    */
   const hasCompletedTour = useCallback((): boolean => {
-    if (!userId) {
-      return true; // Don't show tour if no user
-    }
-
+    if (!userId) return true;
     try {
       const completedData = localStorage.getItem(TOUR_STORAGE_KEY);
-      if (!completedData) {
-        return false;
-      }
-
+      if (!completedData) return false;
       const parsed = JSON.parse(completedData);
-      // Check if this specific user has completed the current version
       return parsed[userId] === TOUR_VERSION;
-    } catch (error) {
-      console.error('Error checking tour completion:', error);
+    } catch {
       return false;
     }
   }, [userId]);
@@ -46,61 +85,47 @@ export const useProductTour = (userId?: string) => {
    * Mark tour as completed for current user
    */
   const completeTour = useCallback(() => {
-    if (!userId) return;
-
-    try {
-      const completedData = localStorage.getItem(TOUR_STORAGE_KEY);
-      const parsed = completedData ? JSON.parse(completedData) : {};
-
-      // Mark current version as completed for this user
-      parsed[userId] = TOUR_VERSION;
-
-      localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(parsed));
-
-      setTourState({
-        run: false,
-        stepIndex: 0,
-      });
-    } catch (error) {
-      console.error('Error saving tour completion:', error);
+    if (userId) {
+      try {
+        const completedData = localStorage.getItem(TOUR_STORAGE_KEY);
+        const parsed = completedData ? JSON.parse(completedData) : {};
+        parsed[userId] = TOUR_VERSION;
+        localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(parsed));
+      } catch (error) {
+        console.error('Error saving tour completion:', error);
+      }
     }
+    setTourState({ run: false, stepIndex: 0 });
+    setActivePageKey(null);
   }, [userId]);
 
   /**
-   * Start the tour manually (from Settings or other triggers)
+   * Start a specific page tour
    */
-  const startTour = useCallback(() => {
-    setTourState({
-      run: true,
-      stepIndex: 0,
-    });
-    // Dispatch custom event for other hook instances in the same window
-    window.dispatchEvent(new CustomEvent('startProductTour'));
+  const startPageTour = useCallback((pageKey: PageTourKey) => {
+    setActivePageKey(pageKey);
+    setTourState({ run: true, stepIndex: 0 });
+    window.dispatchEvent(new CustomEvent('startPageTour', { detail: { pageKey } }));
   }, []);
 
   /**
    * Stop the tour
    */
   const stopTour = useCallback(() => {
-    setTourState({
-      run: false,
-      stepIndex: 0,
-    });
+    setTourState({ run: false, stepIndex: 0 });
+    setActivePageKey(null);
   }, []);
 
   /**
-   * Reset tour completion (for testing or if user wants to see it again)
+   * Reset tour completion (for testing)
    */
   const resetTour = useCallback(() => {
     if (!userId) return;
-
     try {
       const completedData = localStorage.getItem(TOUR_STORAGE_KEY);
       if (!completedData) return;
-
       const parsed = JSON.parse(completedData);
       delete parsed[userId];
-
       if (Object.keys(parsed).length === 0) {
         localStorage.removeItem(TOUR_STORAGE_KEY);
       } else {
@@ -112,74 +137,29 @@ export const useProductTour = (userId?: string) => {
   }, [userId]);
 
   /**
-   * Auto-start behavior for NEW users ONLY:
-   * - NEW users (first login ever): Tour starts automatically ONCE
-   * - RETURNING users (completed/skipped tour): Tour does NOT auto-start
-   * - Only runs ONCE per session to prevent re-triggering
-   * - Can always be manually started from Settings
-   *
-   * DISABLED: Product tour will NOT auto-start on login
-   * Users can manually start it from Settings if needed
+   * Listen for page tour trigger from other components (e.g., Settings page)
    */
   useEffect(() => {
-    // DISABLED: Do not auto-start product tour
-    // Users can manually trigger it from Settings
-    return;
-
-    // Don't run if no userId
-    if (!userId) {
-      return;
-    }
-
-    // Check both ref AND sessionStorage to handle component remounts
-    const sessionInitKey = `${TOUR_SESSION_KEY}_${userId}`;
-    const alreadyInitializedInSession = sessionStorage.getItem(sessionInitKey) === 'true';
-
-    if (hasInitialized.current || alreadyInitializedInSession) {
-      return;
-    }
-
-    // Mark as initialized in both ref and sessionStorage (prevents multiple auto-starts in same session)
-    hasInitialized.current = true;
-    sessionStorage.setItem(sessionInitKey, 'true');
-
-    // Small delay to ensure the page is fully loaded
-    const timer = setTimeout(() => {
-      const completed = hasCompletedTour();
-
-      // Only auto-start for NEW users who haven't completed the tour yet
-      if (!completed) {
-        startTour();
-      }
-    }, 1000); // 1 second delay after login
-
-    return () => clearTimeout(timer);
-    // Only depend on userId - functions are stable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
-
-  /**
-   * Listen for tour trigger from other components (e.g., Settings page)
-   */
-  useEffect(() => {
-    const handleTourStart = () => {
-      setTourState({
-        run: true,
-        stepIndex: 0,
-      });
+    const handlePageTourStart = (e: Event) => {
+      const { pageKey } = (e as CustomEvent).detail;
+      setActivePageKey(pageKey);
+      setTourState({ run: true, stepIndex: 0 });
     };
 
-    window.addEventListener('startProductTour', handleTourStart);
-    return () => window.removeEventListener('startProductTour', handleTourStart);
+    window.addEventListener('startPageTour', handlePageTourStart);
+    return () => window.removeEventListener('startPageTour', handlePageTourStart);
   }, []);
 
   return {
     tourState,
     setTourState,
-    startTour,
+    activePageKey,
+    startPageTour,
     stopTour,
     completeTour,
     resetTour,
     hasCompletedTour: hasCompletedTour(),
+    tourEnabled,
+    setTourEnabled,
   };
 };

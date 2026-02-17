@@ -37,7 +37,7 @@ interface BugReport {
   expectedBehavior?: string;
   actualBehavior?: string;
   type: 'bug' | 'feature';
-  status: 'pending' | 'in_progress' | 'rejected' | 'completed';
+  status: 'pending' | 'in_progress' | 'qa' | 'rejected' | 'completed';
   priority: 'low' | 'medium' | 'high' | 'critical';
   author: {
     _id: string;
@@ -106,6 +106,13 @@ const statusConfig = {
     headerText: 'text-blue-500',
     icon: ArrowPathIcon,
   },
+  qa: {
+    label: 'QA',
+    color: 'border-purple-500',
+    headerBg: 'bg-purple-500/10',
+    headerText: 'text-purple-500',
+    icon: MagnifyingGlassIcon,
+  },
   rejected: {
     label: 'Rejected',
     color: 'border-orange-500',
@@ -173,6 +180,9 @@ const BugReports = () => {
   const [draggedReport, setDraggedReport] = useState<BugReport | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<keyof typeof statusConfig | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [activeTab, setActiveTab] = useState<'submit' | 'submissions'>('submit');
+  const [submissionsPage, setSubmissionsPage] = useState(1);
+  const submissionsPerPage = 5;
   const dragHappened = useRef(false);
   const dragEndTime = useRef(0);
 
@@ -198,6 +208,8 @@ const BugReports = () => {
       setShowCreateModal(false);
       setNewReport(initialFormState);
       setAttachments([]);
+      setActiveTab('submissions');
+      setSubmissionsPage(1);
       toast.success('Feedback submitted successfully!');
     },
     onError: () => {
@@ -413,9 +425,18 @@ const BugReports = () => {
   const reportsByStatus = {
     pending: filteredReports.filter(r => r.status === 'pending'),
     in_progress: filteredReports.filter(r => r.status === 'in_progress'),
+    qa: filteredReports.filter(r => r.status === 'qa'),
     rejected: filteredReports.filter(r => r.status === 'rejected'),
     completed: filteredReports.filter(r => r.status === 'completed'),
   };
+
+  // My submissions with pagination
+  const mySubmissions = (reportsData || []).filter(r => user && r.author._id === user._id);
+  const totalSubmissionsPages = Math.max(1, Math.ceil(mySubmissions.length / submissionsPerPage));
+  const paginatedSubmissions = mySubmissions.slice(
+    (submissionsPage - 1) * submissionsPerPage,
+    submissionsPage * submissionsPerPage
+  );
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -884,267 +905,369 @@ const BugReports = () => {
       <div className="max-w-2xl mx-auto space-y-6" data-tour="bug-reports-content">
         {/* Header */}
         <div className="text-center">
-          <div className="inline-flex p-4 bg-primary-600/10 rounded-full mb-4">
-            <BugAntIcon className="h-10 w-10 text-primary-500" />
+          <div className={`inline-flex p-4 rounded-full mb-4 ${
+            activeTab === 'submissions'
+              ? 'bg-primary-600/10'
+              : newReport.type === 'bug'
+                ? 'bg-red-500/10'
+                : 'bg-yellow-500/10'
+          }`}>
+            {activeTab === 'submissions' ? (
+              <ChatBubbleLeftIcon className="h-10 w-10 text-primary-500" />
+            ) : newReport.type === 'bug' ? (
+              <BugAntIcon className="h-10 w-10 text-red-500" />
+            ) : (
+              <LightBulbIcon className="h-10 w-10 text-yellow-500" />
+            )}
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Submit Feedback
+            {activeTab === 'submissions'
+              ? 'My Submissions'
+              : newReport.type === 'bug'
+                ? 'Bug Report'
+                : 'Feature Request'}
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Report a bug or request a new feature. We appreciate your feedback!
+            {activeTab === 'submissions'
+              ? 'Track the status of your submitted reports and requests.'
+              : newReport.type === 'bug'
+                ? 'Found something broken? Let us know and we\'ll fix it!'
+                : 'Have an idea to improve the platform? We\'d love to hear it!'}
           </p>
         </div>
 
-        {/* Inline Submission Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-          <form onSubmit={handleCreateSubmit} className="p-6 space-y-5">
-            {/* Type Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                What would you like to submit?
-              </label>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setNewReport({ ...newReport, type: 'bug' })}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                    newReport.type === 'bug'
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  <BugAntIcon className="h-5 w-5" />
-                  Bug Report
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewReport({ ...newReport, type: 'feature' })}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
-                    newReport.type === 'feature'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  <LightBulbIcon className="h-5 w-5" />
-                  Feature Request
-                </button>
-              </div>
-            </div>
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setActiveTab('submit')}
+            className={`flex-1 px-4 py-3 text-sm font-medium text-center transition-colors relative ${
+              activeTab === 'submit'
+                ? 'text-primary-600 dark:text-primary-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Submit Feedback
+            {activeTab === 'submit' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-t" />
+            )}
+          </button>
+          <button
+            onClick={() => { setActiveTab('submissions'); setSubmissionsPage(1); }}
+            className={`flex-1 px-4 py-3 text-sm font-medium text-center transition-colors relative ${
+              activeTab === 'submissions'
+                ? 'text-primary-600 dark:text-primary-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            My Submissions
+            {mySubmissions.length > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 text-xs font-semibold rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
+                {mySubmissions.length}
+              </span>
+            )}
+            {activeTab === 'submissions' && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-t" />
+            )}
+          </button>
+        </div>
 
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Title
-              </label>
-              <input
-                type="text"
-                value={newReport.title}
-                onChange={(e) => setNewReport({ ...newReport, title: e.target.value })}
-                placeholder={newReport.type === 'bug' ? 'Brief description of the bug' : 'Brief description of the feature'}
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-              />
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Description
-              </label>
-              <textarea
-                value={newReport.description}
-                onChange={(e) => setNewReport({ ...newReport, description: e.target.value })}
-                placeholder={newReport.type === 'bug' ? 'Describe what happened...' : 'Describe the feature you would like...'}
-                rows={4}
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                required
-              />
-            </div>
-
-            {/* Steps to Reproduce - only show for bugs */}
-            {newReport.type === 'bug' && (
+        {/* Submit Feedback Tab */}
+        {activeTab === 'submit' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <form onSubmit={handleCreateSubmit} className="p-6 space-y-5">
+              {/* Type Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Steps to Reproduce <span className="text-gray-400 font-normal">(optional)</span>
+                  What would you like to submit?
                 </label>
-                <textarea
-                  value={newReport.stepsToReproduce}
-                  onChange={(e) => setNewReport({ ...newReport, stepsToReproduce: e.target.value })}
-                  placeholder="1. Go to... 2. Click on... 3. See error"
-                  rows={3}
-                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setNewReport({ ...newReport, type: 'bug' })}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+                      newReport.type === 'bug'
+                        ? 'bg-red-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <BugAntIcon className="h-5 w-5" />
+                    Bug Report
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewReport({ ...newReport, type: 'feature' })}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+                      newReport.type === 'feature'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <LightBulbIcon className="h-5 w-5" />
+                    Feature Request
+                  </button>
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={newReport.title}
+                  onChange={(e) => setNewReport({ ...newReport, title: e.target.value })}
+                  placeholder={newReport.type === 'bug' ? 'Brief description of the bug' : 'Brief description of the feature'}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
                 />
               </div>
-            )}
 
-            {/* Attachments */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Attachments <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                accept="image/*,video/*"
-                multiple
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              >
-                <ArrowUpTrayIcon className="h-5 w-5" />
-                Upload Screenshot/Video
-              </button>
-              <p className="text-xs text-gray-500 mt-1.5">Accepted: Images and videos up to 50MB</p>
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={newReport.description}
+                  onChange={(e) => setNewReport({ ...newReport, description: e.target.value })}
+                  placeholder={newReport.type === 'bug' ? 'Describe what happened...' : 'Describe the feature you would like...'}
+                  rows={4}
+                  className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  required
+                />
+              </div>
 
-              {/* Attachment previews */}
-              {attachments.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
-                  {attachments.map((file, index) => (
-                    <div
-                      key={index}
-                      className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700"
-                    >
-                      {file.type.startsWith('image/') ? (
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={file.name}
-                          className="w-full h-24 object-cover"
-                        />
-                      ) : file.type.startsWith('video/') ? (
-                        <div className="relative w-full h-24 bg-gray-800 flex items-center justify-center">
-                          <video
+              {/* Steps to Reproduce - only show for bugs */}
+              {newReport.type === 'bug' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Steps to Reproduce <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    value={newReport.stepsToReproduce}
+                    onChange={(e) => setNewReport({ ...newReport, stepsToReproduce: e.target.value })}
+                    placeholder="1. Go to... 2. Click on... 3. See error"
+                    rows={3}
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  />
+                </div>
+              )}
+
+              {/* Attachments */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Attachments <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  accept="image/*,video/*"
+                  multiple
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  <ArrowUpTrayIcon className="h-5 w-5" />
+                  Upload Screenshot/Video
+                </button>
+                <p className="text-xs text-gray-500 mt-1.5">Accepted: Images and videos up to 50MB</p>
+
+                {/* Attachment previews */}
+                {attachments.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+                    {attachments.map((file, index) => (
+                      <div
+                        key={index}
+                        className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700"
+                      >
+                        {file.type.startsWith('image/') ? (
+                          <img
                             src={URL.createObjectURL(file)}
+                            alt={file.name}
                             className="w-full h-24 object-cover"
                           />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                            <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
-                              <svg className="w-5 h-5 text-gray-800 ml-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                              </svg>
+                        ) : file.type.startsWith('video/') ? (
+                          <div className="relative w-full h-24 bg-gray-800 flex items-center justify-center">
+                            <video
+                              src={URL.createObjectURL(file)}
+                              className="w-full h-24 object-cover"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-gray-800 ml-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                                </svg>
+                              </div>
                             </div>
                           </div>
+                        ) : (
+                          <div className="w-full h-24 flex items-center justify-center">
+                            <span className="text-gray-500 text-xs">{file.name}</span>
+                          </div>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                          <p className="text-white text-xs truncate">{file.name}</p>
                         </div>
-                      ) : (
-                        <div className="w-full h-24 flex items-center justify-center">
-                          <span className="text-gray-500 text-xs">{file.name}</span>
-                        </div>
-                      )}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                        <p className="text-white text-xs truncate">{file.name}</p>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(index)}
+                          className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(index)}
-                        className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={handleEnhanceWithAI}
+                  disabled={isEnhancing || !newReport.description.trim()}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <SparklesIcon className="h-5 w-5" />
+                  {isEnhancing ? 'Enhancing...' : 'Enhance with AI'}
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending}
+                  className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {createMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* My Submissions Tab */}
+        {activeTab === 'submissions' && (
+          <div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-300 border-t-primary-600"></div>
+              </div>
+            ) : mySubmissions.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+                <ChatBubbleLeftIcon className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500 dark:text-gray-400 text-sm">No submissions yet.</p>
+                <button
+                  onClick={() => setActiveTab('submit')}
+                  className="mt-3 text-sm text-primary-600 dark:text-primary-400 hover:underline font-medium"
+                >
+                  Submit your first report
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  {paginatedSubmissions.map((report) => (
+                    <div
+                      key={report._id}
+                      onClick={() => openDetailModal(report)}
+                      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 min-w-0">
+                          {report.type === 'bug' ? (
+                            <BugAntIcon className="h-5 w-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <LightBulbIcon className="h-5 w-5 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              {report.taskNumber && (
+                                <span className="text-xs font-mono font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-1.5 py-0.5 rounded flex-shrink-0">
+                                  {report.taskNumber}
+                                </span>
+                              )}
+                              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                                {report.title}
+                              </h3>
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+                              {report.description}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${priorityConfig[report.priority].color}`}>
+                            {priorityConfig[report.priority].label}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded font-medium ${statusConfig[report.status].headerBg} ${statusConfig[report.status].headerText}`}>
+                            {statusConfig[report.status].label}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="flex items-center gap-1">
+                          <ClockIcon className="h-3.5 w-3.5" />
+                          {formatDate(report.createdAt)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <ChatBubbleLeftIcon className="h-3.5 w-3.5" />
+                          {report.commentsCount} {report.commentsCount === 1 ? 'comment' : 'comments'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <ChevronUpIcon className="h-3.5 w-3.5" />
+                          {report.votesCount} {report.votesCount === 1 ? 'vote' : 'votes'}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
 
-            {/* Footer */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={handleEnhanceWithAI}
-                disabled={isEnhancing || !newReport.description.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <SparklesIcon className="h-5 w-5" />
-                {isEnhancing ? 'Enhancing...' : 'Enhance with AI'}
-              </button>
-
-              <button
-                type="submit"
-                disabled={createMutation.isPending}
-                className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-              >
-                {createMutation.isPending ? 'Submitting...' : 'Submit Feedback'}
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* My Submissions */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            My Submissions
-          </h2>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-300 border-t-primary-600"></div>
-            </div>
-          ) : !reportsData || reportsData.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
-              <ChatBubbleLeftIcon className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-500 dark:text-gray-400 text-sm">No submissions yet. Submit your first report above!</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {reportsData.map((report) => (
-                <div
-                  key={report._id}
-                  onClick={() => openDetailModal(report)}
-                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
-                      {report.type === 'bug' ? (
-                        <BugAntIcon className="h-5 w-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <LightBulbIcon className="h-5 w-5 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                      )}
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          {report.taskNumber && (
-                            <span className="text-xs font-mono font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-1.5 py-0.5 rounded flex-shrink-0">
-                              {report.taskNumber}
-                            </span>
-                          )}
-                          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                            {report.title}
-                          </h3>
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
-                          {report.description}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${priorityConfig[report.priority].color}`}>
-                        {priorityConfig[report.priority].label}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${statusConfig[report.status].headerBg} ${statusConfig[report.status].headerText}`}>
-                        {statusConfig[report.status].label}
-                      </span>
+                {/* Pagination */}
+                {totalSubmissionsPages > 1 && (
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Showing {(submissionsPage - 1) * submissionsPerPage + 1}-{Math.min(submissionsPage * submissionsPerPage, mySubmissions.length)} of {mySubmissions.length}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setSubmissionsPage(p => Math.max(1, p - 1))}
+                        disabled={submissionsPage === 1}
+                        className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Previous
+                      </button>
+                      {Array.from({ length: totalSubmissionsPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setSubmissionsPage(page)}
+                          className={`w-8 h-8 text-sm rounded-lg font-medium transition-colors ${
+                            page === submissionsPage
+                              ? 'bg-primary-600 text-white'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setSubmissionsPage(p => Math.min(totalSubmissionsPages, p + 1))}
+                        disabled={submissionsPage === totalSubmissionsPages}
+                        className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <ClockIcon className="h-3.5 w-3.5" />
-                      {formatDate(report.createdAt)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <ChatBubbleLeftIcon className="h-3.5 w-3.5" />
-                      {report.commentsCount} {report.commentsCount === 1 ? 'comment' : 'comments'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <ChevronUpIcon className="h-3.5 w-3.5" />
-                      {report.votesCount} {report.votesCount === 1 ? 'vote' : 'votes'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     ) : (
       <div className="space-y-6" data-tour="bug-reports-content">
@@ -1209,6 +1332,7 @@ const BugReports = () => {
           <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
             <KanbanColumn status="pending" reports={reportsByStatus.pending} />
             <KanbanColumn status="in_progress" reports={reportsByStatus.in_progress} />
+            <KanbanColumn status="qa" reports={reportsByStatus.qa} />
             <KanbanColumn status="rejected" reports={reportsByStatus.rejected} />
             <KanbanColumn status="completed" reports={reportsByStatus.completed} />
           </div>
@@ -1987,7 +2111,7 @@ const BugReports = () => {
                   <div className="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4">
                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Update Status (Admin)</h3>
                     <div className="flex flex-wrap gap-2">
-                      {(['pending', 'in_progress', 'rejected', 'completed'] as const).map((status) => (
+                      {(['pending', 'in_progress', 'qa', 'rejected', 'completed'] as const).map((status) => (
                         <button
                           key={status}
                           onClick={() => handleStatusChange(selectedReport._id, status)}

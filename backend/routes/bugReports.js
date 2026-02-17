@@ -360,7 +360,7 @@ router.put('/:id/status', protect, authorize('admin'), async (req, res) => {
   try {
     const { status, adminNotes } = req.body;
 
-    if (!status || !['pending', 'in_progress', 'rejected', 'completed'].includes(status)) {
+    if (!status || !['pending', 'in_progress', 'qa', 'rejected', 'completed'].includes(status)) {
       return res.status(400).json({
         success: false,
         error: 'Valid status is required'

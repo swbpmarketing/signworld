@@ -36,7 +36,7 @@ const bugReportSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'in_progress', 'rejected', 'completed'],
+    enum: ['pending', 'in_progress', 'qa', 'rejected', 'completed'],
     default: 'pending',
   },
   priority: {

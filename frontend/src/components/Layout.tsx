@@ -35,9 +35,10 @@ import {
   BugAntIcon,
   LifebuoyIcon,
 } from "@heroicons/react/24/outline";
-import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import AISearchModal from "./AISearchModal";
 import UserSelectionModal from "./UserSelectionModal";
+import HelpGuide from "./HelpGuide";
 import { NotificationPanel } from "./NotificationPanel";
 import { useNotifications } from "../hooks/useNotifications";
 import AnnouncementBanner from "./AnnouncementBanner";
@@ -417,6 +418,7 @@ const Layout = () => {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
   const [userSelectionModalOpen, setUserSelectionModalOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Get the effective role for UI (actual role or preview role)
   const effectiveRole = getEffectiveRole();
@@ -481,6 +483,21 @@ const Layout = () => {
   const handleUserMenuClose = useCallback(() => {
     setUserMenuOpen(false);
   }, []);
+
+  // Close user menu on click outside
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Ignore clicks on the avatar toggle button
+      if (target.closest('[aria-label="User menu"]')) return;
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [userMenuOpen]);
 
   // Keyboard shortcut for search (Ctrl+K or Cmd+K)
   useEffect(() => {
@@ -775,7 +792,7 @@ const Layout = () => {
 
           {/* User dropdown */}
           {userMenuOpen && (
-            <div className="absolute right-3 sm:right-4 md:right-6 top-10 sm:top-10 mt-2 w-56 rounded-lg bg-white dark:bg-gray-800 py-1 shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 z-50">
+            <div ref={userMenuRef} className="absolute right-3 sm:right-4 md:right-6 top-10 sm:top-10 mt-2 w-56 rounded-lg bg-white dark:bg-gray-800 py-1 shadow-lg ring-1 ring-black dark:ring-gray-700 ring-opacity-5 z-50">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {user?.name || "Guest User"}
@@ -920,6 +937,9 @@ const Layout = () => {
           setUserSelectionModalOpen(false);
         }}
       />
+
+      {/* Floating Help Guide */}
+      <HelpGuide />
     </div>
   );
 };
