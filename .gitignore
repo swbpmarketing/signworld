@@ -59,4 +59,8 @@ backend/dist/
 .env
 
 # Deployment checklists with credentials
-RENDER_DEPLOYMENT_CHECKLIST.mdnul
+RENDER_DEPLOYMENT_CHECKLIST.md
+
+# Sensitive data
+partners data/
+*.csv
