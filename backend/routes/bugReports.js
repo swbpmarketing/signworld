@@ -5,6 +5,7 @@ const Notification = require('../models/Notification');
 const { protect, authorize, optionalProtect, handlePreviewMode } = require('../middleware/auth');
 const { bugReportFiles } = require('../middleware/upload');
 const parseMentions = require('../utils/parseMentions');
+const { sendBugReportCreated, sendBugReportStatusChanged, sendBugReportComment } = require('../services/discordService');
 
 // @desc    Get all bug reports with filtering
 // @route   GET /api/bug-reports
@@ -269,6 +270,9 @@ router.post('/', protect, bugReportFiles, async (req, res) => {
       });
     }
 
+    // Fire-and-forget Discord notification
+    sendBugReportCreated(report);
+
     res.status(201).json({
       success: true,
       data: report,
@@ -399,6 +403,9 @@ router.put('/:id/status', protect, authorize('admin'), async (req, res) => {
         }
       });
     }
+
+    // Fire-and-forget Discord notification
+    sendBugReportStatusChanged(report, previousStatus, status, req.user);
 
     // Notify the author about status change
     if (report.author._id.toString() !== req.user.id) {
@@ -590,6 +597,9 @@ router.post('/:id/comment', protect, ...bugReportFiles, async (req, res) => {
         commentsCount: report.comments.length
       });
     }
+
+    // Fire-and-forget Discord notification
+    sendBugReportComment(report, newComment, req.user);
 
     // Send mention notifications
     try {
