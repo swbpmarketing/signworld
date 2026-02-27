@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { getAvailableTours } from '../config/tourSteps';
 import type { PageTourKey } from '../config/tourSteps';
 
 const TOUR_STORAGE_KEY = 'productTourCompleted';
 const TOUR_ENABLED_KEY = 'productTourEnabled';
+const PAGE_TOUR_COMPLETED_KEY = 'productTourPageCompleted';
 const TOUR_VERSION = '2.0';
 
 interface TourState {
@@ -10,7 +12,13 @@ interface TourState {
   stepIndex: number;
 }
 
-export const useProductTour = (userId?: string) => {
+export interface TourProgress {
+  completed: number;
+  total: number;
+  percentage: number;
+}
+
+export const useProductTour = (userId?: string, userRole?: string) => {
   const [tourState, setTourState] = useState<TourState>({
     run: false,
     stepIndex: 0,
@@ -49,6 +57,89 @@ export const useProductTour = (userId?: string) => {
       setTourEnabledState(true);
     }
   }, [userId]);
+
+  // --- Per-page tour completion tracking ---
+  const [completedPageTours, setCompletedPageTours] = useState<string[]>(() => {
+    if (!userId) return [];
+    try {
+      const data = localStorage.getItem(PAGE_TOUR_COMPLETED_KEY);
+      if (!data) return [];
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed[userId]) ? parsed[userId] : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Re-sync completedPageTours when userId changes
+  useEffect(() => {
+    if (!userId) {
+      setCompletedPageTours([]);
+      return;
+    }
+    try {
+      const data = localStorage.getItem(PAGE_TOUR_COMPLETED_KEY);
+      if (!data) {
+        setCompletedPageTours([]);
+        return;
+      }
+      const parsed = JSON.parse(data);
+      setCompletedPageTours(Array.isArray(parsed[userId]) ? parsed[userId] : []);
+    } catch {
+      setCompletedPageTours([]);
+    }
+  }, [userId]);
+
+  /**
+   * Mark a specific page tour as completed
+   */
+  const markPageTourCompleted = useCallback((pageKey: PageTourKey) => {
+    if (!userId) return;
+    setCompletedPageTours(prev => {
+      if (prev.includes(pageKey)) return prev;
+      const updated = [...prev, pageKey];
+      try {
+        const data = localStorage.getItem(PAGE_TOUR_COMPLETED_KEY);
+        const parsed = data ? JSON.parse(data) : {};
+        parsed[userId] = updated;
+        localStorage.setItem(PAGE_TOUR_COMPLETED_KEY, JSON.stringify(parsed));
+      } catch (error) {
+        console.error('Error saving page tour completion:', error);
+      }
+      // Notify other hook instances to re-sync
+      window.dispatchEvent(new CustomEvent('pageTourCompleted', { detail: { userId, pageKey } }));
+      return updated;
+    });
+  }, [userId]);
+
+  // Listen for completion events from other hook instances to stay in sync
+  useEffect(() => {
+    const handleTourCompleted = (e: Event) => {
+      const { userId: completedUserId } = (e as CustomEvent).detail;
+      if (completedUserId !== userId) return;
+      try {
+        const data = localStorage.getItem(PAGE_TOUR_COMPLETED_KEY);
+        if (!data) return;
+        const parsed = JSON.parse(data);
+        setCompletedPageTours(Array.isArray(parsed[userId]) ? parsed[userId] : []);
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('pageTourCompleted', handleTourCompleted);
+    return () => window.removeEventListener('pageTourCompleted', handleTourCompleted);
+  }, [userId]);
+
+  /**
+   * Tour progress calculation based on role-specific tours
+   */
+  const tourProgress: TourProgress = useMemo(() => {
+    const available = getAvailableTours(userRole);
+    const total = available.length;
+    const completed = available.filter(({ key }) => completedPageTours.includes(key)).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { completed, total, percentage };
+  }, [userRole, completedPageTours]);
+
+  const allToursCompleted = tourProgress.total > 0 && tourProgress.percentage === 100;
 
   /**
    * Toggle tour on/off — updates both React state and localStorage
@@ -161,5 +252,9 @@ export const useProductTour = (userId?: string) => {
     hasCompletedTour: hasCompletedTour(),
     tourEnabled,
     setTourEnabled,
+    completedPageTours,
+    markPageTourCompleted,
+    tourProgress,
+    allToursCompleted,
   };
 };

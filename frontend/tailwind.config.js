@@ -40,6 +40,9 @@ export default {
         'fade-in': 'fadeIn 0.2s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',
         'spin': 'spin 1s linear infinite',
+        'ai-nudge': 'aiNudge 1.5s ease-in-out',
+        'ping-slow': 'pingSlow 1.5s ease-out forwards',
+        'spin-slow': 'spinSlow 1.5s ease-in-out',
       },
       keyframes: {
         fadeIn: {
@@ -52,6 +55,22 @@ export default {
         },
         spin: {
           '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        aiNudge: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '15%': { transform: 'scale(1.15)' },
+          '30%': { transform: 'scale(1)' },
+          '45%': { transform: 'scale(1.1)' },
+          '60%': { transform: 'scale(1)' },
+        },
+        pingSlow: {
+          '0%': { transform: 'scale(1)', opacity: '0.6' },
+          '100%': { transform: 'scale(2)', opacity: '0' },
+        },
+        spinSlow: {
+          '0%': { transform: 'rotate(0deg)' },
+          '50%': { transform: 'rotate(180deg)' },
           '100%': { transform: 'rotate(360deg)' },
         },
       },

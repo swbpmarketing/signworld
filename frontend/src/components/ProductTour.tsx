@@ -10,33 +10,38 @@ interface ProductTourProps {
 }
 
 const ProductTour: React.FC<ProductTourProps> = ({ userId }) => {
-  const { tourState, setTourState, activePageKey, completeTour } = useProductTour(userId);
+  const { tourState, setTourState, activePageKey, completeTour, markPageTourCompleted } = useProductTour(userId);
 
   const steps = getPageTourSteps(activePageKey).map(step => ({ ...step, disableBeacon: true }));
 
   const handleJoyrideCallback = useCallback((data: CallBackProps) => {
     const { status, type, action, index } = data;
 
-    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+    const finishTour = () => {
+      if (activePageKey) markPageTourCompleted(activePageKey);
       completeTour();
+    };
+
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+      finishTour();
       return;
     }
 
     if (action === ACTIONS.CLOSE) {
-      completeTour();
+      finishTour();
       return;
     }
 
     if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
       const nextStepIndex = index + (action === ACTIONS.PREV ? -1 : 1);
       if (nextStepIndex >= steps.length) {
-        completeTour();
+        finishTour();
         return;
       }
       if (nextStepIndex < 0) return;
       setTourState((prev) => ({ ...prev, stepIndex: nextStepIndex }));
     }
-  }, [completeTour, setTourState, steps.length]);
+  }, [activePageKey, markPageTourCompleted, completeTour, setTourState, steps.length]);
 
   if (!activePageKey || steps.length === 0) return null;
 

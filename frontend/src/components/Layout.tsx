@@ -415,8 +415,8 @@ const Layout = () => {
   });
   const [sidebarHovering, setSidebarHovering] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const [helpGuideOpen, setHelpGuideOpen] = useState(false);
   const [userSelectionModalOpen, setUserSelectionModalOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -464,14 +464,6 @@ const Layout = () => {
     setUserMenuOpen(prev => !prev);
   }, []);
 
-  const handleSearchModalOpen = useCallback(() => {
-    setSearchModalOpen(true);
-  }, []);
-
-  const handleSearchModalClose = useCallback(() => {
-    setSearchModalOpen(false);
-  }, []);
-
   const handleNotificationToggle = useCallback(() => {
     setNotificationPanelOpen(prev => !prev);
   }, []);
@@ -482,6 +474,14 @@ const Layout = () => {
 
   const handleUserMenuClose = useCallback(() => {
     setUserMenuOpen(false);
+  }, []);
+
+  const handleHelpGuideToggle = useCallback(() => {
+    setHelpGuideOpen(prev => !prev);
+  }, []);
+
+  const handleHelpGuideClose = useCallback(() => {
+    setHelpGuideOpen(false);
   }, []);
 
   // Close user menu on click outside
@@ -498,19 +498,6 @@ const Layout = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [userMenuOpen]);
-
-  // Keyboard shortcut for search (Ctrl+K or Cmd+K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setSearchModalOpen(true);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   // Don't redirect while loading, and redirect to login if not authenticated
   if (loading) {
@@ -605,18 +592,6 @@ const Layout = () => {
               <div className="flex items-center space-x-4">
                 {/* Mobile view - Individual buttons */}
                 <div className="flex sm:hidden items-center space-x-1.5">
-                  {/* Search */}
-                  <button
-                    type="button"
-                    onClick={handleSearchModalOpen}
-                    className="p-2.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    aria-label="Search (Ctrl+K)"
-                  >
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </button>
-
                   {/* Dark mode toggle */}
                   <button
                     type="button"
@@ -629,6 +604,26 @@ const Layout = () => {
                     ) : (
                       <MoonIcon className="h-5 w-5" />
                     )}
+                  </button>
+
+                  {/* Settings */}
+                  <Link
+                    to="/settings"
+                    className="p-2.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    aria-label="Settings"
+                  >
+                    <Cog6ToothIcon className="h-5 w-5" />
+                  </Link>
+
+                  {/* Tour Guide */}
+                  <button
+                    type="button"
+                    data-tour-guide-trigger
+                    className="p-2.5 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    aria-label="Platform guide"
+                    onClick={handleHelpGuideToggle}
+                  >
+                    <QuestionMarkCircleIcon className="h-5 w-5" />
                   </button>
 
                   {/* Notifications */}
@@ -691,23 +686,6 @@ const Layout = () => {
 
                 {/* Desktop view - Pill Container */}
                 <div className="hidden sm:flex items-center space-x-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-full">
-                  {/* Search */}
-                  <button
-                    type="button"
-                    onClick={handleSearchModalOpen}
-                    data-tour="search-button"
-                    className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md px-2 py-1"
-                    aria-label="Search (Ctrl+K)"
-                  >
-                    <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <span className="hidden sm:inline">Search</span>
-                    <kbd className="hidden sm:inline-flex items-center px-2 py-0.5 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                      CTRL K
-                    </kbd>
-                  </button>
-
                   {/* Dark mode toggle */}
                   <button
                     type="button"
@@ -720,6 +698,26 @@ const Layout = () => {
                     ) : (
                       <MoonIcon className="h-5 w-5" />
                     )}
+                  </button>
+
+                  {/* Settings */}
+                  <Link
+                    to="/settings"
+                    className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    aria-label="Settings"
+                  >
+                    <Cog6ToothIcon className="h-5 w-5" />
+                  </Link>
+
+                  {/* Tour Guide */}
+                  <button
+                    type="button"
+                    data-tour-guide-trigger
+                    className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    aria-label="Platform guide"
+                    onClick={handleHelpGuideToggle}
+                  >
+                    <QuestionMarkCircleIcon className="h-5 w-5" />
                   </button>
 
                   {/* Notifications */}
@@ -919,10 +917,11 @@ const Layout = () => {
         </main>
       </div>
 
-      {/* AI Search Modal */}
+      {/* Help Guide Panel */}
+      <HelpGuide isOpen={helpGuideOpen} onClose={handleHelpGuideClose} />
+
+      {/* AI Chatbot */}
       <AISearchModal
-        isOpen={searchModalOpen}
-        onClose={handleSearchModalClose}
         userRole={effectiveRole}
         userName={isPreviewMode && getPreviewedUser()?.name ? getPreviewedUser()?.name : user?.name}
         userCompany={isPreviewMode && getPreviewedUser()?.name ? '' : user?.company}
@@ -938,8 +937,6 @@ const Layout = () => {
         }}
       />
 
-      {/* Floating Help Guide */}
-      <HelpGuide />
     </div>
   );
 };
